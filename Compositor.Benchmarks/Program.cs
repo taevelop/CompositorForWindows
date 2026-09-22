@@ -5,6 +5,12 @@ using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 
+if (args.Length > 0 && args[0] == "--stability")
+{
+    StabilityBenchmark.Run(args.Length > 1 ? args[1] : "stability-benchmark.json");
+    return;
+}
+
 string output = args.Length > 0 ? Path.GetFullPath(args[0]) : Path.GetFullPath("benchmark.json");
 var runs = new List<object>();
 foreach (bool opaque in new[] { false, true })

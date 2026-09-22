@@ -1,4 +1,4 @@
-param([switch]$Test, [switch]$Benchmark, [switch]$Publish)
+param([switch]$Test, [switch]$Benchmark, [switch]$Stability, [switch]$Publish)
 $ErrorActionPreference = 'Stop'
 Push-Location $PSScriptRoot
 try {
@@ -16,6 +16,10 @@ try {
     if ($Benchmark) {
         & dotnet run --project Compositor.Benchmarks/Compositor.Benchmarks.csproj -c Release --no-build -- artifacts/benchmark.json
         if ($LASTEXITCODE -ne 0) { throw 'Benchmark failed.' }
+    }
+    if ($Stability) {
+        & dotnet run --project Compositor.Benchmarks/Compositor.Benchmarks.csproj -c Release --no-build -- --stability artifacts/stability-benchmark.json
+        if ($LASTEXITCODE -ne 0) { throw 'Stability benchmark failed.' }
     }
     if ($Publish) {
         & dotnet publish Compositor.App/Compositor.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/publish --nologo

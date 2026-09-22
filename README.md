@@ -36,12 +36,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Publish
 - Normal, Multiply, Screen, Overlay, Darken, Lighten, Difference 합성
 - 이동 도구, 숫자 기반 크기·회전·위치 조정, 가로·세로 뒤집기
 - 크기·경도·불투명도·RGB 색상을 지정하는 브러시와 지우개
-- 256×256 불변 타일 기반 Undo/Redo; 드래그·스트로크당 한 번의 히스토리
+- 256×256 불변 타일 기반 Undo/Redo; 드래그·스트로크당 한 번의 히스토리. 변화 없는 이동·속성 적용은 이력을 만들지 않으며 Redo를 유지합니다. 이력은 최대 100단계 및 현재 문서 외 고유 타일 256MiB로 제한합니다.
 - `.comp` 프로젝트 폴더 저장·열기, PNG 투명도 보존 내보내기, 흰 배경 JPEG 내보내기(품질 92)
 - PNG/JPEG 가져오기의 EXIF 방향 보정과 sRGB 변환, 내보내기 해상도 메타데이터
 - 포인터 기준 휠 확대/축소, 중간 버튼 드래그 또는 Hand 도구로 이동
 
-메뉴에 표시된 Ctrl 단축키를 사용합니다. V/B/E/H는 이동/브러시/지우개/Hand입니다. Esc는 진행 중인 편집을 취소합니다. 텍스트 필드에 포커스가 있으면 텍스트 편집 단축키를 우선합니다. 레이어 속성은 **Apply layer properties**로 적용합니다.
+메뉴에 표시된 Ctrl 단축키를 사용합니다. V/B/E/H는 이동/브러시/지우개/Hand입니다. Esc는 진행 중인 편집과 Hand 이동을 취소합니다. 창 비활성화·마우스 캡처 상실도 미완료 편집을 되돌립니다. 드래그 중 휠 확대/축소는 무시합니다. 텍스트 필드에 포커스가 있으면 텍스트 편집 단축키를 우선합니다. 레이어 속성은 **Apply layer properties**로 적용합니다.
 
 ## 프로젝트 호환성과 저장 보호
 
@@ -51,7 +51,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Publish
 - 기본 픽셀 레이어만 지원합니다. 그룹, 마스크, 조정, 효과, 도형, 텍스트, 가이드, 미지원 합성 모드 및 알 수 없는 필드는 **프로젝트 전체 열기를 거부**합니다. 기능을 조용히 버리고 덮어쓰지 않습니다.
 - 자산 경로·중복 ID·형식 버전·크기·심볼릭 링크와 junction을 검사합니다. 디스크 자산은 외부 원본 이미지에 의존하지 않습니다.
 - 완전한 임시 패키지를 쓰고 다시 읽어 검증한 다음 기존 폴더를 `.comp.recovery`로 이동하고 새 폴더를 게시합니다. 게시 실패 시 기존 폴더를 복구합니다. 같은 경로의 동시 저장은 `.write-lock`으로 차단합니다.
-- **폴더 두 번의 이름 변경 전체가 하나의 원자적 연산은 아닙니다.** 전원 중단 시 `.comp.recovery`가 남을 수 있습니다. 원본 또는 복구 폴더를 열어 내용을 확인한 뒤 보존할 사본을 결정하십시오. 복구 사본이 있으면 다음 저장은 차단됩니다. 잠금 파일은 빈 파일로 남으며, 실제 잠금은 프로세스의 파일 핸들입니다.
+- **폴더 두 번의 이름 변경 전체가 하나의 원자적 연산은 아닙니다.** 전원 중단 시 `.comp.recovery`가 남을 수 있습니다. File → **Open recovery copy…**에서 `.comp.recovery` 폴더를 선택하면 수정된 새 문서로 열립니다. Save에서 새 `.comp` 이름으로 저장하십시오. 원본과 복구 폴더는 자동으로 덮어쓰거나 삭제하지 않습니다. 복구 사본이 있으면 다음 저장은 차단됩니다. 잠금 파일은 빈 파일로 남으며, 실제 잠금은 프로세스의 파일 핸들입니다.
 - 캔버스/이미지 30,000px/변 및 100MP 한도, 총 소스 100MP, 레이어 10,000개, manifest 4MiB, 자산당 512MiB를 적용합니다. 대형 프로젝트에서는 상당한 RAM이 필요합니다.
 
 저장 필드와 읽기 제한은 [Windows 프로젝트 규격](docs/project-format.md)에 정리했습니다. 실제 Mac에서 생성한 대표 문서의 양방향 열기는 아직 검증하지 않았습니다. 현재 호환성 근거는 원본 코드, Swift 형태의 명시적 fixture, 저장 왕복 테스트입니다.
@@ -82,7 +82,9 @@ dotnet run --project Compositor.Benchmarks/Compositor.Benchmarks.csproj -c Relea
 
 벤치마크는 4000×4000 문서, 800px/0% 경도 브러시, 빈 레이어와 불투명 레이어, 각 120회 입력의 스트로크 2개를 측정합니다. 1000×1000 Skia 화면 합성을 포함하되 WPF 표시 지연이나 input-to-photon 측정은 아닙니다. 초기 내부 기준은 p95 33.3ms 이하, 스트로크 종료 100ms 이하입니다. 장비와 부하에 따라 달라집니다.
 
-`build.ps1 -Test`는 숨김 WPF 창에서 브러시·Undo/Redo·속성·이동을 실행하고 `artifacts/ui-smoke.png`를 만듭니다. 실제 포인터 입력 장치, 압력, 여러 모니터 DPI 전환, 접근성은 별도의 실기 검증이 필요합니다.
+`build.ps1 -Test`는 숨김 WPF 창에서 입력 취소·혼합 버튼·PNG/JPEG 가져오기·브러시/지우개·Undo/Redo·저장/재열기·복구·종료 확인 경로를 실행하고 `artifacts/ui-smoke.png`와 `artifacts/ui-smoke.checks.json`을 만듭니다. 실제 포인터 입력 장치, 압력, 여러 모니터 DPI 전환, 접근성은 별도의 실기 검증이 필요합니다.
+
+다중 레이어와 반복 편집 검증은 `powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Stability`로 실행합니다. 결과는 `artifacts/stability-benchmark.json`에 저장됩니다. [실사용 체크리스트](docs/usability-checklist.md)와 [안정화 검증 결과](docs/windows-stability-validation.md)를 참고하십시오.
 
 현재 제한:
 

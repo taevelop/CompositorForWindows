@@ -16,9 +16,13 @@ public sealed class EditorCanvas : SKElement, IDisposable
     public EditorTool Tool { get; set; } = EditorTool.Brush;
     public Func<BrushSettings> ReadBrush { get; set; } = () => new(40, .7, 1, 98, 201, 181);
     public Action<string>? ReportError { get; set; }
+    public Action? ViewportChanged { get; set; }
     public double Zoom { get; private set; } = 1;
+    public bool HasInteraction => originalLayer is not null || panStart is not null || gestureButton is not null;
     private double panX = 30, panY = 30;
     private Point? panStart;
+    private Point panOrigin;
+    private MouseButton? gestureButton;
     private BrushStroke? stroke;
     private Layer? originalLayer;
     private PointD anchor;
@@ -26,53 +30,100 @@ public sealed class EditorCanvas : SKElement, IDisposable
     {
         PaintSurface += Paint;
         Loaded += (_, _) => Fit();
-        LostMouseCapture += (_, _) => { if (Session?.InTransaction == true) EndPointer(false); panStart = null; };
-        Unloaded += (_, _) => Dispose();
+        LostMouseCapture += (_, _) => CancelInteraction();
+        Unloaded += (_, _) => { CancelInteraction(); Dispose(); };
     }
     public void Fit()
     {
         if (Session is null || ActualWidth <= 0 || ActualHeight <= 0) return;
+        CancelInteraction();
         Zoom = Math.Clamp(Math.Min((ActualWidth - 60) / Session.Document.Width, (ActualHeight - 60) / Session.Document.Height), .01, 32);
         panX = (ActualWidth - Session.Document.Width * Zoom) / 2; panY = (ActualHeight - Session.Document.Height * Zoom) / 2;
-        InvalidateVisual();
+        InvalidateVisual(); ViewportChanged?.Invoke();
     }
-    public void ActualPixels() { Zoom = 1; panX = panY = 30; InvalidateVisual(); }
-    private PointD DocumentPoint(Point p) => new((p.X - panX) / Zoom, (p.Y - panY) / Zoom);
+    public void ActualPixels() { CancelInteraction(); Zoom = 1; panX = panY = 30; InvalidateVisual(); ViewportChanged?.Invoke(); }
+    internal PointD DocumentPoint(Point p) => new((p.X - panX) / Zoom, (p.Y - panY) / Zoom);
     protected override void OnMouseWheel(MouseWheelEventArgs e)
     {
-        base.OnMouseWheel(e); Point p = e.GetPosition(this); var before = DocumentPoint(p);
-        Zoom = Math.Clamp(Zoom * Math.Pow(1.15, e.Delta / 120.0), .01, 32);
-        panX = p.X - before.X * Zoom; panY = p.Y - before.Y * Zoom; InvalidateVisual(); e.Handled = true;
+        base.OnMouseWheel(e); e.Handled = true;
+        ZoomAt(e.GetPosition(this), e.Delta);
+    }
+    internal void ZoomAt(Point point, int delta)
+    {
+        if (HasInteraction) return;
+        var before = DocumentPoint(point);
+        Zoom = Math.Clamp(Zoom * Math.Pow(1.15, delta / 120.0), .01, 32);
+        panX = point.X - before.X * Zoom; panY = point.Y - before.Y * Zoom;
+        InvalidateVisual(); ViewportChanged?.Invoke();
     }
     protected override void OnMouseDown(MouseButtonEventArgs e)
     {
         base.OnMouseDown(e); Focus();
-        if (e.ChangedButton == MouseButton.Middle || (e.ChangedButton == MouseButton.Left && Tool == EditorTool.Hand))
-        { panStart = e.GetPosition(this); CaptureMouse(); e.Handled = true; return; }
-        if (e.ChangedButton != MouseButton.Left) return;
-        try { BeginPointer(DocumentPoint(e.GetPosition(this))); if (Session.InTransaction) CaptureMouse(); }
-        catch (Exception error) { EndPointer(false); ReportError?.Invoke(error.Message); }
-        e.Handled = true;
+        try
+        {
+            if (!BeginInteraction(e.ChangedButton, e.GetPosition(this))) return;
+            if (!CaptureMouse()) CancelInteraction();
+            e.Handled = true;
+        }
+        catch (Exception error) { CancelInteraction(); ReportError?.Invoke(error.Message); }
     }
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        if (panStart is Point previous)
-        { var p = e.GetPosition(this); panX += p.X - previous.X; panY += p.Y - previous.Y; panStart = p; InvalidateVisual(); return; }
-        if (!Session.InTransaction) return;
-        try { MovePointer(DocumentPoint(e.GetPosition(this))); }
-        catch (Exception error) { EndPointer(false); ReleaseMouseCapture(); ReportError?.Invoke(error.Message); }
+        try { MoveInteraction(e.GetPosition(this)); }
+        catch (Exception error) { CancelInteraction(); ReportError?.Invoke(error.Message); }
     }
     protected override void OnMouseUp(MouseButtonEventArgs e)
     {
         base.OnMouseUp(e);
-        try { if (Session.InTransaction) { MovePointer(DocumentPoint(e.GetPosition(this))); EndPointer(true); } }
-        catch (Exception error) { EndPointer(false); ReportError?.Invoke(error.Message); }
-        panStart = null; ReleaseMouseCapture();
+        try
+        {
+            if (!FinishInteraction(e.ChangedButton, e.GetPosition(this))) return;
+            ReleaseMouseCapture(); e.Handled = true;
+        }
+        catch (Exception error) { CancelInteraction(); ReportError?.Invoke(error.Message); }
+    }
+    // These routes are also exercised by the hidden WPF integration check.
+    internal bool BeginInteraction(MouseButton button, Point point)
+    {
+        if (Session is null || HasInteraction || Session.InTransaction) return false;
+        if (button == MouseButton.Middle || (button == MouseButton.Left && Tool == EditorTool.Hand))
+        {
+            gestureButton = button; panOrigin = new(panX, panY); panStart = point; return true;
+        }
+        if (button != MouseButton.Left) return false;
+        BeginPointer(DocumentPoint(point));
+        if (!Session.InTransaction) return false;
+        gestureButton = button; return true;
+    }
+    internal void MoveInteraction(Point point)
+    {
+        if (panStart is Point previous)
+        {
+            panX += point.X - previous.X; panY += point.Y - previous.Y; panStart = point; InvalidateVisual(); return;
+        }
+        if (originalLayer is not null) MovePointer(DocumentPoint(point));
+    }
+    internal bool FinishInteraction(MouseButton button, Point point)
+    {
+        if (gestureButton != button) return false;
+        MoveInteraction(point);
+        if (panStart is not null) { panStart = null; gestureButton = null; }
+        else EndPointer(true);
+        return true;
+    }
+    public void CancelInteraction()
+    {
+        bool editing = originalLayer is not null;
+        originalLayer = null; stroke = null; gestureButton = null;
+        if (panStart is not null) { panX = panOrigin.X; panY = panOrigin.Y; panStart = null; }
+        if (editing && Session?.InTransaction == true) Session.Cancel();
+        if (IsMouseCaptured) ReleaseMouseCapture();
+        InvalidateVisual();
     }
     public void BeginPointer(PointD point)
     {
-        if (Session.InTransaction || Session.ActiveLayer is not { } layer) return;
+        if (Session.InTransaction || Session.ActiveLayer is not { } layer || Tool == EditorTool.Hand) return;
         if (Tool is EditorTool.Brush or EditorTool.Eraser && !layer.Visible) throw new InvalidOperationException("Show the layer before painting.");
         originalLayer = layer; anchor = point;
         if (Tool is EditorTool.Brush or EditorTool.Eraser)
@@ -87,15 +138,18 @@ public sealed class EditorCanvas : SKElement, IDisposable
         else if (Tool == EditorTool.Move)
         {
             var t = originalLayer.Transform;
-            Session.Preview(Session.Document.Replace(originalLayer with { Transform = t with { X = t.X + point.X - anchor.X, Y = t.Y + point.Y - anchor.Y } }));
+            var transform = t with { X = t.X + point.X - anchor.X, Y = t.Y + point.Y - anchor.Y };
+            if (Session.ActiveLayer?.Transform != transform) Session.Preview(Session.Document.Replace(originalLayer with { Transform = transform }));
         }
     }
     public void EndPointer(bool commit)
     {
-        stroke = null; originalLayer = null;
-        if (commit) Session.Commit(); else Session.Cancel();
+        bool editing = originalLayer is not null;
+        stroke = null; originalLayer = null; gestureButton = null;
+        if (editing) { if (commit) Session.Commit(); else Session.Cancel(); }
         InvalidateVisual();
     }
+
     private void Paint(object? sender, SKPaintSurfaceEventArgs e)
     {
         var c = e.Surface.Canvas; c.Clear(new SKColor(28, 30, 34));

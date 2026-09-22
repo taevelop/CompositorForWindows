@@ -15,6 +15,13 @@ public static class ProjectStore
         "maskFile", "maskEnabled", "maskSourceID", "adjustment", "maskPlacement", "maskLinked", "shape", "effects", "text"];
     private static readonly string[] UnsupportedFields = ["parentID", "maskFile", "maskEnabled", "maskSourceID", "adjustment", "maskPlacement", "maskLinked", "shape", "effects", "text"];
 
+    public static LoadedProject LoadRecovery(string path)
+    {
+        if (!Path.GetFullPath(path).EndsWith(".comp.recovery", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Select a .comp.recovery folder.");
+        return Load(path);
+    }
+
     public static LoadedProject Load(string path)
     {
         string root = Path.GetFullPath(path);

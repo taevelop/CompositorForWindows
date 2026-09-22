@@ -17,13 +17,18 @@ public partial class MainWindow : Window
 {
     private readonly EditorSession session = new(Document.Create(1400, 900));
     private string? projectPath;
+    private readonly EditorPrompts defaultPrompts;
+    private EditorPrompts prompts;
     private bool refreshing, busy, allowClose;
 
     public MainWindow()
     {
+        defaultPrompts = prompts = EditorPrompts.For(this);
         InitializeComponent();
         Canvas.Session = session; Canvas.ReadBrush = ReadBrush;
         Canvas.ReportError = ShowError;
+        Canvas.ViewportChanged = UpdateStatus;
+        Deactivated += (_, _) => Canvas.CancelInteraction();
         LayerBlend.ItemsSource = Enum.GetValues<BlendMode>();
         LayerSampling.ItemsSource = Enum.GetValues<Sampling>();
         session.Changed += Refresh;
@@ -49,8 +54,12 @@ public partial class MainWindow : Window
             LayerSampling.SelectedItem = layer.Transform.Sampling;
         }
         UndoMenu.IsEnabled = session.CanUndo; RedoMenu.IsEnabled = session.CanRedo;
-        Status.Text = $"{session.Document.Width:N0} × {session.Document.Height:N0} px   ·   {session.Document.Layers.Length} layers   ·   {Canvas.Zoom:P0}   ·   {Canvas.Tool}";
+        UpdateStatus();
         refreshing = false;
+    }
+    private void UpdateStatus()
+    {
+        if (!busy) Status.Text = $"{session.Document.Width:N0} × {session.Document.Height:N0} px   ·   {session.Document.Layers.Length} layers   ·   {Canvas.Zoom:P0}   ·   {Canvas.Tool}";
     }
     private static string F(double n) => n.ToString("0.###", CultureInfo.InvariantCulture);
     private static double Number(TextBox input)
@@ -65,7 +74,7 @@ public partial class MainWindow : Window
         if (color.A != 255) throw new InvalidDataException("Use an opaque RGB color; control transparency with brush opacity.");
         return new(Number(BrushSize), Number(BrushHardness) / 100, Number(BrushOpacity) / 100, color.R, color.G, color.B);
     }
-    private void ShowError(string message) => MessageBox.Show(this, message, "Compositor", MessageBoxButton.OK, MessageBoxImage.Warning);
+    private void ShowError(string message) => prompts.ShowError(message);
     private void Safe(Action action)
     {
         if (busy || session.InTransaction) return;
@@ -83,7 +92,7 @@ public partial class MainWindow : Window
     {
         if (busy || session.InTransaction) return false;
         if (!session.IsModified) return true;
-        var response = MessageBox.Show(this, "Save changes before continuing?", "Unsaved project", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+        var response = prompts.ConfirmSaveChanges();
         return response == MessageBoxResult.No || (response == MessageBoxResult.Yes && await Save(false));
     }
     private async void NewDocument(object? sender, RoutedEventArgs e)
@@ -101,14 +110,27 @@ public partial class MainWindow : Window
             Canvas.Fit(); Refresh();
         });
     }
-    private async void OpenProject(object? sender, RoutedEventArgs e)
+    private async void OpenProject(object? sender, RoutedEventArgs e) => await OpenProjectFolder(false);
+    private async void OpenRecovery(object? sender, RoutedEventArgs e) => await OpenProjectFolder(true);
+    private async Task OpenProjectFolder(bool recoveryOnly)
     {
         if (!await ConfirmDiscard()) return;
-        var dialog = new OpenFolderDialog { Title = "Select a .comp project folder" };
+        var dialog = new OpenFolderDialog { Title = recoveryOnly ? "Select a .comp.recovery folder" : "Select a .comp project folder" };
         if (dialog.ShowDialog(this) != true) return;
+        bool recovery = recoveryOnly || dialog.FolderName.EndsWith(".comp.recovery", StringComparison.OrdinalIgnoreCase);
+        await LoadProject(dialog.FolderName, recovery);
+    }
+    private async Task<bool> LoadProject(string source, bool recovery)
+    {
         LoadedProject? loaded = null;
-        if (await Work("Opening project…", () => loaded = ProjectStore.Load(dialog.FolderName)))
-        { session.Load(loaded!.Document, loaded.ActiveLayerId); projectPath = dialog.FolderName; Canvas.Fit(); Refresh(); }
+        if (!await Work("Opening project…", () => loaded = recovery ? ProjectStore.LoadRecovery(source) : ProjectStore.Load(source))) return false;
+        OpenLoadedProject(loaded!, source, recovery); return true;
+    }
+    private void OpenLoadedProject(LoadedProject loaded, string source, bool recovery)
+    {
+        session.Load(loaded.Document, loaded.ActiveLayerId, recovered: recovery);
+        projectPath = recovery ? null : source; Canvas.Fit(); Refresh();
+        if (recovery) Status.Text = "Recovery copy opened. Save to a new project name; the original and recovery folders are preserved.";
     }
     private async void ImportImages(object? sender, RoutedEventArgs e)
     {
@@ -131,7 +153,7 @@ public partial class MainWindow : Window
             (before with { Layers = before.Layers.AddRange(imported) }).Validate();
         });
         if (success && imported.Count > 0)
-        { session.ActiveLayerId = imported[^1].Id; session.Apply(d => d with { Layers = d.Layers.AddRange(imported) }); Refresh(); }
+        { session.Apply(d => d with { Layers = d.Layers.AddRange(imported) }); session.ActiveLayerId = imported[^1].Id; Refresh(); }
     }
     private async void DropFiles(object sender, DragEventArgs e)
     {
@@ -172,12 +194,12 @@ public partial class MainWindow : Window
     private void AddLayer(object sender, RoutedEventArgs e) => Safe(() =>
     {
         var l = Layer.Blank($"Layer {session.Document.Layers.Length + 1}", session.Document.Width, session.Document.Height);
-        session.ActiveLayerId = l.Id; session.Apply(d => d with { Layers = d.Layers.Add(l) });
+        session.Apply(d => d with { Layers = d.Layers.Add(l) }); session.ActiveLayerId = l.Id; Refresh();
     });
     private void DeleteLayer(object? sender, RoutedEventArgs e) => Safe(() =>
     {
         if (session.ActiveLayer is not { } l) return;
-        var remaining = session.Document.Layers.Remove(l); session.ActiveLayerId = remaining.LastOrDefault()?.Id;
+        var remaining = session.Document.Layers.Remove(l);
         session.Apply(d => d with { Layers = remaining });
     });
     private void Reorder(int offset) => Safe(() =>
@@ -206,7 +228,7 @@ public partial class MainWindow : Window
     private void ToolChanged(object sender, SelectionChangedEventArgs e)
     {
         if (Canvas is null) return;
-        if (session.InTransaction) Canvas.EndPointer(false);
+        Canvas.CancelInteraction();
         Canvas.Tool = (EditorTool)ToolPicker.SelectedIndex; Canvas.InvalidateVisual(); Canvas.Focus();
     }
     private void Undo(object? sender, RoutedEventArgs e) => Safe(session.Undo);
@@ -216,7 +238,7 @@ public partial class MainWindow : Window
     private void WindowKeyDown(object sender, KeyEventArgs e)
     {
         if (busy) return;
-        if (e.Key == Key.Escape && session.InTransaction) { Canvas.EndPointer(false); Canvas.ReleaseMouseCapture(); e.Handled = true; return; }
+        if (e.Key == Key.Escape && Canvas.HasInteraction) { Canvas.CancelInteraction(); e.Handled = true; return; }
         // Text editing owns its own shortcuts, including Undo and Delete.
         if (Keyboard.FocusedElement is TextBox) return;
         bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control), shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
@@ -245,6 +267,7 @@ public partial class MainWindow : Window
     private async void WindowClosing(object? sender, CancelEventArgs e)
     {
         if (allowClose) return;
+        Canvas.CancelInteraction();
         e.Cancel = true;
         if (await ConfirmDiscard()) { allowClose = true; _ = Dispatcher.BeginInvoke(new Action(Close)); }
     }
@@ -274,6 +297,7 @@ public partial class MainWindow : Window
         ApplyLayer(this, new());
         Canvas.Tool = EditorTool.Move; Canvas.BeginPointer(new(0, 0)); Canvas.MovePointer(new(25, 15)); Canvas.EndPointer(true);
         if (session.ActiveLayer!.Transform.X != 25) throw new InvalidOperationException("UI move gesture failed.");
+        await StabilitySmokeTest(Path.ChangeExtension(screenshot, ".checks.json"));
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         UpdateLayout();
         var bitmap = new RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, PixelFormats.Pbgra32);

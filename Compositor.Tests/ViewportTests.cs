@@ -7,9 +7,13 @@ namespace Compositor.Tests;
 
 public class ViewportTests
 {
-    [Fact]
-    public void IncrementalViewportMatchesFreshCompositingAfterPaintEraseUndoAndStructuralEdits()
+    [Theory]
+    [InlineData(1f)]
+    [InlineData(1.5f)]
+    [InlineData(2f)]
+    public void IncrementalViewportMatchesFreshCompositingAfterPaintEraseUndoAndStructuralEdits(float scale)
     {
+        int width = (int)(330 * scale), height = (int)(280 * scale);
         var doc = Document.Create(600, 500);
         var background = new BrushStroke(doc.Layers[0], new(1800, 1, 1, 90, 110, 160), 600, 500);
         background.Append(new(300, 250)); doc = doc.Replace(doc.Layers[0] with { Pixels = background.Pixels });
@@ -18,12 +22,12 @@ public class ViewportTests
         using var viewport = new ViewportRenderer();
         void Compare(Document d)
         {
-            using var incremental = viewport.Render(d, 330, 280, .5f, 12, 7);
-            using var reference = SKSurface.Create(CanvasRenderer.Info(330, 280));
-            reference.Canvas.Clear(SKColors.Transparent); reference.Canvas.Translate(12, 7); reference.Canvas.Scale(.5f);
+            using var incremental = viewport.Render(d, width, height, .5f * scale, 12 * scale, 7 * scale);
+            using var reference = SKSurface.Create(CanvasRenderer.Info(width, height));
+            reference.Canvas.Clear(SKColors.Transparent); reference.Canvas.Translate(12 * scale, 7 * scale); reference.Canvas.Scale(.5f * scale);
             using var renderer = new CanvasRenderer(); renderer.Draw(reference.Canvas, d);
             using var expected = reference.Snapshot();
-            using var a = new SKBitmap(CanvasRenderer.Info(330, 280)); using var b = new SKBitmap(a.Info);
+            using var a = new SKBitmap(CanvasRenderer.Info(width, height)); using var b = new SKBitmap(a.Info);
             incremental.ReadPixels(a.Info, a.GetPixels(), a.RowBytes, 0, 0); expected.ReadPixels(b.Info, b.GetPixels(), b.RowBytes, 0, 0);
             Assert.True(a.GetPixelSpan().SequenceEqual(b.GetPixelSpan()), "Incremental and full render pixels differ.");
         }
