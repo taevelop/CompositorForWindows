@@ -1,35 +1,49 @@
-# Compositor project format, versions 1–6
+# Windows 프로젝트 규격 — 버전 1–8
 
-A `.comp` file is a macOS document package containing `manifest.json` and an `images/` directory of `<layer UUID>.png` assets.
+이 문서는 Windows 구현인 [ProjectStore.cs](../Compositor.Imaging/ProjectStore.cs)의 저장 형식과 읽기 제한을 설명합니다. macOS의 전체 기능 규격은 [macOS 원본 문서](../macOS/docs/project-format.md)에 있습니다. **Windows는 버전 1–8을 읽고 버전 8로 저장하지만, 해당 버전의 모든 기능을 지원하지는 않습니다.**
 
-The manifest identifies `com.compositor.project`, version `6` for new saves (versions `1`–`5` remain readable), and the sRGB working space. It stores document UUID, pixel dimensions, active layer UUID, and layers in bottom-to-top order. Each layer stores its UUID, name, visibility, transform (origin, size, clockwise rotation, flips, sampling), and optional image filename. Blank layers have no image asset.
+## 패키지와 필드
 
-Embedded PNGs preserve source pixels and transparency; transforms remain separate. Projects survive moving or deleting imported source photos. Saving uses a coordinated atomic package replacement. Unsupported versions, invalid metadata, missing assets, unsafe paths, and oversized data are rejected before replacing the live document.
+`.comp`는 단일 파일이 아니라 다음 내용을 담는 폴더입니다. PNG에 원본 픽셀과 투명도를 보관하고 레이어 변환은 별도 메타데이터로 저장하므로, 가져온 원본 사진을 이동하거나 삭제해도 프로젝트를 열 수 있습니다.
 
-Limits: 30,000 pixels per canvas/image side, 100 million total source pixels, 10,000 layers, 4 MiB manifest, 512 MiB per encoded asset. See `ProjectStore.swift` for validation.
+```text
+Project.comp/
+  manifest.json
+  images/
+    <레이어 UUID>.png
+```
 
-Undo history and viewport are session-only. Opening fits the canvas, restores selection, and starts with clean history. Future editable features must extend the schema and round-trip tests. PNG export is a flattened derivative and does not mark project edits saved.
+manifest의 `format`은 `com.compositor.project`, `colorSpace`는 `sRGB`입니다. `documentID`, 정수 픽셀 크기 `width`·`height`, 아래에서 위 순서의 `layers` 배열을 저장합니다. 선택 레이어는 `activeLayerID`로 저장하며, 값이 있으면 실제 레이어를 가리켜야 합니다. 선택 정보가 없거나 null인 문서도 읽습니다. `resolution`은 pixels/inch 단위의 1–9600 값이고, 없거나 null이면 72입니다.
 
-Image Size adds optional `resolution` (pixels/inch, 1–9600). Older manifests without it default to 72. This additive field retains version 1 compatibility. Both PNG and JPEG exports include document resolution metadata. Resampling stores the new layer pixels and bounds; undo retains the prior sources only during the current session.
+각 기본 픽셀 레이어는 다음 필드를 사용합니다.
 
-Version 2 adds optional `parentID` and `isGroup` on layer records. A group has no image file. Root nodes have no parent; children refer to an existing group. Array order defines bottom-to-top sibling order; renderers traverse each group as a contiguous subtree. Visibility is inherited without changing child flags. Cycles, missing/non-group parents, image-bearing groups, and nesting beyond 64 ancestor levels are rejected. Group ancestors permit room for leaf nodes at the deepest level. Group metadata survives image/canvas resizing and cropping. Older app builds reject version 2 rather than misrender grouped documents. Collapse state is not serialized.
+| 필드 | 규격 |
+|---|---|
+| `id`, `name`, `isVisible` | 고유 UUID, 비어 있지 않은 이름, 표시 여부 |
+| `imageFile` | `images/` 안의 `<레이어 UUID>.png`; 없거나 null이면 빈 레이어 |
+| `opacity` | 0–1; 없거나 null이면 1 |
+| `blendMode` | `Normal`, `Multiply`, `Screen`, `Overlay`, `Darken`, `Lighten`, `Difference`; 없거나 null이면 `Normal` |
+| `transform.origin`, `transform.size` | Swift Codable의 CGPoint/CGSize와 같은 2원소 숫자 배열 |
+| `transform.rotation` | 도 단위 시계 방향 회전; 좌표 원점은 왼쪽 위 |
+| `transform.flipX`, `transform.flipY` | 가로·세로 뒤집기 |
+| `transform.sampling` | `Nearest`, `Smooth`, `High quality` |
 
-Version 3 adds optional per-layer `opacity` (finite 0–1) and `blendMode` (Normal, Multiply, Screen, Overlay, Darken, Lighten, Difference, Color Dodge, Color Burn). Missing fields default to full opacity and Normal. Group records required those defaults until version 8, which lets a folder carry its own opacity; a folder's opacity multiplies into every layer inside it, while its blend mode stays Normal because folders are pass-through. Effects are applied during compositing and retained as metadata when resizing sources. Files declaring older versions cannot contain non-default appearance values.
+버전 1–2는 불투명도 1과 Normal 합성만 허용합니다. Windows의 Smooth와 High quality는 현재 모두 bilinear 샘플링이며, macOS의 고품질 필터와 동일하지 않습니다. 저장 시 UUID는 대문자를 사용하고, 이미지 파일명은 해당 UUID의 대문자 또는 소문자 표기만 읽습니다.
 
-Version 4 adds optional `maskFile` and `maskEnabled` fields to individual layers. Mask filenames must be `<layer UUID>.mask.png` under `images/`; enabled defaults to true when a mask exists. Records without masks omit both fields. Groups cannot carry masks in this version. Files declaring versions 1–3 cannot contain mask metadata.
+## 지원하지 않는 문서
 
-Masks store 8-bit grayscale coverage without alpha (white reveals, black hides). Their normalized extent matches the image’s local rectangle, so the same layer transform applies to both. A uniform 1×1 mask is valid and avoids allocating full-resolution pixels before painting. Nonuniform mask pixels and a thumbnail are immutable assets shared by history. Image Size resamples them with the image transform; Canvas Size and Crop preserve their pixels. Up to 100 million mask pixels may be stored in addition to the existing 100 million image pixels; per-side and per-file limits also apply to masks. Disabled masks remain embedded and editable but do not affect compositing. Image-versus-mask target selection is session-only and reopens on image pixels.
+Windows는 보존할 수 없는 기능을 버리고 열지 않습니다. 다음 항목이 있으면 프로젝트 전체 열기를 거부합니다.
 
-Version 5 adds optional `maskSourceID`: the UUID of a non-group layer supplying live alpha in document coordinates. It multiplies the target’s alpha alongside its enabled raster mask. Source pixels, transform, opacity, raster mask and upstream live masks contribute coverage; visibility and RGB color do not. Sources remain independent layers. Missing references, self-links, cycles, group endpoints and chains over 256 nodes are rejected. Deletion can bake the live coverage into dependent image pixels (retaining their raster masks) or remove the links, as one undoable operation. Links survive image/canvas resize and crop. Older versions default to no live mask; older app builds reject v5.
+- 그룹(`isGroup: true`), 부모 관계(`parentID`), 래스터·클리핑 마스크 관련 필드.
+- 조정, 도형, 효과, 텍스트 메타데이터와 비어 있지 않은 가이드 목록.
+- 미지원 합성·샘플링 모드, 알 수 없는 manifest·레이어·변환 필드, 중복 JSON 필드.
 
-UI terminology: these alpha links are clipping masks. Option-click assigns the lower sibling’s base or releases the connection. Multiple clipped layers share one base, show indented above it, and release when moved outside the contiguous stack. The underlying `maskSourceID` representation is unchanged.
+미지원 레이어 필드는 null이 아닌 값이면 거부합니다. 예를 들어 비어 있는 `effects` 객체나 `maskEnabled: false`도 열리지 않습니다. 위 미지원 레이어 필드의 null 값, `isGroup: false`, 빈 가이드 목록은 허용합니다. 버전 번호가 8이라는 이유만으로 그룹·마스크 등 macOS 기능을 읽을 수 있는 것은 아닙니다.
 
-Version 6 allows `maskFile` and `maskEnabled` on group records. A folder has no image, so its mask covers the folder's own transform rectangle (the canvas size when the folder was created); Image Size resamples it through that transform, and Canvas Size and Crop preserve its pixels, exactly as for layer masks. Groups are pass-through, so an enabled folder mask multiplies the coverage of every descendant layer, together with that layer's own mask and any enclosing folders' masks; clipping-mask coverage is unaffected. Files declaring versions 1–5 cannot give a group a mask, and older app builds reject v6.
+## 검증과 저장 보호
 
-### Editable text
+캔버스와 이미지 크기는 한 변 최대 30,000px 및 100MP, 전체 소스 이미지는 합계 100MP, 레이어는 10,000개까지 허용합니다. manifest는 4MiB, 인코딩된 이미지 자산은 개당 512MiB로 제한합니다. 문서·레이어 ID, 중복 레이어, 유한한 변환·불투명도 값, 이미지 경로·누락·형식도 검사하며 심볼릭 링크와 junction은 거부합니다. 자세한 메타데이터 검증은 [Document.cs](../Compositor.Core/Document.cs)를 참고하십시오.
 
-Pixel layer records may include optional `text` metadata: content, PostScript font name, font size in pixels, RGB color, alignment, tracking, line spacing and optional `boxSize` paragraph bounds. Text wraps inside these bounds; changing them reflows the text without scaling the font. The PNG remains the display and export fallback. Older readers ignore this metadata. Transforms, duplication, masks and canvas-size changes preserve it; destructive pixel operations rasterize text and omit the metadata on the next save. Missing fonts use the system font when edited, while the saved PNG preserves the original appearance until then.
+저장은 같은 상위 폴더의 임시 패키지에 작성한 후 다시 읽어 검증합니다. 기존 `.comp`를 `.comp.recovery`로 옮기고 새 패키지를 게시하며, 게시 실패 시 기존 폴더를 복구합니다. 두 번의 폴더 이름 변경 전체가 하나의 원자적 연산은 아닙니다. 복구 사본이 남아 있으면 다음 저장을 차단하므로, 원본과 복구 폴더를 확인하고 보존할 사본을 결정해야 합니다. 같은 경로의 동시 저장은 `.write-lock` 파일 핸들로 차단하며, 남아 있는 빈 잠금 파일 자체는 저장 차단을 뜻하지 않습니다.
 
-### Layer effects
-
-An optional `effects` record contains independent `stroke`, `shadow`, `colorOverlay`, `innerShadow` and `outerGlow` records. Stroke carries a size (0–500 layer pixels), a color, an opacity and an `inside` flag choosing which side of the edge it sits on; drop shadow and inner shadow each carry an angle, a distance, a blur, a color and an opacity; color overlay carries a color and an opacity; outer glow carries a size (0–500 layer pixels), a color and an opacity. Each supports optional `enabled` visibility (missing means visible); hidden effects keep all parameters and remain listed under their layer. Effects, including their visibility, are saved and participate in document undo. Canvas previews run on a serial background worker with a shared pixel budget; exports render the full-resolution effects. A record omitting an effect means that layer does not have it, so older readers see the effects they understand and ignore the rest.
+Undo/Redo 히스토리와 화면 확대·이동 상태는 저장하지 않습니다. PNG/JPEG 내보내기는 합성된 별도 이미지이며 프로젝트 저장을 대신하지 않습니다. 실제 macOS 앱에서 생성한 대표 문서의 양방향 열기는 아직 검증하지 않았고, 현재 근거는 원본 코드·Swift 형태 fixture·저장 왕복 테스트입니다.

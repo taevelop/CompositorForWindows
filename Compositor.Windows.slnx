@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Compositor.Core/Compositor.Core.csproj" />
+  <Project Path="Compositor.Imaging/Compositor.Imaging.csproj" />
+  <Project Path="Compositor.App/Compositor.App.csproj" />
+  <Project Path="Compositor.Tests/Compositor.Tests.csproj" />
+  <Project Path="Compositor.Benchmarks/Compositor.Benchmarks.csproj" />
+</Solution>

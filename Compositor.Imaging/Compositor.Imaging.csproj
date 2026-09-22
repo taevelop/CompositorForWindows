@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Compositor.Core/Compositor.Core.csproj" />
+    <PackageReference Include="SkiaSharp" Version="4.152.1" />
+    <None Include="../artifacts/native/Compositor.Native.dll" Link="Compositor.Native.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <InternalsVisibleTo Include="Compositor.Tests" />
+  </ItemGroup>
+  <Target Name="BuildNative" BeforeTargets="PrepareForBuild">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\native\build.ps1&quot;" />
+  </Target>
+</Project>
