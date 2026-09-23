@@ -42,10 +42,18 @@ public sealed class ViewportRenderer : IDisposable
             var a = old.Layers[i]; var b = current.Layers[i];
             if (a.Id != b.Id || a.Transform != b.Transform || a.Opacity != b.Opacity || a.Visible != b.Visible || a.Blend != b.Blend ||
                 a.Pixels.Width != b.Pixels.Width || a.Pixels.Height != b.Pixels.Height) return full;
-            if (!b.Visible || ReferenceEquals(a.Pixels, b.Pixels)) continue;
-            foreach (var key in a.Pixels.Tiles.Keys.Union(b.Pixels.Tiles.Keys))
+            var am = a.Mask is { Enabled: true } aMask ? aMask.Pixels : null;
+            var bm = b.Mask is { Enabled: true } bMask ? bMask.Pixels : null;
+            if (am?.Width != bm?.Width || am?.Height != bm?.Height) return full;
+            if (bm?.Width == 1 && bm.Height == 1 && !ReferenceEquals(am, bm)) return full;
+            if (!b.Visible || (ReferenceEquals(a.Pixels, b.Pixels) && ReferenceEquals(am, bm))) continue;
+            // Skia's rotated tile clips can quantize differently when intersected with a damage clip.
+            // Repaint the whole viewport for rotated pixel edits to keep export and display identical.
+            if (b.Transform.Rotation % 90 != 0) return full;
+            foreach (var key in a.Pixels.Tiles.Keys.Union(b.Pixels.Tiles.Keys).Union(am?.Tiles.Keys ?? Enumerable.Empty<TileKey>()).Union(bm?.Tiles.Keys ?? Enumerable.Empty<TileKey>()))
             {
-                if (ReferenceEquals(a.Pixels.Tiles.GetValueOrDefault(key), b.Pixels.Tiles.GetValueOrDefault(key))) continue;
+                if (ReferenceEquals(a.Pixels.Tiles.GetValueOrDefault(key), b.Pixels.Tiles.GetValueOrDefault(key)) &&
+                    ReferenceEquals(am?.Tiles.GetValueOrDefault(key), bm?.Tiles.GetValueOrDefault(key))) continue;
                 // Include the neighboring sampling gutter and round outward in device pixels.
                 PointD[] corners = [new(key.X * 256 - 2, key.Y * 256 - 2), new(key.X * 256 + 258, key.Y * 256 - 2),
                     new(key.X * 256 - 2, key.Y * 256 + 258), new(key.X * 256 + 258, key.Y * 256 + 258)];
@@ -57,7 +65,10 @@ public sealed class ViewportRenderer : IDisposable
                 }
             }
         }
-        return right <= left || bottom <= top ? SKRect.Empty : SKRect.Intersect(new(left, top, right, bottom), full);
+        if (right <= left || bottom <= top) return SKRect.Empty;
+        // Unchanged rotated overlays also pass through the damage clip during recomposition.
+        if (current.Layers.Any(l => l.Visible && l.Opacity > 0 && l.Transform.Rotation % 90 != 0)) return full;
+        return SKRect.Intersect(new(left, top, right, bottom), full);
     }
     public void Dispose() { surface?.Dispose(); surface = null; previous = null; renderer.Dispose(); }
 }

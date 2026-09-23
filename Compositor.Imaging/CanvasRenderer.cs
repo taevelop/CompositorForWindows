@@ -35,14 +35,18 @@ public sealed class CanvasRenderer : IDisposable
                 var bounds = new SKRect(x, y, Math.Min(x + 256, layer.Pixels.Width), Math.Min(y + 256, layer.Pixels.Height));
                 var cacheKey = (layer.Id, key); used.Add(cacheKey);
                 if (!canvas.LocalClipBounds.IntersectsWith(bounds)) continue;
-                var neighbors = new PixelTile?[9]; int index = 0;
+                var mask = layer.Mask is { Enabled: true } m ? m.Pixels : null;
+                var neighbors = new PixelTile?[mask is null ? 9 : 18]; int index = 0;
                 for (int dy = -1; dy <= 1; dy++)
                 for (int dx = -1; dx <= 1; dx++)
                     neighbors[index++] = layer.Pixels.Tiles.GetValueOrDefault(new(key.X + dx, key.Y + dy));
+                if (mask is not null)
+                    for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++)
+                        neighbors[index++] = mask.Tiles.GetValueOrDefault(mask.Width == 1 && mask.Height == 1 ? new(0, 0) : new(key.X + dx, key.Y + dy));
                 if (!cache.TryGetValue(cacheKey, out var cached) || !cached.Neighbors.SequenceEqual(neighbors))
                 {
                     cached?.Image.Dispose();
-                    cached = new(neighbors, TileImage(layer.Pixels, key)); cache[cacheKey] = cached;
+                    cached = new(neighbors, TileImage(layer.Pixels, key, mask)); cache[cacheKey] = cached;
                 }
                 canvas.Save(); canvas.ClipRect(bounds, SKClipOperation.Intersect, false);
                 canvas.DrawImage(cached.Image, new SKRect(x - 1, y - 1, x + 257, y + 257), sampling, paint);
@@ -54,7 +58,7 @@ public sealed class CanvasRenderer : IDisposable
         foreach (var key in cache.Keys.Where(k => !used.Contains(k)).ToArray()) { cache[key].Image.Dispose(); cache.Remove(key); }
     }
 
-    private static unsafe SKImage TileImage(Raster raster, TileKey key)
+    private static unsafe SKImage TileImage(Raster raster, TileKey key, Raster? mask)
     {
         // One-pixel neighboring gutters prevent interpolation seams between tiles.
         using var bitmap = new SKBitmap(Info(258, 258));
@@ -72,6 +76,40 @@ public sealed class CanvasRenderer : IDisposable
                 if (raster.Tiles.TryGetValue(new(sx / 256, sy / 256), out var source))
                     source.Bytes.Slice(((sy % 256) * 256 + sx % 256) * 4, count * 4).CopyTo(bytes.Slice((y * 258 + x) * 4));
                 x += count;
+            }
+        }
+        if (mask is not null)
+        {
+            if (mask.Width == 1 && mask.Height == 1)
+            {
+                byte coverage = mask.Tiles[new(0, 0)].Bytes[0];
+                if (coverage != 255)
+                    for (int i = 0; i < bytes.Length; i++) bytes[i] = (byte)((bytes[i] * coverage + 127) / 255);
+            }
+            else
+            {
+                for (int y = 0; y < 258; y++)
+                {
+                    int sy = Math.Clamp(key.Y * 256 + y - 1, 0, mask.Height - 1), x = 0;
+                    while (x < 258)
+                    {
+                        int rawX = key.X * 256 + x - 1, sx = Math.Clamp(rawX, 0, mask.Width - 1);
+                        int count = rawX < 0 || rawX >= mask.Width ? 1 : Math.Min(258 - x, Math.Min(256 - sx % 256, mask.Width - sx));
+                        // Resolve immutable tile once per row segment, not once per pixel.
+                        var coverage = mask.Tiles[new(sx / 256, sy / 256)].Bytes.Slice(((sy % 256) * 256 + sx % 256) * 4, count * 4);
+                        var destination = bytes.Slice((y * 258 + x) * 4, count * 4);
+                        for (int p = 0; p < destination.Length; p += 4)
+                        {
+                            int value = coverage[p];
+                            if (value == 255) continue;
+                            destination[p] = (byte)((destination[p] * value + 127) / 255);
+                            destination[p + 1] = (byte)((destination[p + 1] * value + 127) / 255);
+                            destination[p + 2] = (byte)((destination[p + 2] * value + 127) / 255);
+                            destination[p + 3] = (byte)((destination[p + 3] * value + 127) / 255);
+                        }
+                        x += count;
+                    }
+                }
             }
         }
         bitmap.SetImmutable();

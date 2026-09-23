@@ -24,14 +24,16 @@
           <Label Content="Hardness %"/><TextBox x:Name="BrushHardness" Text="70" Width="48"/>
           <Label Content="Opacity %"/><TextBox x:Name="BrushOpacity" Text="100" Width="48"/>
           <Label Content="Color"/><TextBox x:Name="BrushColor" Text="#62C9B5" Width="88" ToolTip="RGB hex color"/>
+          <Label Content="Mask gray %"/><TextBox x:Name="MaskGray" Text="100" Width="48" IsEnabled="False" ToolTip="Mask brush: 100 reveals, 0 hides; Eraser hides"/>
           <Button Content="Fit" Click="Fit"/><TextBlock Text="Wheel: zoom · Middle drag: pan" Foreground="#9DA3AF" Margin="15,0,0,0"/>
         </WrapPanel>
       </Border>
       <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="280"/></Grid.ColumnDefinitions>
         <local:EditorCanvas x:Name="Canvas" Focusable="True"/>
         <Border Grid.Column="1" Background="{StaticResource Panel}" Padding="10" BorderBrush="#424650" BorderThickness="1,0,0,0">
-          <DockPanel>
-            <StackPanel DockPanel.Dock="Top">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel>
+            <StackPanel>
               <TextBlock Text="LAYER PROPERTIES" FontWeight="SemiBold" Foreground="#B9BDC7" Margin="5,6,0,12"/>
               <TextBox x:Name="LayerName" ToolTip="Layer name"/>
               <CheckBox x:Name="LayerVisible" Content="Visible" Foreground="White" Margin="6"/>
@@ -39,6 +41,8 @@
                 <StackPanel><Label Content="Opacity %"/><TextBox x:Name="LayerOpacity" Text="100"/></StackPanel>
                 <StackPanel Grid.Column="1"><Label Content="Blend mode"/><ComboBox x:Name="LayerBlend"/></StackPanel>
               </Grid>
+              <Expander x:Name="TransformPanel" Header="Position, size and rotation" Foreground="White" Margin="5,8,5,0">
+              <StackPanel>
               <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
                 <StackPanel><Label Content="X"/><TextBox x:Name="LayerX"/><Label Content="Width"/><TextBox x:Name="LayerWidth"/></StackPanel>
                 <StackPanel Grid.Column="1"><Label Content="Y"/><TextBox x:Name="LayerY"/><Label Content="Height"/><TextBox x:Name="LayerHeight"/></StackPanel>
@@ -46,12 +50,23 @@
               <Label Content="Rotation (clockwise degrees)"/><TextBox x:Name="LayerRotation"/>
               <WrapPanel><CheckBox x:Name="FlipX" Content="Flip X" Foreground="White" Margin="6"/><CheckBox x:Name="FlipY" Content="Flip Y" Foreground="White" Margin="6"/></WrapPanel>
               <ComboBox x:Name="LayerSampling" ToolTip="Image resampling"/>
+              </StackPanel>
+              </Expander>
               <Button Content="Apply layer properties" Click="ApplyLayer"/>
+              <Expander x:Name="MaskSection" Header="LAYER MASK" Foreground="White" Margin="5,10,0,5"><StackPanel>
+              <TextBlock x:Name="MaskInfo" Text="No mask" Foreground="#B9BDC7" Margin="5"/>
+              <WrapPanel><Button x:Name="RevealMaskButton" Content="+ Reveal" Click="AddRevealMask"/><Button x:Name="HideMaskButton" Content="+ Hide" Click="AddHideMask"/><Button x:Name="RemoveMaskButton" Content="Remove" Click="RemoveMask"/></WrapPanel>
+              <CheckBox x:Name="MaskEnabled" Content="Mask enabled" Foreground="White" Margin="6" Click="ToggleMask"/>
+              <ComboBox x:Name="EditTarget" SelectedIndex="0" SelectionChanged="EditTargetChanged" ToolTip="Choose what the brush and eraser edit"><ComboBoxItem Content="Edit image"/><ComboBoxItem Content="Edit mask"/></ComboBox>
+              <TextBlock Text="Linked to layer · Brush gray: 0 hides, 100 reveals · Eraser hides" TextWrapping="Wrap" Foreground="#9DA3AF" Margin="5"/>
+              </StackPanel></Expander>
               <TextBlock Text="LAYERS" FontWeight="SemiBold" Foreground="#B9BDC7" Margin="5,18,0,8"/>
               <WrapPanel><Button Content="+" ToolTip="New blank layer" Click="AddLayer"/><Button Content="−" ToolTip="Delete selected layer" Click="DeleteLayer"/><Button Content="↑" ToolTip="Move layer up" Click="LayerUp"/><Button Content="↓" ToolTip="Move layer down" Click="LayerDown"/></WrapPanel>
+
             </StackPanel>
-            <ListBox x:Name="Layers" Background="#191B20" Foreground="White" BorderThickness="0" DisplayMemberPath="Name" SelectionChanged="LayerSelected" Margin="3,8,3,3"/>
-          </DockPanel>
+            <ListBox x:Name="Layers" Background="#191B20" Foreground="White" BorderThickness="0" DisplayMemberPath="Name" MinHeight="140" MaxHeight="300" SelectionChanged="LayerSelected" Margin="3,8,3,3"/>
+          </StackPanel>
+          </ScrollViewer>
         </Border>
       </Grid>
     </Grid>

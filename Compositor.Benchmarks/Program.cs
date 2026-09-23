@@ -5,6 +5,12 @@ using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 
+if (args.Length > 0 && args[0] == "--masks")
+{
+    StabilityBenchmark.RunMasks(args.Length > 1 ? args[1] : "mask-benchmark.json");
+    return;
+}
+
 if (args.Length > 0 && args[0] == "--stability")
 {
     StabilityBenchmark.Run(args.Length > 1 ? args[1] : "stability-benchmark.json");

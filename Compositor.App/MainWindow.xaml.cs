@@ -53,13 +53,14 @@ public partial class MainWindow : Window
             FlipX.IsChecked = layer.Transform.FlipX; FlipY.IsChecked = layer.Transform.FlipY;
             LayerSampling.SelectedItem = layer.Transform.Sampling;
         }
+        RefreshMaskControls();
         UndoMenu.IsEnabled = session.CanUndo; RedoMenu.IsEnabled = session.CanRedo;
         UpdateStatus();
         refreshing = false;
     }
     private void UpdateStatus()
     {
-        if (!busy) Status.Text = $"{session.Document.Width:N0} × {session.Document.Height:N0} px   ·   {session.Document.Layers.Length} layers   ·   {Canvas.Zoom:P0}   ·   {Canvas.Tool}";
+        if (!busy) Status.Text = $"{session.Document.Width:N0} × {session.Document.Height:N0} px   ·   {session.Document.Layers.Length} layers   ·   {Canvas.Zoom:P0}   ·   {Canvas.Tool}   ·   {(session.EditMask ? "Mask" : "Image")}";
     }
     private static string F(double n) => n.ToString("0.###", CultureInfo.InvariantCulture);
     private static double Number(TextBox input)
@@ -70,6 +71,13 @@ public partial class MainWindow : Window
     }
     private BrushSettings ReadBrush()
     {
+        if (session.EditMask)
+        {
+            double gray = Number(MaskGray);
+            if (gray is < 0 or > 100) throw new InvalidDataException("Mask gray must be between 0 and 100.");
+            byte value = (byte)Math.Round(gray * 255 / 100);
+            return new(Number(BrushSize), Number(BrushHardness) / 100, Number(BrushOpacity) / 100, value, value, value);
+        }
         var color = (Color)ColorConverter.ConvertFromString(BrushColor.Text);
         if (color.A != 255) throw new InvalidDataException("Use an opaque RGB color; control transparency with brush opacity.");
         return new(Number(BrushSize), Number(BrushHardness) / 100, Number(BrushOpacity) / 100, color.R, color.G, color.B);
@@ -143,7 +151,7 @@ public partial class MainWindow : Window
         var before = session.Document; var imported = new List<Layer>();
         bool success = await Work("Importing images…", () =>
         {
-            long used = before.Layers.Where(l => l.Pixels.Tiles.Count != 0).Sum(l => (long)l.Pixels.Width * l.Pixels.Height);
+            long used = before.Layers.Where(l => (l.Pixels.Tiles.Count != 0 || l.Mask is not null)).Sum(l => (long)l.Pixels.Width * l.Pixels.Height);
             foreach (string path in paths)
             {
                 var pixels = ImageCodec.Load(path, Limits.MaxPixels - used); used += (long)pixels.Width * pixels.Height;
@@ -286,6 +294,8 @@ public partial class MainWindow : Window
         return dialog.ShowDialog() == true ? field.Text : null;
     }
 
+    internal void CloseSmokeOnFailure() { allowClose = true; Close(); }
+
     internal async Task SmokeTest(string screenshot)
     {
         session.Load(Document.Create(800, 600));
@@ -298,6 +308,7 @@ public partial class MainWindow : Window
         Canvas.Tool = EditorTool.Move; Canvas.BeginPointer(new(0, 0)); Canvas.MovePointer(new(25, 15)); Canvas.EndPointer(true);
         if (session.ActiveLayer!.Transform.X != 25) throw new InvalidOperationException("UI move gesture failed.");
         await StabilitySmokeTest(Path.ChangeExtension(screenshot, ".checks.json"));
+        await MaskSmokeTest(Path.ChangeExtension(screenshot, ".masks.json"));
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         UpdateLayout();
         var bitmap = new RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, PixelFormats.Pbgra32);

@@ -24,6 +24,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     private Point panOrigin;
     private MouseButton? gestureButton;
     private BrushStroke? stroke;
+    private MaskStroke? maskStroke;
     private Layer? originalLayer;
     private PointD anchor;
     public EditorCanvas()
@@ -115,7 +116,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     public void CancelInteraction()
     {
         bool editing = originalLayer is not null;
-        originalLayer = null; stroke = null; gestureButton = null;
+        originalLayer = null; stroke = null; maskStroke = null; gestureButton = null;
         if (panStart is not null) { panX = panOrigin.X; panY = panOrigin.Y; panStart = null; }
         if (editing && Session?.InTransaction == true) Session.Cancel();
         if (IsMouseCaptured) ReleaseMouseCapture();
@@ -127,13 +128,22 @@ public sealed class EditorCanvas : SKElement, IDisposable
         if (Tool is EditorTool.Brush or EditorTool.Eraser && !layer.Visible) throw new InvalidOperationException("Show the layer before painting.");
         originalLayer = layer; anchor = point;
         if (Tool is EditorTool.Brush or EditorTool.Eraser)
-            stroke = new(layer, ReadBrush() with { Erase = Tool == EditorTool.Eraser }, Session.Document.Width, Session.Document.Height);
+        {
+            var settings = ReadBrush() with { Erase = Tool == EditorTool.Eraser };
+            if (Session.EditMask) maskStroke = new(layer, settings, Session.Document.Width, Session.Document.Height);
+            else stroke = new(layer, settings, Session.Document.Width, Session.Document.Height);
+        }
         Session.Begin(); MovePointer(point);
     }
     public void MovePointer(PointD point)
     {
         if (!Session.InTransaction || originalLayer is null) return;
-        if (stroke is not null)
+        if (maskStroke is not null)
+        {
+            maskStroke.Append(point);
+            if (!ReferenceEquals(Session.ActiveLayer?.Mask, maskStroke.Mask)) Session.Preview(Session.Document.Replace(originalLayer with { Mask = maskStroke.Mask }));
+        }
+        else if (stroke is not null)
         { stroke.Append(point); if (!ReferenceEquals(Session.ActiveLayer?.Pixels, stroke.Pixels)) Session.Preview(Session.Document.Replace(originalLayer with { Pixels = stroke.Pixels })); }
         else if (Tool == EditorTool.Move)
         {
@@ -145,7 +155,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     public void EndPointer(bool commit)
     {
         bool editing = originalLayer is not null;
-        stroke = null; originalLayer = null; gestureButton = null;
+        stroke = null; maskStroke = null; originalLayer = null; gestureButton = null;
         if (editing) { if (commit) Session.Commit(); else Session.Cancel(); }
         InvalidateVisual();
     }

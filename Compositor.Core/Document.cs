@@ -31,8 +31,9 @@ public sealed record LayerTransform(double X, double Y, double Width, double Hei
     }
 }
 public sealed record Layer(Guid Id, string Name, Raster Pixels, LayerTransform Transform,
-    bool Visible = true, double Opacity = 1, BlendMode Blend = BlendMode.Normal)
+    bool Visible = true, double Opacity = 1, BlendMode Blend = BlendMode.Normal, LayerMask? Mask = null)
 {
+    public IEnumerable<PixelTile> RetainedTiles => Pixels.Tiles.Values.Concat(Mask?.Pixels.Tiles.Values ?? Enumerable.Empty<PixelTile>());
     public static Layer Blank(string name, int width, int height) =>
         new(Guid.NewGuid(), name, new(width, height), new(0, 0, width, height));
 }
@@ -49,7 +50,7 @@ public sealed record Document(Guid Id, int Width, int Height, double Resolution,
         if (Id == Guid.Empty || !double.IsFinite(Resolution) || Resolution is < 1 or > 9600 || Layers.Length > 10_000)
             throw new InvalidDataException("Invalid document metadata.");
         var ids = new HashSet<Guid>();
-        long pixels = 0;
+        long pixels = 0, maskPixels = 0;
         foreach (var layer in Layers)
         {
             layer.Transform.Validate();
@@ -57,8 +58,16 @@ public sealed record Document(Guid Id, int Width, int Height, double Resolution,
                 System.Text.Encoding.UTF8.GetByteCount(layer.Name) > 16384 ||
                 !double.IsFinite(layer.Opacity) || layer.Opacity is < 0 or > 1 || !Enum.IsDefined(layer.Blend))
                 throw new InvalidDataException("Invalid layer metadata.");
-            if (layer.Pixels.Tiles.Count != 0) pixels += (long)layer.Pixels.Width * layer.Pixels.Height;
+            if (layer.Mask is { } mask)
+            {
+                var m = mask.Pixels;
+                if (!(m.Width == 1 && m.Height == 1) && (m.Width != layer.Pixels.Width || m.Height != layer.Pixels.Height))
+                    throw new NotSupportedException("This Windows build supports masks matching the source size or uniform 1x1 masks only.");
+                maskPixels += (long)m.Width * m.Height;
+            }
+            if (layer.Pixels.Tiles.Count != 0 || layer.Mask is not null) pixels += (long)layer.Pixels.Width * layer.Pixels.Height;
         }
+        if (maskPixels > Limits.MaxPixels) throw new InvalidDataException("The project exceeds 100 megapixels of masks.");
         if (pixels > Limits.MaxPixels) throw new InvalidDataException("The project exceeds 100 megapixels of source images.");
     }
     public Document Replace(Layer layer)

@@ -13,7 +13,7 @@ public static class ProjectStore
     private static readonly string[] RootFields = ["format", "version", "colorSpace", "resolution", "documentID", "width", "height", "activeLayerID", "layers", "guides"];
     private static readonly string[] LayerFields = ["id", "name", "isVisible", "transform", "imageFile", "parentID", "isGroup", "opacity", "blendMode",
         "maskFile", "maskEnabled", "maskSourceID", "adjustment", "maskPlacement", "maskLinked", "shape", "effects", "text"];
-    private static readonly string[] UnsupportedFields = ["parentID", "maskFile", "maskEnabled", "maskSourceID", "adjustment", "maskPlacement", "maskLinked", "shape", "effects", "text"];
+    private static readonly string[] UnsupportedFields = ["parentID", "maskSourceID", "adjustment", "maskPlacement", "shape", "effects", "text"];
 
     public static LoadedProject LoadRecovery(string path)
     {
@@ -49,10 +49,15 @@ public static class ProjectStore
                 foreach (string field in UnsupportedFields)
                     if (l.TryGetProperty(field, out var v) && v.ValueKind != JsonValueKind.Null)
                         throw new NotSupportedException($"Layer '{l.GetProperty("name").GetString()}' contains unsupported {field}. Nothing was opened or changed.");
+                string? maskFile = OptionalString(l, "maskFile");
+                bool? enabled = OptionalBool(l, "maskEnabled"), linked = OptionalBool(l, "maskLinked");
+                if (maskFile is null && (enabled is not null || linked is not null)) throw new InvalidDataException("Mask metadata requires a mask file.");
+                if (maskFile is not null && version < 4) throw new InvalidDataException("Masks require project version 4 or later.");
+                if (linked == false) throw new NotSupportedException("Unlinked masks are not supported in this Windows build.");
                 if (l.TryGetProperty("isGroup", out var group) && group.ValueKind != JsonValueKind.Null && group.GetBoolean())
                     throw new NotSupportedException("Layer groups are not supported in this Windows build.");
             }
-            var layers = ImmutableArray.CreateBuilder<Layer>(); long usedPixels = 0;
+            var layers = ImmutableArray.CreateBuilder<Layer>(); long usedPixels = 0, usedMaskPixels = 0;
             foreach (var l in entries.EnumerateArray())
             {
                 var id = l.GetProperty("id").GetGuid();
@@ -86,7 +91,17 @@ public static class ProjectStore
                     // Empty Mac layers can have arbitrarily enlarged transform bounds; allocate lazily.
                     raster = new(Math.Min(30_000, (int)Math.Ceiling(transform.Width)), Math.Min(30_000, (int)Math.Ceiling(transform.Height)));
                 }
-                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend));
+                LayerMask? mask = null;
+                string? maskAsset = OptionalString(l, "maskFile");
+                if (maskAsset is not null)
+                {
+                    if (maskAsset != id.ToString().ToUpperInvariant() + ".mask.png" && maskAsset != id.ToString() + ".mask.png")
+                        throw new InvalidDataException("Invalid or unsafe mask asset path.");
+                    string file = Path.Combine(root, "images", maskAsset); CheckFile(file, ImageCodec.MaxEncodedBytes);
+                    mask = MaskCodec.Load(file, Limits.MaxPixels - usedMaskPixels) with { Enabled = OptionalBool(l, "maskEnabled") ?? true };
+                    usedMaskPixels += (long)mask.Pixels.Width * mask.Pixels.Height;
+                }
+                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask));
             }
             var document = new Document(m.GetProperty("documentID").GetGuid(), width, height, OptionalDouble(m, "resolution", 72), layers.ToImmutable());
             document.Validate();
@@ -122,11 +137,15 @@ public static class ProjectStore
             foreach (var l in document.Layers)
             {
                 string id = l.Id.ToString().ToUpperInvariant(); string? file = null;
-                if (l.Pixels.Tiles.Count != 0) { file = id + ".png"; ImageCodec.SaveRaster(l.Pixels, Path.Combine(staging, "images", file)); }
+                if (l.Pixels.Tiles.Count != 0 || l.Mask is not null) { file = id + ".png"; ImageCodec.SaveRaster(l.Pixels, Path.Combine(staging, "images", file)); }
+                string? maskFile = null;
+                if (l.Mask is { } mask) { maskFile = id + ".mask.png"; MaskCodec.Save(mask, Path.Combine(staging, "images", maskFile)); }
                 var t = l.Transform;
                 records.Add(new JsonObject
                 {
                     ["id"] = id, ["name"] = l.Name, ["isVisible"] = l.Visible, ["imageFile"] = file,
+                    ["maskFile"] = maskFile, ["maskEnabled"] = l.Mask is null ? null : JsonValue.Create(l.Mask.Enabled),
+                    ["maskLinked"] = l.Mask is null ? null : JsonValue.Create(true),
                     ["opacity"] = l.Opacity, ["blendMode"] = l.Blend.ToString(),
                     ["transform"] = new JsonObject
                     {
@@ -197,6 +216,7 @@ public static class ProjectStore
         if (e.GetArrayLength() != 2) throw new InvalidDataException("Invalid point or size.");
         return [e[0].GetDouble(), e[1].GetDouble()];
     }
+    private static bool? OptionalBool(JsonElement e, string key) => e.TryGetProperty(key, out var v) && v.ValueKind != JsonValueKind.Null ? v.GetBoolean() : null;
     private static string? OptionalString(JsonElement e, string key) => e.TryGetProperty(key, out var v) && v.ValueKind != JsonValueKind.Null ? v.GetString() : null;
     private static double OptionalDouble(JsonElement e, string key, double fallback) => e.TryGetProperty(key, out var v) && v.ValueKind != JsonValueKind.Null ? v.GetDouble() : fallback;
 }

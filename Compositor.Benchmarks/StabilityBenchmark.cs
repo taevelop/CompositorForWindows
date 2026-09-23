@@ -29,8 +29,22 @@ internal static class StabilityBenchmark
         Console.WriteLine(File.ReadAllText(path));
     }
 
+    public static void RunMasks(string path)
+    {
+        var runs = new List<object>();
+        foreach (int layers in new[] { 1, 3, 6 })
+        {
+            GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+            runs.Add(MeasureLayers(layers, true));
+        }
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        File.WriteAllText(path, JsonSerializer.Serialize(new { timeUtc = DateTimeOffset.UtcNow,
+            description = "4K sources, linked mask on bottom layer, 800px soft black mask brush; 120 updates x 2, 1000px offscreen Skia viewport. Not WPF presentation latency.", runs }, new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine(File.ReadAllText(path));
+    }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static object MeasureLayers(int count)
+    private static object MeasureLayers(int count, bool maskEditing = false)
     {
         var document = Document.Create(4000, 4000);
         var layers = document.Layers.Clear();
@@ -48,6 +62,7 @@ internal static class StabilityBenchmark
                 Blend = i % 2 == 0 ? BlendMode.Normal : BlendMode.Multiply
             });
         }
+        if (maskEditing) layers = layers.SetItem(0, layers[0] with { Mask = LayerMask.Solid(1, 1) });
         var session = new EditorSession(document with { Layers = layers });
         using var viewport = new ViewportRenderer();
         using var output = SKSurface.Create(CanvasRenderer.Info(1000, 1000));
@@ -63,13 +78,15 @@ internal static class StabilityBenchmark
         {
             // Edit the bottom layer so every overlying blend participates in each damaged region.
             var layer = session.Document.Layers[0];
-            var stroke = new BrushStroke(layer, new(800, 0, 1, 98, 201, 181), 4000, 4000);
+            var stroke = maskEditing ? null : new BrushStroke(layer, new(800, 0, 1, 98, 201, 181), 4000, 4000);
+            var maskStroke = maskEditing ? new MaskStroke(layer, new(800, 0, 1, 0, 0, 0), 4000, 4000) : null;
             var updates = new List<double>(); var renders = new List<double>();
             long allocated = GC.GetTotalAllocatedBytes(true); session.Begin();
             for (int i = 0; i < 120; i++)
             {
-                clock.Restart(); stroke.Append(new(500 + i * 24, 1100 + pass * 1200 + Math.Sin(i * .05) * 250));
-                session.Preview(session.Document.Replace(layer with { Pixels = stroke.Pixels }));
+                clock.Restart(); var point = new PointD(500 + i * 24, 1100 + pass * 1200 + Math.Sin(i * .05) * 250);
+                if (maskStroke is not null) { maskStroke.Append(point); session.Preview(session.Document.Replace(layer with { Mask = maskStroke.Mask })); }
+                else { stroke!.Append(point); session.Preview(session.Document.Replace(layer with { Pixels = stroke.Pixels })); }
                 double model = clock.Elapsed.TotalMilliseconds; clock.Restart(); Display();
                 renders.Add(clock.Elapsed.TotalMilliseconds); updates.Add(model + renders[^1]);
             }
@@ -86,7 +103,7 @@ internal static class StabilityBenchmark
                 meetsInitialBudget = updates[113] <= 33.3 && commitMs <= 100
             });
         }
-        return new { layers = count, sourceMegapixels = 16 * count, coldFrameMs, passes };
+        return new { layers = count, maskEditing, sourceMegapixels = 16 * count, coldFrameMs, passes };
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

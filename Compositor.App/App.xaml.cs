@@ -15,7 +15,7 @@ public partial class App : Application
             window.Loaded += async (_, _) =>
             {
                 try { await window.SmokeTest(e.Args[1]); Shutdown(0); }
-                catch (Exception error) { System.IO.File.WriteAllText(e.Args[1] + ".error.txt", error.ToString()); Shutdown(1); }
+                catch (Exception error) { System.IO.File.WriteAllText(e.Args[1] + ".error.txt", error.ToString()); window.CloseSmokeOnFailure(); Shutdown(1); }
             };
         }
         window.Show();

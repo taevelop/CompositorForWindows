@@ -11,9 +11,10 @@ Project.comp/
   manifest.json
   images/
     <레이어 UUID>.png
+    <레이어 UUID>.mask.png  # 선택: 8비트 회색조, 알파 없음
 ```
 
-manifest의 `format`은 `com.compositor.project`, `colorSpace`는 `sRGB`입니다. `documentID`, 정수 픽셀 크기 `width`·`height`, 아래에서 위 순서의 `layers` 배열을 저장합니다. 선택 레이어는 `activeLayerID`로 저장하며, 값이 있으면 실제 레이어를 가리켜야 합니다. 선택 정보가 없거나 null인 문서도 읽습니다. `resolution`은 pixels/inch 단위의 1–9600 값이고, 없거나 null이면 72입니다.
+manifest의 `format`은 `com.compositor.project`, `colorSpace`는 `sRGB`입니다. `documentID`, 정수 픽셀 크기 `width`·`height`, 아래에서 위 순서를 나타내는 `layers` 배열을 저장합니다. 선택 레이어는 `activeLayerID`로 저장하며, 값이 있으면 실제 레이어를 가리켜야 합니다. 선택 정보가 없거나 null인 문서도 읽습니다. `resolution`은 pixels/inch 단위의 1–9600 값이고, 없거나 null이면 72입니다.
 
 각 기본 픽셀 레이어는 다음 필드를 사용합니다.
 
@@ -21,6 +22,8 @@ manifest의 `format`은 `com.compositor.project`, `colorSpace`는 `sRGB`입니�
 |---|---|
 | `id`, `name`, `isVisible` | 고유 UUID, 비어 있지 않은 이름, 표시 여부 |
 | `imageFile` | `images/` 안의 `<레이어 UUID>.png`; 없거나 null이면 빈 레이어 |
+| `maskFile` | 버전 4 이상, `images/<레이어 UUID>.mask.png`; 없거나 null이면 마스크 없음 |
+| `maskEnabled`, `maskLinked` | 마스크 파일이 있을 때만 사용. enabled 기본 true, linked는 true 또는 생략/null만 지원 |
 | `opacity` | 0–1; 없거나 null이면 1 |
 | `blendMode` | `Normal`, `Multiply`, `Screen`, `Overlay`, `Darken`, `Lighten`, `Difference`; 없거나 null이면 `Normal` |
 | `transform.origin`, `transform.size` | Swift Codable의 CGPoint/CGSize와 같은 2원소 숫자 배열 |
@@ -34,15 +37,23 @@ manifest의 `format`은 `com.compositor.project`, `colorSpace`는 `sRGB`입니�
 
 Windows는 보존할 수 없는 기능을 버리고 열지 않습니다. 다음 항목이 있으면 프로젝트 전체 열기를 거부합니다.
 
-- 그룹(`isGroup: true`), 부모 관계(`parentID`), 래스터·클리핑 마스크 관련 필드.
-- 조정, 도형, 효과, 텍스트 메타데이터와 비어 있지 않은 가이드 목록.
+- 그룹, 참조 마스크(`maskSourceID`), 독립 배치(`maskPlacement`), 연결 해제(`maskLinked: false`).
+- 비파괴 조정 레이어(`adjustment`), 도형, 효과, 텍스트 메타데이터와 비어 있지 않은 가이드 목록.
 - 미지원 합성·샘플링 모드, 알 수 없는 manifest·레이어·변환 필드, 중복 JSON 필드.
 
-미지원 레이어 필드는 null이 아닌 값이면 거부합니다. 예를 들어 비어 있는 `effects` 객체나 `maskEnabled: false`도 열리지 않습니다. 위 미지원 레이어 필드의 null 값, `isGroup: false`, 빈 가이드 목록은 허용합니다. 버전 번호가 8이라는 이유만으로 그룹·마스크 등 macOS 기능을 읽을 수 있는 것은 아닙니다.
+미지원 레이어 필드는 null이 아닌 값이면 거부합니다. 예를 들어 비어 있는 `effects` 객체도 열리지 않습니다. `maskEnabled: false`는 유효한 `maskFile`이 있을 때 지원하며, 비활성 마스크 데이터도 보존합니다. 위 미지원 레이어 필드의 null 값, `isGroup: false`, 빈 가이드 목록은 허용합니다. 버전 번호가 8이라는 이유만으로 그룹 마스크·독립 배치 마스크 등 macOS 기능 전체를 읽을 수 있는 것은 아닙니다.
+
+## 연결된 레이어 마스크
+
+마스크는 8비트 회색조 PNG(color type 0, alpha 없음)이며 흰색 255는 표시, 검정 0은 숨김입니다. 커버리지에 색 공간 변환을 적용하지 않습니다. 원본 이미지와 같은 픽셀 크기 또는 1×1 균일 마스크만 읽습니다. 다른 해상도, 회전 EXIF, 알파가 있는 마스크는 거부합니다. `maskPlacement`는 null/생략, `maskLinked`는 true/null/생략인 마스크만 지원하므로 레이어 이동·크기·회전·뒤집기를 그대로 따라갑니다.
+
+1×1 마스크는 처음 픽셀이 변하는 스트로크에서 원본 크기의 공유 불변 타일로 확장합니다. 합성은 원본 RGBA premultiplied 채널에 커버리지를 곱한 뒤 레이어 샘플링·불투명도·합성 모드를 적용합니다. Mac의 별도 마스크 샘플링 및 고품질 필터와 변환된 가장자리가 완전히 같음을 보장하지 않습니다.
+
+마스크가 있는 투명한 빈 레이어도 원본 크기의 투명 PNG를 저장해, 변환된 크기와 픽셀 격자가 달라도 재열기에서 마스크 크기를 유지합니다. 마스크를 삭제한 뒤 저장하면 이전 `.mask.png`가 새 패키지에서 제거됩니다.
 
 ## 검증과 저장 보호
 
-캔버스와 이미지 크기는 한 변 최대 30,000px 및 100MP, 전체 소스 이미지는 합계 100MP, 레이어는 10,000개까지 허용합니다. manifest는 4MiB, 인코딩된 이미지 자산은 개당 512MiB로 제한합니다. 문서·레이어 ID, 중복 레이어, 유한한 변환·불투명도 값, 이미지 경로·누락·형식도 검사하며 심볼릭 링크와 junction은 거부합니다. 자세한 메타데이터 검증은 [Document.cs](../Compositor.Core/Document.cs)를 참고하십시오.
+캔버스와 이미지 크기는 한 변 최대 30,000px 및 100MP, 전체 소스 이미지는 합계 100MP, 마스크도 별도 합계 100MP, 레이어는 10,000개까지 허용합니다. manifest는 4MiB, 인코딩된 이미지 자산은 개당 512MiB로 제한합니다. 문서·레이어 ID, 중복 레이어, 유한한 변환·불투명도 값, 이미지 경로·누락·형식도 검사하며 심볼릭 링크와 junction은 거부합니다. 자세한 메타데이터 검증은 [Document.cs](../Compositor.Core/Document.cs)를 참고하십시오.
 
 저장은 같은 상위 폴더의 임시 패키지에 작성한 후 다시 읽어 검증합니다. 기존 `.comp`를 `.comp.recovery`로 옮기고 새 패키지를 게시하며, 게시 실패 시 기존 폴더를 복구합니다. 두 번의 폴더 이름 변경 전체가 하나의 원자적 연산은 아닙니다. 복구 사본이 남아 있으면 다음 저장을 차단하므로, 원본과 복구 폴더를 확인하고 보존할 사본을 결정해야 합니다. 같은 경로의 동시 저장은 `.write-lock` 파일 핸들로 차단하며, 남아 있는 빈 잠금 파일 자체는 저장 차단을 뜻하지 않습니다.
 

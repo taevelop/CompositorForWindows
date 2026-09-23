@@ -3,13 +3,15 @@ namespace Compositor.Core;
 /// <summary>History shares immutable tiles; saved revisions do not retain an extra document.</summary>
 public sealed class EditorSession
 {
-    private sealed record State(Document Document, long Revision, Guid? ActiveLayer);
+    private sealed record State(Document Document, long Revision, Guid? ActiveLayer, bool EditMask);
     private readonly List<State> undo = [];
     private readonly List<State> redo = [];
     private State? transaction;
     private long revision, nextRevision, savedRevision;
     public Document Document { get; private set; }
-    public Guid? ActiveLayerId { get; set; }
+    private Guid? activeLayerId;
+    public Guid? ActiveLayerId { get => activeLayerId; set { if (activeLayerId != value) EditMask = false; activeLayerId = value; } }
+    public bool EditMask { get; set; }
     public Layer? ActiveLayer => Document.Layers.FirstOrDefault(l => l.Id == ActiveLayerId);
     public bool IsModified => revision != savedRevision || (transaction is not null && !Equivalent(transaction.Document, Document));
     public bool CanUndo => undo.Count > 0;
@@ -21,8 +23,8 @@ public sealed class EditorSession
     {
         get
         {
-            var current = Document.Layers.SelectMany(l => l.Pixels.Tiles.Values).ToHashSet();
-            return undo.Concat(redo).SelectMany(s => s.Document.Layers).SelectMany(l => l.Pixels.Tiles.Values)
+            var current = Document.Layers.SelectMany(l => l.RetainedTiles).ToHashSet();
+            return undo.Concat(redo).SelectMany(s => s.Document.Layers).SelectMany(l => l.RetainedTiles)
                 .Distinct().Count(t => !current.Contains(t)) * (long)PixelTile.ByteCount;
         }
     }
@@ -34,7 +36,7 @@ public sealed class EditorSession
         document.Validate();
         if (active is not null && !document.Layers.Any(l => l.Id == active)) throw new InvalidDataException("Invalid active layer.");
         Document = document; revision = ++nextRevision; savedRevision = recovered ? -1 : revision;
-        transaction = null; undo.Clear(); redo.Clear();
+        transaction = null; undo.Clear(); redo.Clear(); EditMask = false;
         ActiveLayerId = active ?? document.Layers.LastOrDefault()?.Id; Changed?.Invoke();
     }
     public void MarkSaved()
@@ -42,10 +44,10 @@ public sealed class EditorSession
         if (InTransaction) throw new InvalidOperationException("Finish the active edit before saving.");
         savedRevision = revision; Changed?.Invoke();
     }
-    private State Capture() => new(Document, revision, ActiveLayerId);
+    private State Capture() => new(Document, revision, ActiveLayerId, EditMask);
     private void Restore(State state)
     {
-        Document = state.Document; revision = state.Revision; ActiveLayerId = state.ActiveLayer; ReconcileActive();
+        Document = state.Document; revision = state.Revision; ActiveLayerId = state.ActiveLayer; EditMask = state.EditMask; ReconcileActive();
     }
     public void Begin()
     {
@@ -98,7 +100,7 @@ public sealed class EditorSession
         undo.Add(Capture()); var state = redo[^1]; redo.RemoveAt(redo.Count - 1);
         Restore(state); TrimHistory(); Changed?.Invoke();
     }
-    private void ReconcileActive() { if (ActiveLayer is null) ActiveLayerId = Document.Layers.LastOrDefault()?.Id; }
+    private void ReconcileActive() { if (ActiveLayer is null) ActiveLayerId = Document.Layers.LastOrDefault()?.Id; if (ActiveLayer?.Mask is null) EditMask = false; }
     private void TrimHistory()
     {
         while (undo.Count + redo.Count > 100 || HistoryRetainedBytes > 256L * 1024 * 1024)

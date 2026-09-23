@@ -154,12 +154,12 @@ public sealed class EditorTests : IDisposable
         Assert.Single(Directory.GetFiles(Path.Combine(path, "images"))); Assert.Single(ProjectStore.Load(path).Document.Layers);
     }
     [Theory]
-    [InlineData("text")][InlineData("effects")][InlineData("maskFile")][InlineData("shape")][InlineData("adjustment")][InlineData("futureFeature")]
+    [InlineData("text")][InlineData("effects")][InlineData("maskPlacement")][InlineData("shape")][InlineData("adjustment")][InlineData("futureFeature")]
     public void UnsupportedMetadataIsRejectedWithoutChangingCurrentDocument(string field)
     {
         var doc = Sample(); string path = Path.Combine(temporary, "Unsupported.comp"); ProjectStore.Save(doc, null, path);
         string manifest = Path.Combine(path, "manifest.json"); var json = JsonNode.Parse(File.ReadAllText(manifest))!;
-        json["layers"]![0]![field] = field == "maskFile" ? JsonValue.Create("mask.png") : new JsonObject();
+        json["layers"]![0]![field] = new JsonObject();
         File.WriteAllText(manifest, json.ToJsonString()); byte[] before = File.ReadAllBytes(manifest);
         Assert.Throws<NotSupportedException>(() => ProjectStore.Load(path));
         Assert.Throws<NotSupportedException>(() => ProjectStore.Save(doc, null, path)); Assert.Equal(before, File.ReadAllBytes(manifest));
