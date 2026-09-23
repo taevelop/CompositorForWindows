@@ -13,7 +13,7 @@ public static class ProjectStore
     private static readonly string[] RootFields = ["format", "version", "colorSpace", "resolution", "documentID", "width", "height", "activeLayerID", "layers", "guides"];
     private static readonly string[] LayerFields = ["id", "name", "isVisible", "transform", "imageFile", "parentID", "isGroup", "opacity", "blendMode",
         "maskFile", "maskEnabled", "maskSourceID", "adjustment", "maskPlacement", "maskLinked", "shape", "effects", "text"];
-    private static readonly string[] UnsupportedFields = ["parentID", "maskSourceID", "adjustment", "maskPlacement", "shape", "effects", "text"];
+    private static readonly string[] UnsupportedFields = ["maskSourceID", "adjustment", "maskPlacement", "shape", "effects", "text"];
 
     public static LoadedProject LoadRecovery(string path)
     {
@@ -54,13 +54,22 @@ public static class ProjectStore
                 if (maskFile is null && (enabled is not null || linked is not null)) throw new InvalidDataException("Mask metadata requires a mask file.");
                 if (maskFile is not null && version < 4) throw new InvalidDataException("Masks require project version 4 or later.");
                 if (linked == false) throw new NotSupportedException("Unlinked masks are not supported in this Windows build.");
-                if (l.TryGetProperty("isGroup", out var group) && group.ValueKind != JsonValueKind.Null && group.GetBoolean())
-                    throw new NotSupportedException("Layer groups are not supported in this Windows build.");
+                bool isGroup = OptionalBool(l, "isGroup") ?? false;
+                Guid? parent = OptionalGuid(l, "parentID");
+                if (version < 2 && (isGroup || parent is not null)) throw new InvalidDataException("Groups require version 2 or later.");
+                if (isGroup)
+                {
+                    if (maskFile is not null) throw new NotSupportedException("Group masks are not supported in this Windows build.");
+                    if (OptionalString(l, "imageFile") is not null) throw new InvalidDataException("Groups cannot contain image assets.");
+                    if ((OptionalString(l, "blendMode") ?? "Normal") != "Normal") throw new NotSupportedException("Only pass-through groups are supported.");
+                    if (version < 8 && OptionalDouble(l, "opacity", 1) != 1) throw new InvalidDataException("Group opacity requires version 8.");
+                }
             }
             var layers = ImmutableArray.CreateBuilder<Layer>(); long usedPixels = 0, usedMaskPixels = 0;
             foreach (var l in entries.EnumerateArray())
             {
                 var id = l.GetProperty("id").GetGuid();
+                bool isGroup = OptionalBool(l, "isGroup") ?? false; Guid? parent = OptionalGuid(l, "parentID");
                 string name = l.GetProperty("name").GetString() ?? throw new InvalidDataException("Missing layer name.");
                 var t = l.GetProperty("transform");
                 CheckFields(t, ["origin", "size", "rotation", "flipX", "flipY", "sampling"]);
@@ -78,7 +87,8 @@ public static class ProjectStore
                 if (version < 3 && (opacity != 1 || blend != BlendMode.Normal)) throw new InvalidDataException("Layer appearance conflicts with format version.");
                 Raster raster;
                 string? asset = OptionalString(l, "imageFile");
-                if (asset is not null)
+                if (isGroup) raster = new(1, 1);
+                else if (asset is not null)
                 {
                     if (asset != id.ToString().ToUpperInvariant() + ".png" && asset != id.ToString() + ".png")
                         throw new InvalidDataException("Invalid or unsafe image asset path.");
@@ -101,7 +111,7 @@ public static class ProjectStore
                     mask = MaskCodec.Load(file, Limits.MaxPixels - usedMaskPixels) with { Enabled = OptionalBool(l, "maskEnabled") ?? true };
                     usedMaskPixels += (long)mask.Pixels.Width * mask.Pixels.Height;
                 }
-                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask));
+                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask, parent, isGroup));
             }
             var document = new Document(m.GetProperty("documentID").GetGuid(), width, height, OptionalDouble(m, "resolution", 72), layers.ToImmutable());
             document.Validate();
@@ -144,6 +154,7 @@ public static class ProjectStore
                 records.Add(new JsonObject
                 {
                     ["id"] = id, ["name"] = l.Name, ["isVisible"] = l.Visible, ["imageFile"] = file,
+                    ["parentID"] = l.ParentId?.ToString().ToUpperInvariant(), ["isGroup"] = l.IsGroup,
                     ["maskFile"] = maskFile, ["maskEnabled"] = l.Mask is null ? null : JsonValue.Create(l.Mask.Enabled),
                     ["maskLinked"] = l.Mask is null ? null : JsonValue.Create(true),
                     ["opacity"] = l.Opacity, ["blendMode"] = l.Blend.ToString(),
@@ -216,6 +227,7 @@ public static class ProjectStore
         if (e.GetArrayLength() != 2) throw new InvalidDataException("Invalid point or size.");
         return [e[0].GetDouble(), e[1].GetDouble()];
     }
+    private static Guid? OptionalGuid(JsonElement e, string key) => e.TryGetProperty(key, out var v) && v.ValueKind != JsonValueKind.Null ? v.GetGuid() : null;
     private static bool? OptionalBool(JsonElement e, string key) => e.TryGetProperty(key, out var v) && v.ValueKind != JsonValueKind.Null ? v.GetBoolean() : null;
     private static string? OptionalString(JsonElement e, string key) => e.TryGetProperty(key, out var v) && v.ValueKind != JsonValueKind.Null ? v.GetString() : null;
     private static double OptionalDouble(JsonElement e, string key, double fallback) => e.TryGetProperty(key, out var v) && v.ValueKind != JsonValueKind.Null ? v.GetDouble() : fallback;

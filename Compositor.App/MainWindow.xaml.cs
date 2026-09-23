@@ -41,8 +41,7 @@ public partial class MainWindow : Window
         Title = $"{(projectPath is null ? "Untitled" : Path.GetFileName(projectPath))}{(session.IsModified ? " *" : "")} — Compositor for Windows";
         if (session.InTransaction) return;
         refreshing = true;
-        Layers.ItemsSource = session.Document.Layers.Reverse().ToArray();
-        Layers.SelectedItem = session.ActiveLayer;
+        RefreshHierarchy();
         if (session.ActiveLayer is { } layer)
         {
             LayerName.Text = layer.Name; LayerVisible.IsChecked = layer.Visible;
@@ -148,15 +147,16 @@ public partial class MainWindow : Window
     }
     private async Task Import(string[] paths)
     {
+        Guid? parent = InsertionParent;
         var before = session.Document; var imported = new List<Layer>();
         bool success = await Work("Importing images…", () =>
         {
-            long used = before.Layers.Where(l => (l.Pixels.Tiles.Count != 0 || l.Mask is not null)).Sum(l => (long)l.Pixels.Width * l.Pixels.Height);
+            long used = before.Layers.Where(l => !l.IsGroup && (l.Pixels.Tiles.Count != 0 || l.Mask is not null)).Sum(l => (long)l.Pixels.Width * l.Pixels.Height);
             foreach (string path in paths)
             {
                 var pixels = ImageCodec.Load(path, Limits.MaxPixels - used); used += (long)pixels.Width * pixels.Height;
                 imported.Add(new(Guid.NewGuid(), Path.GetFileNameWithoutExtension(path), pixels,
-                    new((before.Width - pixels.Width) / 2.0, (before.Height - pixels.Height) / 2.0, pixels.Width, pixels.Height)));
+                    new((before.Width - pixels.Width) / 2.0, (before.Height - pixels.Height) / 2.0, pixels.Width, pixels.Height), ParentId: parent));
             }
             (before with { Layers = before.Layers.AddRange(imported) }).Validate();
         });
@@ -201,32 +201,34 @@ public partial class MainWindow : Window
     private async void ExportJpeg(object sender, RoutedEventArgs e) => await Export(true);
     private void AddLayer(object sender, RoutedEventArgs e) => Safe(() =>
     {
-        var l = Layer.Blank($"Layer {session.Document.Layers.Length + 1}", session.Document.Width, session.Document.Height);
+        var l = Layer.Blank($"Layer {session.Document.Layers.Length + 1}", session.Document.Width, session.Document.Height) with { ParentId = InsertionParent };
         session.Apply(d => d with { Layers = d.Layers.Add(l) }); session.ActiveLayerId = l.Id; Refresh();
     });
     private void DeleteLayer(object? sender, RoutedEventArgs e) => Safe(() =>
     {
         if (session.ActiveLayer is not { } l) return;
-        var remaining = session.Document.Layers.Remove(l);
-        session.Apply(d => d with { Layers = remaining });
+        session.Apply(d => LayerHierarchy.Delete(d, l.Id));
     });
     private void Reorder(int offset) => Safe(() =>
     {
         if (session.ActiveLayer is not { } l) return;
-        int index = session.Document.Layers.IndexOf(l), target = index + offset;
-        if (target < 0 || target >= session.Document.Layers.Length) return;
-        session.Apply(d => d with { Layers = d.Layers.RemoveAt(index).Insert(target, l) });
+        session.Apply(d => LayerHierarchy.Reorder(d, l.Id, offset));
     });
     private void LayerUp(object sender, RoutedEventArgs e) => Reorder(1);
     private void LayerDown(object sender, RoutedEventArgs e) => Reorder(-1);
     private void LayerSelected(object sender, SelectionChangedEventArgs e)
     {
-        if (refreshing || busy || session.InTransaction || Layers.SelectedItem is not Layer layer) return;
-        session.ActiveLayerId = layer.Id; Refresh();
+        if (refreshing || busy || session.InTransaction || Layers.SelectedItem is not LayerRow row) return;
+        session.ActiveLayerId = row.Id; Refresh();
     }
     private void ApplyLayer(object sender, RoutedEventArgs e) => Safe(() =>
     {
         if (session.ActiveLayer is not { } l) return;
+        if (l.IsGroup)
+        {
+            session.Apply(d => d.Replace(l with { Name = LayerName.Text, Visible = LayerVisible.IsChecked == true, Opacity = Number(LayerOpacity) / 100 }));
+            Canvas.Focus(); return;
+        }
         var t = new LayerTransform(Number(LayerX), Number(LayerY), Number(LayerWidth), Number(LayerHeight), Number(LayerRotation),
             FlipX.IsChecked == true, FlipY.IsChecked == true, (Sampling)LayerSampling.SelectedItem);
         var updated = l with { Name = LayerName.Text, Visible = LayerVisible.IsChecked == true,
@@ -309,6 +311,7 @@ public partial class MainWindow : Window
         if (session.ActiveLayer!.Transform.X != 25) throw new InvalidOperationException("UI move gesture failed.");
         await StabilitySmokeTest(Path.ChangeExtension(screenshot, ".checks.json"));
         await MaskSmokeTest(Path.ChangeExtension(screenshot, ".masks.json"));
+        await GroupSmokeTest(Path.ChangeExtension(screenshot, ".groups.json"));
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         UpdateLayout();
         var bitmap = new RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, PixelFormats.Pbgra32);

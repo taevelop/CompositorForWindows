@@ -40,7 +40,7 @@ public sealed class ViewportRenderer : IDisposable
         for (int i = 0; i < current.Layers.Length; i++)
         {
             var a = old.Layers[i]; var b = current.Layers[i];
-            if (a.Id != b.Id || a.Transform != b.Transform || a.Opacity != b.Opacity || a.Visible != b.Visible || a.Blend != b.Blend ||
+            if (a.Id != b.Id || a.ParentId != b.ParentId || a.IsGroup != b.IsGroup || a.Transform != b.Transform || a.Opacity != b.Opacity || a.Visible != b.Visible || a.Blend != b.Blend ||
                 a.Pixels.Width != b.Pixels.Width || a.Pixels.Height != b.Pixels.Height) return full;
             var am = a.Mask is { Enabled: true } aMask ? aMask.Pixels : null;
             var bm = b.Mask is { Enabled: true } bMask ? bMask.Pixels : null;
@@ -67,7 +67,7 @@ public sealed class ViewportRenderer : IDisposable
         }
         if (right <= left || bottom <= top) return SKRect.Empty;
         // Unchanged rotated overlays also pass through the damage clip during recomposition.
-        if (current.Layers.Any(l => l.Visible && l.Opacity > 0 && l.Transform.Rotation % 90 != 0)) return full;
+        if (current.Layers.Any(l => !l.IsGroup && l.Visible && l.Opacity > 0 && l.Transform.Rotation % 90 != 0)) return full;
         return SKRect.Intersect(new(left, top, right, bottom), full);
     }
     public void Dispose() { surface?.Dispose(); surface = null; previous = null; renderer.Dispose(); }

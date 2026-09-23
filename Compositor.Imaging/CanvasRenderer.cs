@@ -16,9 +16,10 @@ public sealed class CanvasRenderer : IDisposable
     {
         var used = new HashSet<(Guid, TileKey)>();
         canvas.Save(); canvas.ClipRect(new(0, 0, document.Width, document.Height));
-        foreach (var layer in document.Layers)
+        foreach (var entry in LayerHierarchy.Entries(document))
         {
-            if (!layer.Visible || layer.Opacity <= 0) continue;
+            var layer = entry.Layer;
+            if (layer.IsGroup || !entry.Visible || entry.Opacity <= 0) continue;
             var t = layer.Transform;
             canvas.Save();
             canvas.Translate((float)(t.X + t.Width / 2), (float)(t.Y + t.Height / 2));
@@ -26,7 +27,7 @@ public sealed class CanvasRenderer : IDisposable
             canvas.Scale((float)(t.Width / layer.Pixels.Width * (t.FlipX ? -1 : 1)),
                 (float)(t.Height / layer.Pixels.Height * (t.FlipY ? -1 : 1)));
             canvas.Translate(-layer.Pixels.Width / 2f, -layer.Pixels.Height / 2f);
-            using var paint = new SKPaint { Color = SKColors.White.WithAlpha((byte)Math.Round(layer.Opacity * 255)),
+            using var paint = new SKPaint { Color = SKColors.White.WithAlpha((byte)Math.Round(entry.Opacity * 255)),
                 BlendMode = Blend(layer.Blend), IsAntialias = false };
             var sampling = new SKSamplingOptions(t.Sampling == Sampling.Nearest ? SKFilterMode.Nearest : SKFilterMode.Linear);
             foreach (var (key, tile) in layer.Pixels.Tiles)

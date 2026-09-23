@@ -14,13 +14,14 @@ Project.comp/
     <레이어 UUID>.mask.png  # 선택: 8비트 회색조, 알파 없음
 ```
 
-manifest의 `format`은 `com.compositor.project`, `colorSpace`는 `sRGB`입니다. `documentID`, 정수 픽셀 크기 `width`·`height`, 아래에서 위 순서를 나타내는 `layers` 배열을 저장합니다. 선택 레이어는 `activeLayerID`로 저장하며, 값이 있으면 실제 레이어를 가리켜야 합니다. 선택 정보가 없거나 null인 문서도 읽습니다. `resolution`은 pixels/inch 단위의 1–9600 값이고, 없거나 null이면 72입니다.
+manifest의 `format`은 `com.compositor.project`, `colorSpace`는 `sRGB`입니다. `documentID`, 정수 픽셀 크기 `width`·`height`, 같은 부모 안에서 아래에서 위 순서를 나타내는 `layers` 배열을 저장합니다. 자식은 파일에서 부모 바로 뒤에 연속해서 있을 필요가 없으며 부모 관계로 합성 순서를 구성합니다. 선택 레이어는 `activeLayerID`로 저장하며, 값이 있으면 실제 레이어를 가리켜야 합니다. 선택 정보가 없거나 null인 문서도 읽습니다. `resolution`은 pixels/inch 단위의 1–9600 값이고, 없거나 null이면 72입니다.
 
 각 기본 픽셀 레이어는 다음 필드를 사용합니다.
 
 | 필드 | 규격 |
 |---|---|
 | `id`, `name`, `isVisible` | 고유 UUID, 비어 있지 않은 이름, 표시 여부 |
+| `isGroup`, `parentID` | 버전 2 이상 그룹 여부와 부모 그룹 UUID. 생략/null은 일반 레이어·문서 루트 |
 | `imageFile` | `images/` 안의 `<레이어 UUID>.png`; 없거나 null이면 빈 레이어 |
 | `maskFile` | 버전 4 이상, `images/<레이어 UUID>.mask.png`; 없거나 null이면 마스크 없음 |
 | `maskEnabled`, `maskLinked` | 마스크 파일이 있을 때만 사용. enabled 기본 true, linked는 true 또는 생략/null만 지원 |
@@ -37,11 +38,19 @@ manifest의 `format`은 `com.compositor.project`, `colorSpace`는 `sRGB`입니�
 
 Windows는 보존할 수 없는 기능을 버리고 열지 않습니다. 다음 항목이 있으면 프로젝트 전체 열기를 거부합니다.
 
-- 그룹, 참조 마스크(`maskSourceID`), 독립 배치(`maskPlacement`), 연결 해제(`maskLinked: false`).
+- 그룹 마스크 및 Normal 외 그룹 합성 모드, 참조 마스크(`maskSourceID`), 독립 배치(`maskPlacement`), 연결 해제(`maskLinked: false`).
 - 비파괴 조정 레이어(`adjustment`), 도형, 효과, 텍스트 메타데이터와 비어 있지 않은 가이드 목록.
 - 미지원 합성·샘플링 모드, 알 수 없는 manifest·레이어·변환 필드, 중복 JSON 필드.
 
 미지원 레이어 필드는 null이 아닌 값이면 거부합니다. 예를 들어 비어 있는 `effects` 객체도 열리지 않습니다. `maskEnabled: false`는 유효한 `maskFile`이 있을 때 지원하며, 비활성 마스크 데이터도 보존합니다. 위 미지원 레이어 필드의 null 값, `isGroup: false`, 빈 가이드 목록은 허용합니다. 버전 번호가 8이라는 이유만으로 그룹 마스크·독립 배치 마스크 등 macOS 기능 전체를 읽을 수 있는 것은 아닙니다.
+
+## 그룹과 계층
+
+그룹은 `isGroup: true`, `imageFile: null`, `blendMode: Normal`로 저장하며 자체 원본 픽셀이 없습니다. 부모는 실제 그룹이어야 하고 순환·자기 참조·누락된 부모를 거부합니다. 최대 64단계 중첩 그룹과 그 아래 일반 레이어를 지원합니다. 그룹을 포함해 총 10,000개 항목 제한을 적용합니다.
+
+버전 1의 그룹/부모 관계는 거부합니다. 버전 2–7의 그룹 불투명도는 1만 허용하며 버전 8부터 0–1을 지원합니다. 그룹은 별도 이미지로 합치지 않고 각 자식의 기존 합성 모드를 배경에 직접 적용합니다. 자식의 최종 불투명도는 자기 값과 모든 부모 값의 곱이며 부모가 하나라도 숨김이면 표시하지 않습니다.
+
+자식 변환은 부모에 상대적인 좌표가 아닌 문서의 절대 좌표입니다. 그룹 이동은 모든 하위 항목의 변환 원점을 같은 양만큼 바꾸고, 그룹 자체 `transform`은 자식에 추가 적용하지 않습니다. 그룹 transform 메타데이터는 저장 시 보존합니다. 그룹 마스크는 아직 열지 않습니다. 그룹 접힘 상태는 파일에 저장하지 않습니다.
 
 ## 연결된 레이어 마스크
 

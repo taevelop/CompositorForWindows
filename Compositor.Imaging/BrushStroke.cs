@@ -33,6 +33,7 @@ public sealed class BrushStroke
             !double.IsFinite(settings.Hardness) || settings.Hardness is < 0 or > 1 ||
             !double.IsFinite(settings.Opacity) || settings.Opacity is < 0 or > 1)
             throw new ArgumentOutOfRangeException(nameof(settings));
+        if (layer.IsGroup) throw new InvalidOperationException("Groups cannot be painted directly.");
         this.layer = layer; this.settings = settings; this.canvasWidth = canvasWidth; this.canvasHeight = canvasHeight;
         Pixels = layer.Pixels;
         PointD p = layer.Transform.ToDocument(new(0, 0), Pixels.Width, Pixels.Height),

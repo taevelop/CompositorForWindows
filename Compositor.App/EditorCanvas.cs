@@ -26,6 +26,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     private BrushStroke? stroke;
     private MaskStroke? maskStroke;
     private Layer? originalLayer;
+    private Document? groupMoveDocument;
     private PointD anchor;
     public EditorCanvas()
     {
@@ -116,7 +117,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     public void CancelInteraction()
     {
         bool editing = originalLayer is not null;
-        originalLayer = null; stroke = null; maskStroke = null; gestureButton = null;
+        originalLayer = null; groupMoveDocument = null; stroke = null; maskStroke = null; gestureButton = null;
         if (panStart is not null) { panX = panOrigin.X; panY = panOrigin.Y; panStart = null; }
         if (editing && Session?.InTransaction == true) Session.Cancel();
         if (IsMouseCaptured) ReleaseMouseCapture();
@@ -125,8 +126,13 @@ public sealed class EditorCanvas : SKElement, IDisposable
     public void BeginPointer(PointD point)
     {
         if (Session.InTransaction || Session.ActiveLayer is not { } layer || Tool == EditorTool.Hand) return;
-        if (Tool is EditorTool.Brush or EditorTool.Eraser && !layer.Visible) throw new InvalidOperationException("Show the layer before painting.");
+        if (Tool is EditorTool.Brush or EditorTool.Eraser)
+        {
+            if (layer.IsGroup) throw new InvalidOperationException("Select an image layer inside the group before painting.");
+            if (!LayerHierarchy.Entries(Session.Document).First(e => e.Layer.Id == layer.Id).Visible) throw new InvalidOperationException("Show the layer and its parent groups before painting.");
+        }
         originalLayer = layer; anchor = point;
+        groupMoveDocument = layer.IsGroup ? Session.Document : null;
         if (Tool is EditorTool.Brush or EditorTool.Eraser)
         {
             var settings = ReadBrush() with { Erase = Tool == EditorTool.Eraser };
@@ -147,6 +153,11 @@ public sealed class EditorCanvas : SKElement, IDisposable
         { stroke.Append(point); if (!ReferenceEquals(Session.ActiveLayer?.Pixels, stroke.Pixels)) Session.Preview(Session.Document.Replace(originalLayer with { Pixels = stroke.Pixels })); }
         else if (Tool == EditorTool.Move)
         {
+            if (groupMoveDocument is not null)
+            {
+                Session.Preview(LayerHierarchy.Translate(groupMoveDocument, originalLayer.Id, point.X - anchor.X, point.Y - anchor.Y));
+                return;
+            }
             var t = originalLayer.Transform;
             var transform = t with { X = t.X + point.X - anchor.X, Y = t.Y + point.Y - anchor.Y };
             if (Session.ActiveLayer?.Transform != transform) Session.Preview(Session.Document.Replace(originalLayer with { Transform = transform }));
@@ -155,7 +166,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     public void EndPointer(bool commit)
     {
         bool editing = originalLayer is not null;
-        stroke = null; maskStroke = null; originalLayer = null; gestureButton = null;
+        stroke = null; maskStroke = null; originalLayer = null; groupMoveDocument = null; gestureButton = null;
         if (editing) { if (commit) Session.Commit(); else Session.Cancel(); }
         InvalidateVisual();
     }
@@ -186,8 +197,9 @@ public sealed class EditorCanvas : SKElement, IDisposable
         {
             using var outline = new SKPaint { Color = new(98, 201, 181), Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };
             using var path = new SKPathBuilder();
+            var outlineTransform = layer.IsGroup ? LayerHierarchy.Bounds(doc, layer.Id) : layer.Transform;
             PointD[] corners = [new(0, 0), new(layer.Pixels.Width, 0), new(layer.Pixels.Width, layer.Pixels.Height), new(0, layer.Pixels.Height)];
-            for (int i = 0; i < 4; i++) { var p = layer.Transform.ToDocument(corners[i], layer.Pixels.Width, layer.Pixels.Height); if (i == 0) path.MoveTo((float)p.X, (float)p.Y); else path.LineTo((float)p.X, (float)p.Y); }
+            for (int i = 0; i < 4; i++) { var p = outlineTransform.ToDocument(corners[i], layer.Pixels.Width, layer.Pixels.Height); if (i == 0) path.MoveTo((float)p.X, (float)p.Y); else path.LineTo((float)p.X, (float)p.Y); }
             path.Close(); using var outlinePath = path.Detach(); c.DrawPath(outlinePath, outline);
         }
         c.Restore();

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -29,6 +30,20 @@ internal static class StabilityBenchmark
         Console.WriteLine(File.ReadAllText(path));
     }
 
+    public static void RunGroups(string path)
+    {
+        var runs = new List<object>();
+        foreach (int depth in new[] { 0, 3, 16 })
+        {
+            GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+            runs.Add(MeasureLayers(6, true, depth));
+        }
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        File.WriteAllText(path, JsonSerializer.Serialize(new { timeUtc = DateTimeOffset.UtcNow,
+            description = "Six 4K source layers, bottom-layer mask, 800px soft brush, 0/3/16 nested groups at 90% opacity; 120 updates x 2 and 1000px offscreen viewport. Not WPF display latency.", runs }, new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine(File.ReadAllText(path));
+    }
+
     public static void RunMasks(string path)
     {
         var runs = new List<object>();
@@ -44,7 +59,7 @@ internal static class StabilityBenchmark
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static object MeasureLayers(int count, bool maskEditing = false)
+    private static object MeasureLayers(int count, bool maskEditing = false, int groupDepth = 0)
     {
         var document = Document.Create(4000, 4000);
         var layers = document.Layers.Clear();
@@ -63,6 +78,16 @@ internal static class StabilityBenchmark
             });
         }
         if (maskEditing) layers = layers.SetItem(0, layers[0] with { Mask = LayerMask.Solid(1, 1) });
+        if (groupDepth > 0)
+        {
+            Guid? parent = null;
+            for (int i = 0; i < groupDepth; i++)
+            {
+                var group = Layer.Group($"Group {i + 1}", 4000, 4000, parent) with { Opacity = .9 };
+                layers = layers.Add(group); parent = group.Id;
+            }
+            layers = layers.Select(l => l.IsGroup ? l : l with { ParentId = parent }).ToImmutableArray();
+        }
         var session = new EditorSession(document with { Layers = layers });
         using var viewport = new ViewportRenderer();
         using var output = SKSurface.Create(CanvasRenderer.Info(1000, 1000));
@@ -103,7 +128,7 @@ internal static class StabilityBenchmark
                 meetsInitialBudget = updates[113] <= 33.3 && commitMs <= 100
             });
         }
-        return new { layers = count, maskEditing, sourceMegapixels = 16 * count, coldFrameMs, passes };
+        return new { layers = count, maskEditing, groupDepth, sourceMegapixels = 16 * count, coldFrameMs, passes };
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

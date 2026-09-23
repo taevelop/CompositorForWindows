@@ -31,9 +31,11 @@ public sealed record LayerTransform(double X, double Y, double Width, double Hei
     }
 }
 public sealed record Layer(Guid Id, string Name, Raster Pixels, LayerTransform Transform,
-    bool Visible = true, double Opacity = 1, BlendMode Blend = BlendMode.Normal, LayerMask? Mask = null)
+    bool Visible = true, double Opacity = 1, BlendMode Blend = BlendMode.Normal, LayerMask? Mask = null, Guid? ParentId = null, bool IsGroup = false)
 {
     public IEnumerable<PixelTile> RetainedTiles => Pixels.Tiles.Values.Concat(Mask?.Pixels.Tiles.Values ?? Enumerable.Empty<PixelTile>());
+    public static Layer Group(string name, int width, int height, Guid? parent = null) =>
+        new(Guid.NewGuid(), name, new(1, 1), new(0, 0, width, height), ParentId: parent, IsGroup: true);
     public static Layer Blank(string name, int width, int height) =>
         new(Guid.NewGuid(), name, new(width, height), new(0, 0, width, height));
 }
@@ -49,6 +51,7 @@ public sealed record Document(Guid Id, int Width, int Height, double Resolution,
         Limits.CheckDimensions(Width, Height);
         if (Id == Guid.Empty || !double.IsFinite(Resolution) || Resolution is < 1 or > 9600 || Layers.Length > 10_000)
             throw new InvalidDataException("Invalid document metadata.");
+        LayerHierarchy.Validate(Layers);
         var ids = new HashSet<Guid>();
         long pixels = 0, maskPixels = 0;
         foreach (var layer in Layers)

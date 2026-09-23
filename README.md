@@ -33,6 +33,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Publish
 
 - 새 캔버스, PNG/JPEG 가져오기와 파일 드롭
 - 레이어 추가·삭제·순서·이름·표시·불투명도
+- 중첩 그룹과 접기·펼치기 계층 패널, 그룹 생성·해제·부모 이동·전체 이동, 그룹 표시·불투명도
 - Normal, Multiply, Screen, Overlay, Darken, Lighten, Difference 합성
 - 이동 도구, 숫자 기반 크기·회전·위치 조정, 가로·세로 뒤집기
 - 크기·경도·불투명도·RGB 색상을 지정하는 브러시와 지우개
@@ -46,12 +47,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Publish
 
 마스크는 오른쪽 **LAYER MASK**의 **+ Reveal**(전체 표시) 또는 **+ Hide**(전체 숨김)로 추가합니다. **Edit mask**를 선택하고 **Mask gray %**를 0으로 칠하면 숨기고, 100으로 칠하면 다시 표시합니다. 중간 값과 브러시 불투명도는 부분 표시입니다. 마스크에서 지우개는 검정으로 칠해 숨깁니다. **Edit image**로 원본 편집을 선택하며, 마스크를 끄거나 제거해도 원본 픽셀은 유지됩니다. Move와 레이어 변환은 연결된 마스크도 함께 움직입니다. 크기·위치·회전 입력은 **Position, size and rotation**을 펼칩니다.
 
+그룹은 **+ Group**으로 만들거나 **Group**으로 선택 항목을 감쌉니다. 그룹을 선택한 상태에서 새 레이어나 이미지를 추가하면 그 안에 들어갑니다. **Move into a group**을 펼쳐 부모를 선택한 뒤 **Move here**를 누르며, **Move out**은 한 단계 밖으로 이동합니다. ↑/↓는 같은 부모 안에서 순서를 바꿉니다. **Ungroup**은 자식을 유지하고 표시·불투명도 효과를 자식에 반영합니다. 그룹 삭제(−/Delete)는 자식도 함께 삭제하며 Undo로 복원할 수 있습니다.
+
 ## 프로젝트 호환성과 저장 보호
 
 `.comp`는 `manifest.json`과 `images/<UUID>.png`를 담은 **폴더**입니다. Open project folder에서 `.comp` 폴더 자체를 선택합니다. Save as는 상위 폴더와 새 프로젝트 이름을 차례로 지정합니다.
 
 - 버전 1–8을 읽고 버전 8로 저장합니다. CGPoint/CGSize는 Swift Codable과 같은 2원소 숫자 배열이며, 좌표는 왼쪽 위 원점·시계 방향 회전입니다.
-- 기본 픽셀 레이어와 연결된 회색조 마스크를 지원합니다. 그룹, 분리 이동·독립 배치·다른 레이어 참조 마스크, 비파괴 조정 레이어, 효과, 도형, 텍스트, 가이드, 미지원 합성 모드 및 알 수 없는 필드는 **프로젝트 전체 열기를 거부**합니다. 기능을 조용히 버리고 덮어쓰지 않습니다.
+- 기본 픽셀 레이어, 통과 방식 그룹, 연결된 회색조 마스크를 지원합니다. 그룹 마스크, 분리 이동·독립 배치·다른 레이어 참조 마스크, 비파괴 조정 레이어, 효과, 도형, 텍스트, 가이드, 미지원 합성 모드 및 알 수 없는 필드는 **프로젝트 전체 열기를 거부**합니다. 기능을 조용히 버리고 덮어쓰지 않습니다.
 - 자산 경로·중복 ID·형식 버전·크기·심볼릭 링크와 junction을 검사합니다. 디스크 자산은 외부 원본 이미지에 의존하지 않습니다.
 - 완전한 임시 패키지를 쓰고 다시 읽어 검증한 다음 기존 폴더를 `.comp.recovery`로 이동하고 새 폴더를 게시합니다. 게시 실패 시 기존 폴더를 복구합니다. 같은 경로의 동시 저장은 `.write-lock`으로 차단합니다.
 - **폴더 두 번의 이름 변경 전체가 하나의 원자적 연산은 아닙니다.** 전원 중단 시 `.comp.recovery`가 남을 수 있습니다. File → **Open recovery copy…**에서 `.comp.recovery` 폴더를 선택하면 수정된 새 문서로 열립니다. Save에서 새 `.comp` 이름으로 저장하십시오. 원본과 복구 폴더는 자동으로 덮어쓰거나 삭제하지 않습니다. 복구 사본이 있으면 다음 저장은 차단됩니다. 잠금 파일은 빈 파일로 남으며, 실제 잠금은 프로세스의 파일 핸들입니다.
@@ -67,7 +70,7 @@ Compositor.Core        UI 독립 문서·변환·불변 RGBA 타일·히스토�
 Compositor.Imaging     Skia 합성·증분 화면 캐시·코덱·.comp·브러시
 native                 Windows 고정 크기 ABI/브러시와 독립 C 커널 사본
 Compositor.Tests       픽셀·히스토리·입출력·실패 복구 회귀 테스트
-Compositor.Benchmarks  반복 가능한 4K 브러시·마스크 측정
+Compositor.Benchmarks  반복 가능한 4K 브러시·마스크·그룹 측정
 docs                   Windows 규격·계획·검증 문서
 macOS                  최초 클론한 macOS 소스·빌드·문서
 ```
@@ -95,9 +98,12 @@ dotnet run --project Compositor.Benchmarks/Compositor.Benchmarks.csproj -c Relea
 - 브러시는 현재 레이어의 소스 영역과 캔버스 안에서 동작합니다. 레이어 밖으로 자동 확장하지 않습니다.
 - Nearest 외 Smooth/High는 현재 bilinear 샘플링입니다. Mac의 고품질 축소와 동일한 필터는 아닙니다.
 - 연결된 마스크는 원본과 같은 픽셀 크기 또는 균일한 1×1만 지원합니다. 내부 회색조 값은 RGBA 타일에 담고 파일은 8비트 회색조 PNG로 저장합니다. Mac 앱에서의 실제 양방향 열기와 동일 필터 결과는 아직 검증하지 않았습니다.
+- 그룹은 자식별로 배경과 합성하고 그룹 불투명도를 곱합니다. 그룹을 하나의 이미지로 합성하는 모드, 그룹 마스크·단위 회전/크기 변경, 다중 선택·드래그로 계층 이동은 미지원입니다. 그룹 전체 이동은 Move 도구, 계층 이동은 부모 선택을 사용합니다.
 - 선택·크롭·다중 문서 탭, 비파괴 조정 레이어·효과·PSD는 후속 구현 대상입니다. RAW·AI·편집 가능한 텍스트·자동 업데이트도 이번 MVP에 포함하지 않습니다.
 - GPU, 설치/서명, 전체 Mac 기능 동등성은 아직 구현하지 않았습니다.
 
 마스크 구현·성능 결과와 사용법은 [마스크 검증 문서](docs/layer-masks.md)에 있습니다. 마스크 성능 측정은 `dotnet run --project Compositor.Benchmarks/Compositor.Benchmarks.csproj -c Release -- --masks artifacts/mask-benchmark.json`으로 실행합니다.
 
-후속 순서는 레이어 그룹 → 기본 색상 조정 → 비파괴 조정 레이어 → 효과 → 제한적 PSD 가져오기입니다.
+그룹 사용법·호환성·중첩 성능은 [그룹 검증 문서](docs/layer-groups.md)에 있습니다. `build.ps1 -Test`에 그룹 WPF 검증도 포함되며 `artifacts/ui-smoke.groups.json`에 결과를 남깁니다.
+
+후속 순서는 기본 색상 조정 → 비파괴 조정 레이어 → 효과 → 제한적 PSD 가져오기입니다.

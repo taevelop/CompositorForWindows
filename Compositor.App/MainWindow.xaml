@@ -53,6 +53,7 @@
               </StackPanel>
               </Expander>
               <Button Content="Apply layer properties" Click="ApplyLayer"/>
+              <TextBlock x:Name="GroupHint" Text="Group opacity multiplies into each child. Use Move to move all children; select a child to paint or transform." TextWrapping="Wrap" Foreground="#9DA3AF" Margin="5" Visibility="Collapsed"/>
               <Expander x:Name="MaskSection" Header="LAYER MASK" Foreground="White" Margin="5,10,0,5"><StackPanel>
               <TextBlock x:Name="MaskInfo" Text="No mask" Foreground="#B9BDC7" Margin="5"/>
               <WrapPanel><Button x:Name="RevealMaskButton" Content="+ Reveal" Click="AddRevealMask"/><Button x:Name="HideMaskButton" Content="+ Hide" Click="AddHideMask"/><Button x:Name="RemoveMaskButton" Content="Remove" Click="RemoveMask"/></WrapPanel>
@@ -61,10 +62,21 @@
               <TextBlock Text="Linked to layer · Brush gray: 0 hides, 100 reveals · Eraser hides" TextWrapping="Wrap" Foreground="#9DA3AF" Margin="5"/>
               </StackPanel></Expander>
               <TextBlock Text="LAYERS" FontWeight="SemiBold" Foreground="#B9BDC7" Margin="5,18,0,8"/>
-              <WrapPanel><Button Content="+" ToolTip="New blank layer" Click="AddLayer"/><Button Content="−" ToolTip="Delete selected layer" Click="DeleteLayer"/><Button Content="↑" ToolTip="Move layer up" Click="LayerUp"/><Button Content="↓" ToolTip="Move layer down" Click="LayerDown"/></WrapPanel>
-
+              <WrapPanel><Button Content="+" ToolTip="New blank layer" Click="AddLayer"/><Button Content="−" ToolTip="Delete selected layer or group and its children" Click="DeleteLayer"/><Button Content="↑" ToolTip="Move layer up" Click="LayerUp"/><Button Content="↓" ToolTip="Move layer down" Click="LayerDown"/></WrapPanel>
+              <WrapPanel><Button Content="+ Group" Click="AddGroup" ToolTip="New empty group"/><Button x:Name="WrapGroupButton" Content="Group" Click="WrapInGroup" ToolTip="Wrap the selected layer or group"/><Button x:Name="UngroupButton" Content="Ungroup" Click="Ungroup" ToolTip="Keep children and preserve group appearance"/></WrapPanel>
+              <Expander Header="Move into a group" Foreground="White" Margin="5"><StackPanel>
+                <ComboBox x:Name="ParentGroup" DisplayMemberPath="Label"/>
+                <WrapPanel><Button x:Name="MoveToGroupButton" Content="Move here" Click="MoveToGroup"/><Button x:Name="MoveOutButton" Content="Move out" Click="MoveOutOfGroup"/></WrapPanel>
+              </StackPanel></Expander>
             </StackPanel>
-            <ListBox x:Name="Layers" Background="#191B20" Foreground="White" BorderThickness="0" DisplayMemberPath="Name" MinHeight="140" MaxHeight="300" SelectionChanged="LayerSelected" Margin="3,8,3,3"/>
+            <ListBox x:Name="Layers" Background="#191B20" Foreground="White" BorderThickness="0" MinHeight="140" MaxHeight="300" SelectionChanged="LayerSelected" Margin="3,8,3,3">
+              <ListBox.ItemTemplate><DataTemplate>
+                <StackPanel Orientation="Horizontal" Margin="{Binding Indent}" Opacity="{Binding RowOpacity}">
+                  <Button Content="{Binding Disclosure}" IsEnabled="{Binding CanExpand}" Visibility="{Binding ExpandVisibility}" Tag="{Binding Id}" Click="ToggleGroup" Width="22" Padding="0" Margin="0,1,4,1"/>
+                  <TextBlock Text="{Binding Label}" VerticalAlignment="Center" ToolTip="{Binding Label}"/>
+                </StackPanel>
+              </DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
           </StackPanel>
           </ScrollViewer>
         </Border>

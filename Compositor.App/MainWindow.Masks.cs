@@ -9,10 +9,11 @@ public partial class MainWindow
     private void RefreshMaskControls()
     {
         var mask = session.ActiveLayer?.Mask;
-        MaskSection.IsEnabled = session.ActiveLayer is not null;
+        MaskSection.IsEnabled = session.ActiveLayer is { IsGroup: false };
         if (mask is not null) MaskSection.IsExpanded = true;
+        if (session.ActiveLayer?.IsGroup == true) MaskSection.IsExpanded = false;
         MaskInfo.Text = mask is null ? "No mask" : $"{mask.Pixels.Width:N0} × {mask.Pixels.Height:N0} · {(mask.Enabled ? "Enabled" : "Disabled")}";
-        RevealMaskButton.IsEnabled = HideMaskButton.IsEnabled = session.ActiveLayer is not null && mask is null;
+        RevealMaskButton.IsEnabled = HideMaskButton.IsEnabled = session.ActiveLayer is { IsGroup: false } && mask is null;
         RemoveMaskButton.IsEnabled = MaskEnabled.IsEnabled = EditTarget.IsEnabled = mask is not null;
         MaskEnabled.IsChecked = mask?.Enabled == true;
         EditTarget.SelectedIndex = session.EditMask ? 1 : 0;
@@ -22,7 +23,7 @@ public partial class MainWindow
     private void AddHideMask(object sender, RoutedEventArgs e) => AddMask(0);
     private void AddMask(byte value) => Safe(() =>
     {
-        if (session.ActiveLayer is not { Mask: null } layer) return;
+        if (session.ActiveLayer is not { Mask: null, IsGroup: false } layer) return;
         var mask = LayerMask.Solid(1, 1, value);
         session.Apply(d => d.Replace(layer with { Mask = mask }));
         session.EditMask = true; Refresh();
