@@ -1,0 +1,20 @@
+<Window x:Class="Compositor.App.ColorAdjustmentWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Adjust image colors" Style="{StaticResource {x:Type Window}}" Width="370" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="18">
+    <TextBlock x:Name="TargetName" TextWrapping="Wrap" FontWeight="SemiBold" Margin="3,0,3,10"/>
+    <TextBlock Text="Changes the selected image pixels. Undo restores them during this session. Saved projects keep the adjusted pixels. The mask stays unchanged." TextWrapping="Wrap" Foreground="#B9BDC7" Margin="3,0,3,10"/>
+    <DockPanel><Label Content="Brightness"/><TextBlock Text="{Binding ElementName=Brightness, Path=Value, StringFormat={}{0:0}}" HorizontalAlignment="Right"/></DockPanel>
+    <Slider x:Name="Brightness" Minimum="-100" Maximum="100" Value="0" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="1" LargeChange="10" Margin="6" ValueChanged="SettingsChanged"/>
+    <DockPanel><Label Content="Contrast"/><TextBlock Text="{Binding ElementName=Contrast, Path=Value, StringFormat={}{0:0}}" HorizontalAlignment="Right"/></DockPanel>
+    <Slider x:Name="Contrast" Minimum="-100" Maximum="100" Value="0" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="1" LargeChange="10" Margin="6" ValueChanged="SettingsChanged"/>
+    <DockPanel><Label Content="Saturation"/><TextBlock Text="{Binding ElementName=Saturation, Path=Value, StringFormat={}{0:0}}" HorizontalAlignment="Right"/></DockPanel>
+    <Slider x:Name="Saturation" Minimum="-100" Maximum="100" Value="0" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="1" LargeChange="10" Margin="6" ValueChanged="SettingsChanged"/>
+    <CheckBox x:Name="ShowPreview" Content="Preview changes" IsChecked="True" Foreground="White" Margin="6,14,6,4" Click="TogglePreview"/>
+    <TextBlock x:Name="PreviewStatus" Text="Ready" TextWrapping="Wrap" Foreground="#B9BDC7" Margin="6" MinHeight="36"/>
+    <WrapPanel HorizontalAlignment="Right" Margin="0,8,0,0">
+      <Button Content="Reset" Click="Reset"/>
+      <Button Content="Cancel" IsCancel="True"/>
+      <Button x:Name="ApplyButton" Content="Apply" IsDefault="True" Click="Apply"/>
+    </WrapPanel>
+  </StackPanel>
+</Window>

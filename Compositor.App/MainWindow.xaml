@@ -14,6 +14,7 @@
           <Separator/><MenuItem Header="Export _PNG…" Click="ExportPng"/><MenuItem Header="Export _JPEG…" Click="ExportJpeg"/>
         </MenuItem>
         <MenuItem Header="_Edit"><MenuItem x:Name="UndoMenu" Header="_Undo" InputGestureText="Ctrl+Z" Click="Undo"/><MenuItem x:Name="RedoMenu" Header="_Redo" InputGestureText="Ctrl+Shift+Z" Click="Redo"/></MenuItem>
+        <MenuItem Header="_Image"><MenuItem x:Name="AdjustColorsMenu" Header="Adjust _colors…" Click="AdjustColors"/></MenuItem>
         <MenuItem Header="_View"><MenuItem Header="_Fit canvas" InputGestureText="Ctrl+0" Click="Fit"/><MenuItem Header="_Actual pixels" InputGestureText="Ctrl+1" Click="ActualPixels"/></MenuItem>
       </Menu>
       <Border Grid.Row="1" Background="{StaticResource Panel}" Padding="10,7" BorderBrush="#424650" BorderThickness="0,0,0,1">
@@ -53,6 +54,7 @@
               </StackPanel>
               </Expander>
               <Button Content="Apply layer properties" Click="ApplyLayer"/>
+              <Button x:Name="AdjustColorsButton" Content="Adjust image colors…" Click="AdjustColors" ToolTip="Brightness, contrast and saturation; select Edit image to adjust source pixels"/>
               <TextBlock x:Name="GroupHint" Text="Group opacity multiplies into each child. Use Move to move all children; select a child to paint or transform." TextWrapping="Wrap" Foreground="#9DA3AF" Margin="5" Visibility="Collapsed"/>
               <Expander x:Name="MaskSection" Header="LAYER MASK" Foreground="White" Margin="5,10,0,5"><StackPanel>
               <TextBlock x:Name="MaskInfo" Text="No mask" Foreground="#B9BDC7" Margin="5"/>

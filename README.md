@@ -38,6 +38,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Publish
 - 이동 도구, 숫자 기반 크기·회전·위치 조정, 가로·세로 뒤집기
 - 크기·경도·불투명도·RGB 색상을 지정하는 브러시와 지우개
 - 256×256 불변 타일 기반 Undo/Redo; 드래그·스트로크당 한 번의 히스토리. 변화 없는 이동·속성 적용은 이력을 만들지 않으며 Redo를 유지합니다. 이력은 최대 100단계 및 현재 문서 외 고유 타일 256MiB로 제한합니다.
+- 이미지 밝기·대비·채도 조정: 미리보기, 원본 비교, 초기화, 적용·취소 및 Undo/Redo. 조정된 픽셀을 저장하며 독립 조정 레이어는 아닙니다.
 - 레이어에 연결된 회색조 마스크: 전체 표시/숨김 추가, 활성화·삭제, 마스크 브러시·지우개, Undo/Redo
 - `.comp` 프로젝트 폴더 저장·열기, PNG 투명도 보존 내보내기, 흰 배경 JPEG 내보내기(품질 92)
 - PNG/JPEG 가져오기의 EXIF 방향 보정과 sRGB 변환, 내보내기 해상도 메타데이터
@@ -48,6 +49,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Publish
 마스크는 오른쪽 **LAYER MASK**의 **+ Reveal**(전체 표시) 또는 **+ Hide**(전체 숨김)로 추가합니다. **Edit mask**를 선택하고 **Mask gray %**를 0으로 칠하면 숨기고, 100으로 칠하면 다시 표시합니다. 중간 값과 브러시 불투명도는 부분 표시입니다. 마스크에서 지우개는 검정으로 칠해 숨깁니다. **Edit image**로 원본 편집을 선택하며, 마스크를 끄거나 제거해도 원본 픽셀은 유지됩니다. Move와 레이어 변환은 연결된 마스크도 함께 움직입니다. 크기·위치·회전 입력은 **Position, size and rotation**을 펼칩니다.
 
 그룹은 **+ Group**으로 만들거나 **Group**으로 선택 항목을 감쌉니다. 그룹을 선택한 상태에서 새 레이어나 이미지를 추가하면 그 안에 들어갑니다. **Move into a group**을 펼쳐 부모를 선택한 뒤 **Move here**를 누르며, **Move out**은 한 단계 밖으로 이동합니다. ↑/↓는 같은 부모 안에서 순서를 바꿉니다. **Ungroup**은 자식을 유지하고 표시·불투명도 효과를 자식에 반영합니다. 그룹 삭제(−/Delete)는 자식도 함께 삭제하며 Undo로 복원할 수 있습니다.
+
+이미지 색상은 **Image → Adjust colors…** 또는 오른쪽 **Adjust image colors…**에서 조정합니다. 세 값은 −100~100이며 0은 변화 없음입니다. **Preview changes**를 끄면 원본과 비교하고, **Reset**은 세 값을 초기화합니다. **Apply**는 한 번의 Undo로 묶이며 **Cancel/Esc/창 닫기**는 원본을 유지합니다. 그룹이나 **Edit mask**가 선택돼 있으면 색상 조정을 사용할 수 없습니다. 저장 후 다시 열면 조정값을 재편집하거나 이전 픽셀로 Undo할 수 없습니다.
 
 ## 프로젝트 호환성과 저장 보호
 
@@ -70,7 +73,7 @@ Compositor.Core        UI 독립 문서·변환·불변 RGBA 타일·히스토�
 Compositor.Imaging     Skia 합성·증분 화면 캐시·코덱·.comp·브러시
 native                 Windows 고정 크기 ABI/브러시와 독립 C 커널 사본
 Compositor.Tests       픽셀·히스토리·입출력·실패 복구 회귀 테스트
-Compositor.Benchmarks  반복 가능한 4K 브러시·마스크·그룹 측정
+Compositor.Benchmarks  반복 가능한 4K 브러시·마스크·그룹·색상 조정 측정
 docs                   Windows 규격·계획·검증 문서
 macOS                  최초 클론한 macOS 소스·빌드·문서
 ```
@@ -106,4 +109,6 @@ dotnet run --project Compositor.Benchmarks/Compositor.Benchmarks.csproj -c Relea
 
 그룹 사용법·호환성·중첩 성능은 [그룹 검증 문서](docs/layer-groups.md)에 있습니다. `build.ps1 -Test`에 그룹 WPF 검증도 포함되며 `artifacts/ui-smoke.groups.json`에 결과를 남깁니다.
 
-후속 순서는 기본 색상 조정 → 비파괴 조정 레이어 → 효과 → 제한적 PSD 가져오기입니다.
+기본 색상 조정의 사용법·수식·성능·저장 제한은 [색상 조정 검증 문서](docs/color-adjustments.md)에 있습니다. `build.ps1 -Test`에 조정 대화상자 검증이 포함되며 `artifacts/ui-smoke.adjustments.json`에 결과를 남깁니다.
+
+후속 순서는 Mac 호환 비파괴 조정 레이어(먼저 Exposure) → 효과 → 제한적 PSD 가져오기입니다. 각 단계는 저장 규격과 회귀 테스트를 함께 확장해야 합니다.

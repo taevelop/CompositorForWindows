@@ -53,6 +53,7 @@ public partial class MainWindow : Window
             LayerSampling.SelectedItem = layer.Transform.Sampling;
         }
         RefreshMaskControls();
+        RefreshAdjustmentControls();
         UndoMenu.IsEnabled = session.CanUndo; RedoMenu.IsEnabled = session.CanRedo;
         UpdateStatus();
         refreshing = false;
@@ -312,6 +313,7 @@ public partial class MainWindow : Window
         await StabilitySmokeTest(Path.ChangeExtension(screenshot, ".checks.json"));
         await MaskSmokeTest(Path.ChangeExtension(screenshot, ".masks.json"));
         await GroupSmokeTest(Path.ChangeExtension(screenshot, ".groups.json"));
+        await AdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".adjustments.json"));
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         UpdateLayout();
         var bitmap = new RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, PixelFormats.Pbgra32);

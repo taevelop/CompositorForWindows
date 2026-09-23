@@ -3,6 +3,14 @@ namespace Compositor.Core;
 /// <summary>History shares immutable tiles; saved revisions do not retain an extra document.</summary>
 public sealed class EditorSession
 {
+    public const long MaxHistoryBytes = 256L * 1024 * 1024;
+    /// <summary>Bytes a new Undo state alone would retain, excluding tiles still used by the next document.</summary>
+    public static long UndoBytesRequired(Document before, Document next)
+    {
+        var retained = next.Layers.SelectMany(l => l.RetainedTiles).ToHashSet();
+        return before.Layers.SelectMany(l => l.RetainedTiles).Distinct().Count(t => !retained.Contains(t)) * (long)PixelTile.ByteCount;
+    }
+
     private sealed record State(Document Document, long Revision, Guid? ActiveLayer, bool EditMask);
     private readonly List<State> undo = [];
     private readonly List<State> redo = [];
@@ -103,7 +111,7 @@ public sealed class EditorSession
     private void ReconcileActive() { if (ActiveLayer is null) ActiveLayerId = Document.Layers.LastOrDefault()?.Id; if (ActiveLayer?.Mask is null) EditMask = false; }
     private void TrimHistory()
     {
-        while (undo.Count + redo.Count > 100 || HistoryRetainedBytes > 256L * 1024 * 1024)
+        while (undo.Count + redo.Count > 100 || HistoryRetainedBytes > MaxHistoryBytes)
         {
             if (undo.Count > 0) undo.RemoveAt(0);
             else if (redo.Count > 0) redo.RemoveAt(0);

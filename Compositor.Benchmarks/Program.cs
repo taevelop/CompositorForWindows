@@ -5,6 +5,12 @@ using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 
+if (args.Length > 0 && args[0] == "--adjustments")
+{
+    AdjustmentBenchmark.Run(args.Length > 1 ? args[1] : "adjustment-benchmark.json");
+    return;
+}
+
 if (args.Length > 0 && args[0] == "--groups")
 {
     StabilityBenchmark.RunGroups(args.Length > 1 ? args[1] : "group-benchmark.json");
