@@ -141,18 +141,6 @@
           "SkiaSharp": "[4.152.1, )"
         }
       }
-    },
-    "net10.0-windows10.0.19041/win-x64": {
-      "OpenTK.redist.glfw": {
-        "type": "Transitive",
-        "resolved": "3.3.0-pre20200830200122",
-        "contentHash": "EKE9pJCFHScbqOv/t0zG1h5Eh24nWr44SXYnpYtAWDhJhzAoUoI8TwDRXGvTGhDeCBp8ONEaVsq9xRC+OQIxQA=="
-      },
-      "SkiaSharp.NativeAssets.Win32": {
-        "type": "Transitive",
-        "resolved": "4.152.1",
-        "contentHash": "MLDP6XT8CHLHF6gZlpW06iswGNBlL/JB2+SKuSLz0Y0k1zzsfofNyUY6J6FC32A4/F67E9S8MwovRBL+ELw0lw=="
-      }
     }
   }
 }

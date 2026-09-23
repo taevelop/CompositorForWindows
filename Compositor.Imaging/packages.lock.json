@@ -25,18 +25,6 @@
       "compositor.core": {
         "type": "Project"
       }
-    },
-    "net10.0/win-x64": {
-      "SkiaSharp.NativeAssets.macOS": {
-        "type": "Transitive",
-        "resolved": "4.152.1",
-        "contentHash": "gKaE2zNHsPLjlA88ZClRNmtZlHNGEa/W4iPy5GpP1TtUELIXzrSr2udCbl1GWYFuCdA36IycBk5YhUuK1xi9UA=="
-      },
-      "SkiaSharp.NativeAssets.Win32": {
-        "type": "Transitive",
-        "resolved": "4.152.1",
-        "contentHash": "MLDP6XT8CHLHF6gZlpW06iswGNBlL/JB2+SKuSLz0Y0k1zzsfofNyUY6J6FC32A4/F67E9S8MwovRBL+ELw0lw=="
-      }
     }
   }
 }
