@@ -117,7 +117,7 @@ public static class ProjectStore
                     usedMaskPixels += (long)mask.Pixels.Width * mask.Pixels.Height;
                 }
                 if (adjustment is not null && mask is not null && (mask.Pixels.Width > 1 || mask.Pixels.Height > 1)) raster = new(mask.Pixels.Width, mask.Pixels.Height);
-                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask, parent, isGroup, adjustment?.Exposure, adjustment?.Levels));
+                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask, parent, isGroup, adjustment?.Exposure, adjustment?.Levels, adjustment?.Curves));
             }
             var document = new Document(m.GetProperty("documentID").GetGuid(), width, height, OptionalDouble(m, "resolution", 72), layers.ToImmutable());
             document.Validate();
@@ -173,6 +173,7 @@ public static class ProjectStore
                 });
                 if (l.Exposure is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.Exposure);
                 else if (l.Levels is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.Levels);
+                else if (l.Curves is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.Curves);
             }
             var manifest = new JsonObject
             {

@@ -229,7 +229,7 @@ public sealed class ExposureTests : IDisposable
         var adjustment = layer["adjustment"]!;
         switch (failure)
         {
-            case "kind": adjustment["kind"] = "Curves"; break;
+            case "kind": adjustment["kind"] = "Gradient Map"; break;
             case "unknown": adjustment["exposureSettings"]!["future"] = 1; break;
             case "dormant": adjustment["hue"] = 30; break;
             case "version": json["version"] = 6; break;

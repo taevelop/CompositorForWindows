@@ -6,7 +6,7 @@ namespace Compositor.Imaging;
 
 internal static class AdjustmentJson
 {
-    internal sealed record Parsed(ExposureAdjustment? Exposure, LevelsAdjustment? Levels);
+    internal sealed record Parsed(ExposureAdjustment? Exposure, LevelsAdjustment? Levels, CurvesAdjustment? Curves = null);
     // Swift synthesized Codable requires these nonoptional fields even for Exposure.
     private const string Defaults = """
         {"kind":"Exposure","hue":0,"saturation":0,"lightness":0,"colorize":false,
@@ -25,18 +25,18 @@ internal static class AdjustmentJson
         CheckDuplicates(node);
         if (node.ValueKind != JsonValueKind.Object) throw new InvalidDataException("Invalid adjustment object.");
         string? kind = node.TryGetProperty("kind", out var kindNode) ? kindNode.GetString() : null;
-        if (kind is not ("Exposure" or "Levels"))
-            throw new NotSupportedException("Only Exposure and Levels adjustment layers are supported. Nothing was opened or changed.");
+        if (kind is not ("Exposure" or "Levels" or "Curves"))
+            throw new NotSupportedException("Only Exposure, Levels and Curves adjustment layers are supported. Nothing was opened or changed.");
         bool exposure = kind == "Exposure";
         var defaults = JsonNode.Parse(Defaults)!.AsObject(); var seen = new HashSet<string>();
         foreach (var field in node.EnumerateObject())
         {
             if (!seen.Add(field.Name)) throw new InvalidDataException("Duplicate adjustment field.");
-            if (field.Name == "kind" || (exposure && field.Name == "exposureSettings") || (!exposure && field.Name == "levels")) continue;
+            if (field.Name == "kind" || (exposure && field.Name == "exposureSettings") || (kind == "Levels" && field.Name == "levels") || (kind == "Curves" && field.Name == "curves")) continue;
             if (field.Name == "exposureSettings")
             {
                 if (field.Value.ValueKind != JsonValueKind.Null && !ReadExposure(field.Value).IsIdentity)
-                    throw new NotSupportedException("Levels contains nondefault inactive Exposure settings.");
+                    throw new NotSupportedException($"{kind} contains nondefault inactive Exposure settings.");
                 continue;
             }
             if (defaults.TryGetPropertyValue(field.Name, out var expected))
@@ -50,7 +50,8 @@ internal static class AdjustmentJson
             }
             else throw new NotSupportedException($"Unknown adjustment field: {field.Name}.");
         }
-        if (!exposure) return new(null, LevelsJson.Read(node.GetProperty("levels")));
+        if (kind == "Levels") return new(null, LevelsJson.Read(node.GetProperty("levels")));
+        if (kind == "Curves") return new(null, null, CurvesJson.Read(node.GetProperty("curves")));
         return new(node.TryGetProperty("exposureSettings", out var settings) && settings.ValueKind != JsonValueKind.Null ? ReadExposure(settings) : new(), null);
     }
     private static ExposureAdjustment ReadExposure(JsonElement settings)
@@ -77,6 +78,11 @@ internal static class AdjustmentJson
             }
         }
         else if (value.ValueKind == JsonValueKind.Array) foreach (var item in value.EnumerateArray()) CheckDuplicates(item);
+    }
+    public static JsonObject Write(CurvesAdjustment curves)
+    {
+        curves.Validate(); var result = JsonNode.Parse(Defaults)!.AsObject();
+        result["kind"] = "Curves"; result["curves"] = CurvesJson.Write(curves); return result;
     }
     public static JsonObject Write(LevelsAdjustment levels)
     {

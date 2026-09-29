@@ -25,11 +25,18 @@ internal static class AdjustmentProcessor
             table[c * 256 + i] = (float)settings.RGB.Apply(settings.Range((LevelsChannel)(c + 1)).Apply(i / 255.0));
         return table;
     }
+    internal static float[] Tables(CurvesAdjustment settings)
+    {
+        settings.Validate(); var table = new float[768];
+        for (int c = 0; c < 3; c++) for (int i = 0; i < 256; i++)
+            table[c * 256 + i] = (float)(settings.RGB.Value(settings.Curve((LevelsChannel)(c + 1)).Value(i)) / 255);
+        return table;
+    }
     public static void Apply(SKBitmap bitmap, Document document, Layer layer, double opacity)
     {
-        bool identity = layer.Exposure?.IsIdentity ?? layer.Levels?.IsIdentity ?? throw new InvalidOperationException("No adjustment settings.");
+        bool identity = layer.Exposure?.IsIdentity ?? layer.Levels?.IsIdentity ?? layer.Curves?.IsIdentity ?? throw new InvalidOperationException("No adjustment settings.");
         if (identity && layer.Blend == BlendMode.Normal) return;
-        var tables = layer.Exposure is { } exposure ? Tables(exposure) : Tables(layer.Levels!);
+        var tables = layer.Exposure is { } exposure ? Tables(exposure) : layer.Levels is { } levels ? Tables(levels) : Tables(layer.Curves!);
         var original = bitmap.GetPixelSpan();
         // Evaluate the original Mac C kernel once for each possible alpha/channel pair.
         // The image then uses exact byte lookups rather than millions of floating-point LUT interpolations.
@@ -84,7 +91,7 @@ internal static class AdjustmentProcessor
         {
             using var canvas = new SKCanvas(bitmap); canvas.Clear();
             using var renderer = new CanvasRenderer();
-            var coverage = layer with { Pixels = mask.Pixels, Exposure = null, Levels = null, Mask = null, ParentId = null, Visible = true, Opacity = 1, Blend = BlendMode.Normal };
+            var coverage = layer with { Pixels = mask.Pixels, Exposure = null, Levels = null, Curves = null, Mask = null, ParentId = null, Visible = true, Opacity = 1, Blend = BlendMode.Normal };
             renderer.Draw(canvas, doc with { Layers = [coverage] }); canvas.Flush(); return bitmap;
         }
         catch { bitmap.Dispose(); throw; }
