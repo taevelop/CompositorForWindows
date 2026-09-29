@@ -67,4 +67,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Publish
 
 ## 다음 작업
 
-다음은 **Mac 호환 비파괴 Exposure 조정 레이어**다. Mac의 `adjustment` JSON, 아래 레이어 합성에 대한 적용 범위, 그룹·마스크·알파·불투명도 의미를 먼저 맞추고 저장 왕복·렌더링 검증을 추가한다. 이번 기본 조정만으로 Mac의 조정 레이어를 지원하는 것은 아니므로 해당 문서는 계속 열기를 거부한다. 효과와 제한적 PSD 가져오기는 그 이후 범위다.
+2026-09-28에 [비파괴 Exposure 조정 레이어](exposure-adjustment.md)를 추가했다. 이 문서의 기본 색상 조정은 픽셀 편집으로 유지한다. 다음은 Levels·Curves 조정 레이어이며 효과와 제한적 PSD 가져오기는 이후 범위다.

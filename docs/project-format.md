@@ -25,6 +25,7 @@ manifest의 `format`은 `com.compositor.project`, `colorSpace`는 `sRGB`입니�
 | `imageFile` | `images/` 안의 `<레이어 UUID>.png`; 없거나 null이면 빈 레이어 |
 | `maskFile` | 버전 4 이상, `images/<레이어 UUID>.mask.png`; 없거나 null이면 마스크 없음 |
 | `maskEnabled`, `maskLinked` | 마스크 파일이 있을 때만 사용. enabled 기본 true, linked는 true 또는 생략/null만 지원 |
+| `adjustment` | 버전 7 이상, 지원 범위의 `kind: Exposure` 또는 `kind: Levels`. `imageFile` 없음/null, 그룹 아님. 아래 Exposure 절 참고 |
 | `opacity` | 0–1; 없거나 null이면 1 |
 | `blendMode` | `Normal`, `Multiply`, `Screen`, `Overlay`, `Darken`, `Lighten`, `Difference`; 없거나 null이면 `Normal` |
 | `transform.origin`, `transform.size` | Swift Codable의 CGPoint/CGSize와 같은 2원소 숫자 배열 |
@@ -39,7 +40,7 @@ manifest의 `format`은 `com.compositor.project`, `colorSpace`는 `sRGB`입니�
 Windows는 보존할 수 없는 기능을 버리고 열지 않습니다. 다음 항목이 있으면 프로젝트 전체 열기를 거부합니다.
 
 - 그룹 마스크 및 Normal 외 그룹 합성 모드, 참조 마스크(`maskSourceID`), 독립 배치(`maskPlacement`), 연결 해제(`maskLinked: false`).
-- 비파괴 조정 레이어(`adjustment`), 도형, 효과, 텍스트 메타데이터와 비어 있지 않은 가이드 목록.
+- Exposure·Levels 외의 조정 레이어 또는 보존할 수 없는 비활성 조정 설정, 도형, 효과, 텍스트 메타데이터와 비어 있지 않은 가이드 목록.
 - 미지원 합성·샘플링 모드, 알 수 없는 manifest·레이어·변환 필드, 중복 JSON 필드.
 
 미지원 레이어 필드는 null이 아닌 값이면 거부합니다. 예를 들어 비어 있는 `effects` 객체도 열리지 않습니다. `maskEnabled: false`는 유효한 `maskFile`이 있을 때 지원하며, 비활성 마스크 데이터도 보존합니다. 위 미지원 레이어 필드의 null 값, `isGroup: false`, 빈 가이드 목록은 허용합니다. 버전 번호가 8이라는 이유만으로 그룹 마스크·독립 배치 마스크 등 macOS 기능 전체를 읽을 수 있는 것은 아닙니다.
@@ -64,7 +65,19 @@ Windows는 보존할 수 없는 기능을 버리고 열지 않습니다. 다음 
 
 Windows의 밝기·대비·채도 편집은 선택 이미지의 픽셀을 변경하고 기존 `imageFile` PNG에 저장한다. manifest에 별도 조정 필드나 Windows 전용 메타데이터를 추가하지 않는다. 원본 PNG 외에 마스크·변환·그룹 속성은 그대로 유지한다. Undo는 현재 세션의 불변 타일로 복원하며, 프로젝트 재열기 후에는 조정 전 픽셀이나 슬라이더 값을 복원하지 않는다.
 
-이 기능은 Mac의 `adjustment` 레이어 지원을 뜻하지 않는다. 해당 레이어가 포함된 문서는 계속 편집 열기를 거부한다. 계산 방식은 [색상 조정 문서](color-adjustments.md)를 참고한다.
+이 픽셀 편집과 아래의 Exposure 조정 레이어는 별도 기능이다. 픽셀 편집 계산 방식은 [색상 조정 문서](color-adjustments.md)를 참고한다.
+
+## 비파괴 Exposure 조정 레이어
+
+버전 7–8의 `adjustment.kind: "Exposure"`를 읽고 버전 8로 저장한다. `exposureSettings`는 `exposure`(−20~20), `offset`(−0.5~0.5), `gamma`(0.01~9.99)이며 모두 유한 수다. `exposureSettings`가 없거나 null이면 0/0/1이다. 객체가 있으면 세 필드를 모두 요구한다.
+
+Swift Codable에 필요한 `hue`, `saturation`, `lightness`, `colorize`, `levels`, `curves`는 Mac 기본값으로 저장한다. 입력에 이 값들이 있으면 기본값만 허용하며, `hsvSettings`, `gradientMapSettings`, `grainSettings`, `blackWhiteSettings`, `colorBalanceSettings`는 없거나 null만 허용한다. 사용하지 않는 설정이라도 비기본값을 조용히 제거하지 않고 문서 열기를 거부한다. 모든 중첩 중복/알 수 없는 필드와 지원하지 않는 kind를 거부한다. Levels kind의 활성 설정은 아래 절을 따른다.
+
+조정 레이어는 그룹이 아니고 `imageFile`이 없거나 null이어야 한다. 별도 이미지 PNG를 저장하지 않으며 연결 마스크 PNG는 보존한다. 마스크 없는 내부 빈 픽셀 격자는 문서 크기이고, 1×1 외 마스크를 불러오면 그 마스크 크기로 빈 격자를 맞춘다. 이 빈 격자는 원본 이미지 100MP 합계에서 제외하고 마스크는 기존 마스크 100MP 합계에 포함한다.
+
+합성 순서상 아래의 모든 표시 레이어를 조정한다. 그룹은 pass-through이므로 조정이 같은 그룹 내부에만 제한되지는 않는다. 유효 불투명도는 부모 값과 곱하고, 레이어 합성 모드·연결 마스크 커버리지로 원래 합성과 조정 결과를 섞되 알파는 유지한다. 변환은 마스크의 범위에만 적용하며 마스크가 없으면 전역 조정이다. 원본 픽셀과 설정은 별도로 보존하므로 재열기 후에도 설정을 편집할 수 있다.
+
+실제 Mac 앱 왕복은 미검증이다. 지원 범위와 기준 소스는 [Exposure 문서](exposure-adjustment.md)를 참고한다.
 
 ## 검증과 저장 보호
 
@@ -73,3 +86,10 @@ Windows의 밝기·대비·채도 편집은 선택 이미지의 픽셀을 변경
 저장은 같은 상위 폴더의 임시 패키지에 작성한 후 다시 읽어 검증합니다. 기존 `.comp`를 `.comp.recovery`로 옮기고 새 패키지를 게시하며, 게시 실패 시 기존 폴더를 복구합니다. 두 번의 폴더 이름 변경 전체가 하나의 원자적 연산은 아닙니다. 복구 사본이 남아 있으면 다음 저장을 차단하므로, 원본과 복구 폴더를 확인하고 보존할 사본을 결정해야 합니다. 같은 경로의 동시 저장은 `.write-lock` 파일 핸들로 차단하며, 남아 있는 빈 잠금 파일 자체는 저장 차단을 뜻하지 않습니다.
 
 Undo/Redo 히스토리와 화면 확대·이동 상태는 저장하지 않습니다. PNG/JPEG 내보내기는 합성된 별도 이미지이며 프로젝트 저장을 대신하지 않습니다. 실제 macOS 앱에서 생성한 대표 문서의 양방향 열기는 아직 검증하지 않았고, 현재 근거는 원본 코드·Swift 형태 fixture·저장 왕복 테스트입니다.
+
+
+## 비파괴 Levels 조정 레이어
+
+버전 7–8의 `adjustment.kind: "Levels"`를 읽고 버전 8로 저장한다. `levels.channel`은 RGB/Red/Green/Blue, `levels.ranges`는 해당 순서의 정확히 네 범위다. 각 범위에는 `black`, `gamma`, `white`, `outputBlack`, `outputWhite`가 필요하다. 검정 0~254, 흰색 검정+1~255, 감마 0.1~9.99, 출력 각각 0~255의 유한 수만 허용하며 출력 반전을 지원한다.
+
+활성 `levels` 이외의 필수 조정 필드는 기본값이어야 한다. 비활성 `exposureSettings`는 없음/null 또는 중립값 0/0/1만 허용한다. Exposure와 같이 imageFile 없이 저장하고 마스크 파일·그룹·Undo를 지원한다. 계산은 개별 색 채널 후 RGB 순서다. 상세 범위와 검증은 [Levels 문서](levels-adjustment.md)를 참고한다.
