@@ -316,6 +316,7 @@ public partial class MainWindow : Window
         await AdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".adjustments.json"));
         await ExposureSmokeTest(Path.ChangeExtension(screenshot, ".exposure.json"));
         await LevelsSmokeTest(Path.ChangeExtension(screenshot, ".levels.json"));
+        await CurvesSmokeTest(Path.ChangeExtension(screenshot, ".curves.json"));
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         UpdateLayout();
         var bitmap = new RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, PixelFormats.Pbgra32);

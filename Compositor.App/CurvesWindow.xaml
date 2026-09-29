@@ -1,0 +1,19 @@
+<Window x:Class="Compositor.App.CurvesWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Compositor.App"
+        Title="Curves adjustment layer" Style="{StaticResource {x:Type Window}}" Width="420" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="18">
+    <TextBlock Text="CURVES" FontWeight="SemiBold" Margin="3,0,3,8"/>
+    <TextBlock Text="Adjusts the composite below. Click to add or select a point; drag to move it. Each color channel is applied before RGB." Foreground="#B9BDC7" TextWrapping="Wrap" Margin="3,0,3,8"/>
+    <ComboBox x:Name="ChannelPicker" SelectionChanged="ChannelChanged" Margin="3,4"/>
+    <local:CurveGraph x:Name="Graph" Height="250" Margin="3,8"/>
+    <TextBlock Text="Input → (0–255) · Output ↑ (0–255)" Foreground="#B9BDC7" Margin="3"/>
+    <ComboBox x:Name="PointPicker" SelectionChanged="PointChanged" Margin="3"/>
+    <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+      <StackPanel><Label Content="Input"/><TextBox x:Name="InputValue" TextChanged="ValueChanged"/></StackPanel>
+      <StackPanel Grid.Column="1"><Label Content="Output"/><TextBox x:Name="OutputValue" TextChanged="ValueChanged"/></StackPanel>
+    </Grid>
+    <WrapPanel><Button x:Name="AddPointButton" Content="Add midpoint" Click="AddPoint"/><Button x:Name="DeleteButton" Content="Delete point" Click="DeletePoint"/><Button x:Name="ResetChannelButton" Content="Reset channel" Click="ResetChannel"/><Button x:Name="ResetAllButton" Content="Reset all" Click="ResetAll"/></WrapPanel>
+    <CheckBox x:Name="PreviewEnabled" Content="Preview changes" IsChecked="True" Foreground="White" Margin="6,10,6,4" Click="TogglePreview"/>
+    <TextBlock x:Name="Feedback" Text="Ready" TextWrapping="Wrap" Foreground="#B9BDC7" Margin="6" MinHeight="32"/>
+    <WrapPanel HorizontalAlignment="Right"><Button Content="Cancel" IsCancel="True"/><Button Content="Apply" IsDefault="True" Click="Apply"/></WrapPanel>
+  </StackPanel>
+</Window>

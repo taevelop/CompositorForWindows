@@ -19,6 +19,9 @@ public partial class MainWindow
         bool levels = session.ActiveLayer?.Levels is not null;
         EditLevelsMenu.IsEnabled = levels;
         EditLevelsButton.Visibility = levels ? Visibility.Visible : Visibility.Collapsed;
-        ExposureHint.Visibility = exposure || levels ? Visibility.Visible : Visibility.Collapsed;
+        bool curves = session.ActiveLayer?.Curves is not null;
+        EditCurvesMenu.IsEnabled = curves;
+        EditCurvesButton.Visibility = curves ? Visibility.Visible : Visibility.Collapsed;
+        ExposureHint.Visibility = exposure || levels || curves ? Visibility.Visible : Visibility.Collapsed;
     }
 }
