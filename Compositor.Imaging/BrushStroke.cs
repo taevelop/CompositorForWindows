@@ -12,6 +12,8 @@ public static class NativePixels
     public static extern void AlphaBounds(byte[] pixels, int width, int height, int stride, [Out] int[] bounds);
     [DllImport("Compositor.Native", EntryPoint = "compositor_clamp", CallingConvention = CallingConvention.Cdecl)]
     public static extern void Clamp([In, Out] byte[] pixels, int count);
+    [DllImport("Compositor.Native", EntryPoint = "compositor_levels", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern void Levels([In, Out] byte[] pixels, int count, float[] tables);
     [DllImport("Compositor.Native", EntryPoint = "compositor_brush", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Brush([In, Out] byte[] output, byte[] original, [In, Out] float[] coverage,
         int tileX, int tileY, int width, int height, double[] map, double ax, double ay, double bx, double by,
@@ -33,6 +35,7 @@ public sealed class BrushStroke
             !double.IsFinite(settings.Hardness) || settings.Hardness is < 0 or > 1 ||
             !double.IsFinite(settings.Opacity) || settings.Opacity is < 0 or > 1)
             throw new ArgumentOutOfRangeException(nameof(settings));
+        if (layer.IsAdjustment) throw new InvalidOperationException("Adjustment layers have no image pixels. Select Edit mask to paint their coverage.");
         if (layer.IsGroup) throw new InvalidOperationException("Groups cannot be painted directly.");
         this.layer = layer; this.settings = settings; this.canvasWidth = canvasWidth; this.canvasHeight = canvasHeight;
         Pixels = layer.Pixels;

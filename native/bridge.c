@@ -2,6 +2,11 @@
 #include <math.h>
 #include "BrushPixels.h"
 #include "AdjustPixels.h"
+#include "LevelsPixels.h"
+
+__declspec(dllexport) void compositor_levels(uint8_t *pixels, int32_t count, const float *tables) {
+    levels_apply(pixels, (size_t)count, tables);
+}
 
 // Only fixed-width integer APIs are exported; original C long APIs stay private.
 __declspec(dllexport) int32_t compositor_abi_version(void) { return 1; }

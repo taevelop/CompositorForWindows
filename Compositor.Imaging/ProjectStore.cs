@@ -13,7 +13,7 @@ public static class ProjectStore
     private static readonly string[] RootFields = ["format", "version", "colorSpace", "resolution", "documentID", "width", "height", "activeLayerID", "layers", "guides"];
     private static readonly string[] LayerFields = ["id", "name", "isVisible", "transform", "imageFile", "parentID", "isGroup", "opacity", "blendMode",
         "maskFile", "maskEnabled", "maskSourceID", "adjustment", "maskPlacement", "maskLinked", "shape", "effects", "text"];
-    private static readonly string[] UnsupportedFields = ["maskSourceID", "adjustment", "maskPlacement", "shape", "effects", "text"];
+    private static readonly string[] UnsupportedFields = ["maskSourceID", "maskPlacement", "shape", "effects", "text"];
 
     public static LoadedProject LoadRecovery(string path)
     {
@@ -49,6 +49,9 @@ public static class ProjectStore
                 foreach (string field in UnsupportedFields)
                     if (l.TryGetProperty(field, out var v) && v.ValueKind != JsonValueKind.Null)
                         throw new NotSupportedException($"Layer '{l.GetProperty("name").GetString()}' contains unsupported {field}. Nothing was opened or changed.");
+                var adjustment = AdjustmentJson.Read(l);
+                if (adjustment is not null && (version < 7 || OptionalBool(l, "isGroup") == true || OptionalString(l, "imageFile") is not null))
+                    throw new InvalidDataException("Adjustments require version 7 or later and a non-group layer without imageFile.");
                 string? maskFile = OptionalString(l, "maskFile");
                 bool? enabled = OptionalBool(l, "maskEnabled"), linked = OptionalBool(l, "maskLinked");
                 if (maskFile is null && (enabled is not null || linked is not null)) throw new InvalidDataException("Mask metadata requires a mask file.");
@@ -87,7 +90,9 @@ public static class ProjectStore
                 if (version < 3 && (opacity != 1 || blend != BlendMode.Normal)) throw new InvalidDataException("Layer appearance conflicts with format version.");
                 Raster raster;
                 string? asset = OptionalString(l, "imageFile");
-                if (isGroup) raster = new(1, 1);
+                var adjustment = AdjustmentJson.Read(l);
+                if (adjustment is not null) raster = new(width, height);
+                else if (isGroup) raster = new(1, 1);
                 else if (asset is not null)
                 {
                     if (asset != id.ToString().ToUpperInvariant() + ".png" && asset != id.ToString() + ".png")
@@ -111,7 +116,8 @@ public static class ProjectStore
                     mask = MaskCodec.Load(file, Limits.MaxPixels - usedMaskPixels) with { Enabled = OptionalBool(l, "maskEnabled") ?? true };
                     usedMaskPixels += (long)mask.Pixels.Width * mask.Pixels.Height;
                 }
-                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask, parent, isGroup));
+                if (adjustment is not null && mask is not null && (mask.Pixels.Width > 1 || mask.Pixels.Height > 1)) raster = new(mask.Pixels.Width, mask.Pixels.Height);
+                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask, parent, isGroup, adjustment?.Exposure, adjustment?.Levels));
             }
             var document = new Document(m.GetProperty("documentID").GetGuid(), width, height, OptionalDouble(m, "resolution", 72), layers.ToImmutable());
             document.Validate();
@@ -147,7 +153,7 @@ public static class ProjectStore
             foreach (var l in document.Layers)
             {
                 string id = l.Id.ToString().ToUpperInvariant(); string? file = null;
-                if (l.Pixels.Tiles.Count != 0 || l.Mask is not null) { file = id + ".png"; ImageCodec.SaveRaster(l.Pixels, Path.Combine(staging, "images", file)); }
+                if (!l.IsAdjustment && (l.Pixels.Tiles.Count != 0 || l.Mask is not null)) { file = id + ".png"; ImageCodec.SaveRaster(l.Pixels, Path.Combine(staging, "images", file)); }
                 string? maskFile = null;
                 if (l.Mask is { } mask) { maskFile = id + ".mask.png"; MaskCodec.Save(mask, Path.Combine(staging, "images", maskFile)); }
                 var t = l.Transform;
@@ -165,6 +171,8 @@ public static class ProjectStore
                         ["sampling"] = t.Sampling == Sampling.High ? "High quality" : t.Sampling.ToString()
                     }
                 });
+                if (l.Exposure is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.Exposure);
+                else if (l.Levels is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.Levels);
             }
             var manifest = new JsonObject
             {

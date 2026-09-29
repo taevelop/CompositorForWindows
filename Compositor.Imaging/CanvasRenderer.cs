@@ -3,7 +3,7 @@ using SkiaSharp;
 
 namespace Compositor.Imaging;
 
-/// <summary>Shared by the screen and export. Caches tile images, never a flattened document.</summary>
+/// <summary>Shared screen/export renderer. Caches tiles; Adjustment documents also cache one canonical composite.</summary>
 public sealed class CanvasRenderer : IDisposable
 {
     private sealed record Cached(PixelTile?[] Neighbors, SKImage Image);
@@ -12,7 +12,27 @@ public sealed class CanvasRenderer : IDisposable
     public static SKImageInfo Info(int width, int height) =>
         new(width, height, SKColorType.Rgba8888, SKAlphaType.Premul, WorkingColorSpace);
 
+    private Document? compositeDocument;
+    private SKImage? composite;
     public void Draw(SKCanvas canvas, Document document)
+    {
+        if (document.Layers.Any(l => l.IsAdjustment))
+        {
+            if (!ReferenceEquals(compositeDocument, document))
+            {
+                using var bitmap = new SKBitmap(Info(document.Width, document.Height));
+                using (var target = new SKCanvas(bitmap)) { target.Clear(); DrawLayers(target, document, bitmap); target.Flush(); }
+                bitmap.SetImmutable();
+                var next = SKImage.FromBitmap(bitmap);
+                composite?.Dispose(); composite = next; compositeDocument = document;
+            }
+            canvas.DrawImage(composite!, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest));
+            return;
+        }
+        composite?.Dispose(); composite = null; compositeDocument = null;
+        DrawLayers(canvas, document);
+    }
+    private void DrawLayers(SKCanvas canvas, Document document, SKBitmap? adjustmentSurface = null)
     {
         var used = new HashSet<(Guid, TileKey)>();
         canvas.Save(); canvas.ClipRect(new(0, 0, document.Width, document.Height));
@@ -20,6 +40,10 @@ public sealed class CanvasRenderer : IDisposable
         {
             var layer = entry.Layer;
             if (layer.IsGroup || !entry.Visible || entry.Opacity <= 0) continue;
+            if (layer.IsAdjustment)
+            {
+                canvas.Flush(); AdjustmentProcessor.Apply(adjustmentSurface!, document, layer, entry.Opacity); continue;
+            }
             var t = layer.Transform;
             canvas.Save();
             canvas.Translate((float)(t.X + t.Width / 2), (float)(t.Y + t.Height / 2));
@@ -132,5 +156,5 @@ public sealed class CanvasRenderer : IDisposable
         BlendMode.Darken => SKBlendMode.Darken, BlendMode.Lighten => SKBlendMode.Lighten,
         BlendMode.Difference => SKBlendMode.Difference, _ => throw new NotSupportedException("Unsupported blend mode.")
     };
-    public void Dispose() { foreach (var item in cache.Values) item.Image.Dispose(); cache.Clear(); }
+    public void Dispose() { composite?.Dispose(); composite = null; compositeDocument = null; foreach (var item in cache.Values) item.Image.Dispose(); cache.Clear(); }
 }
