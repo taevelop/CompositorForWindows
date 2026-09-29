@@ -25,7 +25,7 @@ manifest의 `format`은 `com.compositor.project`, `colorSpace`는 `sRGB`입니�
 | `imageFile` | `images/` 안의 `<레이어 UUID>.png`; 없거나 null이면 빈 레이어 |
 | `maskFile` | 버전 4 이상, `images/<레이어 UUID>.mask.png`; 없거나 null이면 마스크 없음 |
 | `maskEnabled`, `maskLinked` | 마스크 파일이 있을 때만 사용. enabled 기본 true, linked는 true 또는 생략/null만 지원 |
-| `adjustment` | 버전 7 이상, 지원 범위의 `kind: Exposure` 또는 `kind: Levels`. `imageFile` 없음/null, 그룹 아님. 아래 Exposure 절 참고 |
+| `adjustment` | 버전 7 이상, 지원 범위의 `kind: Exposure`, `kind: Levels`, `kind: Curves`. `imageFile` 없음/null, 그룹 아님. 아래 Exposure 절 참고 |
 | `opacity` | 0–1; 없거나 null이면 1 |
 | `blendMode` | `Normal`, `Multiply`, `Screen`, `Overlay`, `Darken`, `Lighten`, `Difference`; 없거나 null이면 `Normal` |
 | `transform.origin`, `transform.size` | Swift Codable의 CGPoint/CGSize와 같은 2원소 숫자 배열 |
@@ -40,7 +40,7 @@ manifest의 `format`은 `com.compositor.project`, `colorSpace`는 `sRGB`입니�
 Windows는 보존할 수 없는 기능을 버리고 열지 않습니다. 다음 항목이 있으면 프로젝트 전체 열기를 거부합니다.
 
 - 그룹 마스크 및 Normal 외 그룹 합성 모드, 참조 마스크(`maskSourceID`), 독립 배치(`maskPlacement`), 연결 해제(`maskLinked: false`).
-- Exposure·Levels 외의 조정 레이어 또는 보존할 수 없는 비활성 조정 설정, 도형, 효과, 텍스트 메타데이터와 비어 있지 않은 가이드 목록.
+- Exposure·Levels·Curves 외의 조정 레이어 또는 보존할 수 없는 비활성 조정 설정, 도형, 효과, 텍스트 메타데이터와 비어 있지 않은 가이드 목록.
 - 미지원 합성·샘플링 모드, 알 수 없는 manifest·레이어·변환 필드, 중복 JSON 필드.
 
 미지원 레이어 필드는 null이 아닌 값이면 거부합니다. 예를 들어 비어 있는 `effects` 객체도 열리지 않습니다. `maskEnabled: false`는 유효한 `maskFile`이 있을 때 지원하며, 비활성 마스크 데이터도 보존합니다. 위 미지원 레이어 필드의 null 값, `isGroup: false`, 빈 가이드 목록은 허용합니다. 버전 번호가 8이라는 이유만으로 그룹 마스크·독립 배치 마스크 등 macOS 기능 전체를 읽을 수 있는 것은 아닙니다.
@@ -71,7 +71,7 @@ Windows의 밝기·대비·채도 편집은 선택 이미지의 픽셀을 변경
 
 버전 7–8의 `adjustment.kind: "Exposure"`를 읽고 버전 8로 저장한다. `exposureSettings`는 `exposure`(−20~20), `offset`(−0.5~0.5), `gamma`(0.01~9.99)이며 모두 유한 수다. `exposureSettings`가 없거나 null이면 0/0/1이다. 객체가 있으면 세 필드를 모두 요구한다.
 
-Swift Codable에 필요한 `hue`, `saturation`, `lightness`, `colorize`, `levels`, `curves`는 Mac 기본값으로 저장한다. 입력에 이 값들이 있으면 기본값만 허용하며, `hsvSettings`, `gradientMapSettings`, `grainSettings`, `blackWhiteSettings`, `colorBalanceSettings`는 없거나 null만 허용한다. 사용하지 않는 설정이라도 비기본값을 조용히 제거하지 않고 문서 열기를 거부한다. 모든 중첩 중복/알 수 없는 필드와 지원하지 않는 kind를 거부한다. Levels kind의 활성 설정은 아래 절을 따른다.
+Swift Codable에 필요한 `hue`, `saturation`, `lightness`, `colorize`, `levels`, `curves`는 Mac 기본값으로 저장한다. 입력에 이 값들이 있으면 기본값만 허용하며, `hsvSettings`, `gradientMapSettings`, `grainSettings`, `blackWhiteSettings`, `colorBalanceSettings`는 없거나 null만 허용한다. 사용하지 않는 설정이라도 비기본값을 조용히 제거하지 않고 문서 열기를 거부한다. 모든 중첩 중복/알 수 없는 필드와 지원하지 않는 kind를 거부한다. Levels·Curves kind의 활성 설정은 아래 절을 따른다.
 
 조정 레이어는 그룹이 아니고 `imageFile`이 없거나 null이어야 한다. 별도 이미지 PNG를 저장하지 않으며 연결 마스크 PNG는 보존한다. 마스크 없는 내부 빈 픽셀 격자는 문서 크기이고, 1×1 외 마스크를 불러오면 그 마스크 크기로 빈 격자를 맞춘다. 이 빈 격자는 원본 이미지 100MP 합계에서 제외하고 마스크는 기존 마스크 100MP 합계에 포함한다.
 
@@ -93,3 +93,10 @@ Undo/Redo 히스토리와 화면 확대·이동 상태는 저장하지 않습니
 버전 7–8의 `adjustment.kind: "Levels"`를 읽고 버전 8로 저장한다. `levels.channel`은 RGB/Red/Green/Blue, `levels.ranges`는 해당 순서의 정확히 네 범위다. 각 범위에는 `black`, `gamma`, `white`, `outputBlack`, `outputWhite`가 필요하다. 검정 0~254, 흰색 검정+1~255, 감마 0.1~9.99, 출력 각각 0~255의 유한 수만 허용하며 출력 반전을 지원한다.
 
 활성 `levels` 이외의 필수 조정 필드는 기본값이어야 한다. 비활성 `exposureSettings`는 없음/null 또는 중립값 0/0/1만 허용한다. Exposure와 같이 imageFile 없이 저장하고 마스크 파일·그룹·Undo를 지원한다. 계산은 개별 색 채널 후 RGB 순서다. 상세 범위와 검증은 [Levels 문서](levels-adjustment.md)를 참고한다.
+
+
+## 비파괴 Curves 조정 레이어
+
+버전 7–8의 `adjustment.kind: "Curves"`를 읽고 버전 8로 저장한다. `curves.channel`은 RGB/Red/Green/Blue, `curves.channels`는 해당 순서의 정확히 네 배열이다. 각 배열은 2~32개의 `{x,y}` 객체이며 x/y는 0~255의 유한 수, x는 엄격한 오름차순, 처음/마지막 x는 0/255다. 보간 기울기가 비유한 수가 되는 극단적 간격도 거부한다.
+
+비활성 조정 설정은 기존과 같이 기본값만 보존한다. imageFile 없이 저장하고 선택 채널·점 목록·연결 마스크를 복원한다. 지원하지 않는 필드/중복 필드와 잘못된 점은 열기와 덮어쓰기를 거부한다. [Curves 검증 문서](curves-adjustment.md)에 보간과 실제 검증 범위를 설명한다.

@@ -5,6 +5,11 @@ using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 
+if (args.Length > 0 && args[0] == "--curves")
+{
+    CurvesBenchmark.Run(args.Length > 1 ? args[1] : "curves-benchmark.json");
+    return;
+}
 if (args.Length > 0 && args[0] == "--levels")
 {
     LevelsBenchmark.Run(args.Length > 1 ? args[1] : "levels-benchmark.json");

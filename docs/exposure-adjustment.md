@@ -69,4 +69,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Publish
 
 자동 실행 결과는 `artifacts/ui-smoke.exposure.json`, 대화상자 캡처는 `artifacts/ui-smoke.exposure.dialog.png`다. self-contained 실행 파일 결과는 `artifacts/published-exposure-smoke.exposure.json`에 기록한다. 물리 입력·다중 모니터 DPI·실제 Mac 앱 왕복 및 Apple/Skia 변환 가장자리의 완전한 픽셀 동등성은 미검증이다.
 
-2026-09-29에 [Levels 비파괴 조정 레이어](levels-adjustment.md)를 추가했다. 현재 합성기는 Exposure·Levels를 함께 처리하며 채널별 조회표를 사용한다. 위 수치는 2026-09-28 Exposure 구현 당시의 기록이다. 다음 기능은 Curves다.
+2026-09-29에 [Levels 비파괴 조정 레이어](levels-adjustment.md)를 추가했다. 현재 합성기는 Exposure·Levels를 함께 처리하며 채널별 조회표를 사용한다. 위 수치는 2026-09-28 Exposure 구현 당시의 기록이다. [Curves](curves-adjustment.md)도 추가했으며, 다음 단계는 레이어 효과다.

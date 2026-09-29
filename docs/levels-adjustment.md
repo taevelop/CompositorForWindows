@@ -43,4 +43,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Publish
 
 결과: `artifacts/ui-smoke.levels.json`, `artifacts/ui-smoke.levels.dialog.png`, `artifacts/levels-benchmark.json`. self-contained 배포본 검증은 `artifacts/published-levels-smoke.levels.json`에 기록한다.
 
-다음 기능은 **Curves 비파괴 조정 레이어**다. 채널별 곡선 편집·Mac 곡선 보간·파일 호환성을 구현하고 현재 조정 레이어의 마스크/Undo/합성 검증을 확장한다.
+2026-09-29에 [Curves 비파괴 조정 레이어](curves-adjustment.md)를 추가했다. 위 검증 개수와 성능은 Levels 구현 시점의 기록이다. 다음 단계는 레이어 효과(색상 오버레이부터)다.
