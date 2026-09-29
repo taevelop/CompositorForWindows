@@ -152,7 +152,7 @@ public partial class MainWindow : Window
         var before = session.Document; var imported = new List<Layer>();
         bool success = await Work("Importing images…", () =>
         {
-            long used = before.Layers.Where(l => !l.IsGroup && (l.Pixels.Tiles.Count != 0 || l.Mask is not null)).Sum(l => (long)l.Pixels.Width * l.Pixels.Height);
+            long used = before.Layers.Where(l => !l.IsGroup && !l.IsAdjustment && (l.Pixels.Tiles.Count != 0 || l.Mask is not null)).Sum(l => (long)l.Pixels.Width * l.Pixels.Height);
             foreach (string path in paths)
             {
                 var pixels = ImageCodec.Load(path, Limits.MaxPixels - used); used += (long)pixels.Width * pixels.Height;
@@ -314,6 +314,8 @@ public partial class MainWindow : Window
         await MaskSmokeTest(Path.ChangeExtension(screenshot, ".masks.json"));
         await GroupSmokeTest(Path.ChangeExtension(screenshot, ".groups.json"));
         await AdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".adjustments.json"));
+        await ExposureSmokeTest(Path.ChangeExtension(screenshot, ".exposure.json"));
+        await LevelsSmokeTest(Path.ChangeExtension(screenshot, ".levels.json"));
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         UpdateLayout();
         var bitmap = new RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, PixelFormats.Pbgra32);

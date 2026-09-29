@@ -9,6 +9,7 @@ public partial class MainWindow
     private void RefreshMaskControls()
     {
         var mask = session.ActiveLayer?.Mask;
+        ((ComboBoxItem)EditTarget.Items[0]).Content = session.ActiveLayer?.IsAdjustment == true ? "Adjustment (no image pixels)" : "Edit image";
         MaskSection.IsEnabled = session.ActiveLayer is { IsGroup: false };
         if (mask is not null) MaskSection.IsExpanded = true;
         if (session.ActiveLayer?.IsGroup == true) MaskSection.IsExpanded = false;

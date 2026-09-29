@@ -18,7 +18,7 @@ public partial class ColorAdjustmentWindow : Window
 
     public ColorAdjustmentWindow(EditorSession session)
     {
-        if (session.InTransaction || session.EditMask || session.ActiveLayer is not { IsGroup: false } selected)
+        if (session.InTransaction || session.EditMask || session.ActiveLayer is not { IsGroup: false, IsAdjustment: false } selected)
             throw new InvalidOperationException("Select an image layer and Edit image before adjusting colors.");
         this.session = session; original = session.Document; layer = selected; result = layer.Pixels;
         InitializeComponent(); TargetName.Text = layer.Name;

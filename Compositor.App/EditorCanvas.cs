@@ -128,6 +128,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
         if (Session.InTransaction || Session.ActiveLayer is not { } layer || Tool == EditorTool.Hand) return;
         if (Tool is EditorTool.Brush or EditorTool.Eraser)
         {
+            if (layer.IsAdjustment && !Session.EditMask) throw new InvalidOperationException("Adjustment layers have no image pixels. Select Edit mask to paint coverage.");
             if (layer.IsGroup) throw new InvalidOperationException("Select an image layer inside the group before painting.");
             if (!LayerHierarchy.Entries(Session.Document).First(e => e.Layer.Id == layer.Id).Visible) throw new InvalidOperationException("Show the layer and its parent groups before painting.");
         }

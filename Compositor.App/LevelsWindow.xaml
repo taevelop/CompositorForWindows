@@ -1,0 +1,17 @@
+<Window x:Class="Compositor.App.LevelsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Levels adjustment layer" Style="{StaticResource {x:Type Window}}" Width="400" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="18">
+    <TextBlock Text="LEVELS" FontWeight="SemiBold" Margin="3,0,3,10"/>
+    <TextBlock Text="Adjusts the visible composite below this layer. Each color channel is adjusted first, then RGB. Source images stay unchanged." Foreground="#B9BDC7" TextWrapping="Wrap" Margin="3,0,3,10"/>
+    <Label Content="Channel"/><ComboBox x:Name="ChannelPicker" SelectionChanged="ChannelChanged"/>
+    <Label Content="Input black (0 to 254)"/><TextBox x:Name="BlackValue" Text="0" TextChanged="ValueChanged"/>
+    <Label Content="Gamma (0.1 to 9.99)"/><TextBox x:Name="GammaValue" Text="1" TextChanged="ValueChanged"/>
+    <Label Content="Input white (greater than black, up to 255)"/><TextBox x:Name="WhiteValue" Text="255" TextChanged="ValueChanged"/>
+    <Label Content="Output black (0 to 255)"/><TextBox x:Name="OutputBlackValue" Text="0" TextChanged="ValueChanged"/>
+    <Label Content="Output white (0 to 255; may be below black)"/><TextBox x:Name="OutputWhiteValue" Text="255" TextChanged="ValueChanged"/>
+    <CheckBox x:Name="PreviewEnabled" Content="Preview changes" IsChecked="True" Foreground="White" Margin="6,14,6,4" Click="TogglePreview"/>
+    <TextBlock x:Name="Feedback" Text="Ready" TextWrapping="Wrap" Foreground="#B9BDC7" Margin="6" MinHeight="36"/>
+    <WrapPanel><Button Content="Reset channel" Click="ResetChannel"/><Button Content="Reset all" Click="ResetAll"/></WrapPanel>
+    <WrapPanel HorizontalAlignment="Right"><Button Content="Cancel" IsCancel="True"/><Button Content="Apply" IsDefault="True" Click="Apply"/></WrapPanel>
+  </StackPanel>
+</Window>

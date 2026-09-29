@@ -12,6 +12,13 @@ public partial class MainWindow
     });
     private void RefreshAdjustmentControls()
     {
-        AdjustColorsMenu.IsEnabled = AdjustColorsButton.IsEnabled = session.ActiveLayer is { IsGroup: false } && !session.EditMask;
+        AdjustColorsMenu.IsEnabled = AdjustColorsButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false } && !session.EditMask;
+        bool exposure = session.ActiveLayer?.Exposure is not null;
+        EditExposureMenu.IsEnabled = exposure;
+        EditExposureButton.Visibility = exposure ? Visibility.Visible : Visibility.Collapsed;
+        bool levels = session.ActiveLayer?.Levels is not null;
+        EditLevelsMenu.IsEnabled = levels;
+        EditLevelsButton.Visibility = levels ? Visibility.Visible : Visibility.Collapsed;
+        ExposureHint.Visibility = exposure || levels ? Visibility.Visible : Visibility.Collapsed;
     }
 }

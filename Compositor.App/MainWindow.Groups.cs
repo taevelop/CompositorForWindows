@@ -8,7 +8,7 @@ public partial class MainWindow
     private sealed record LayerRow(Layer Layer, int Depth, bool Visible, bool Expanded)
     {
         public Guid Id => Layer.Id;
-        public string Label => (Layer.IsGroup ? "Group · " : "") + Layer.Name;
+        public string Label => (Layer.IsGroup ? "Group · " : Layer.IsAdjustment ? "Adjustment · " : "") + Layer.Name;
         public string Disclosure => Layer.IsGroup ? Expanded ? "−" : "+" : "";
         public bool CanExpand => Layer.IsGroup;
         public Visibility ExpandVisibility => Layer.IsGroup ? Visibility.Visible : Visibility.Hidden;
