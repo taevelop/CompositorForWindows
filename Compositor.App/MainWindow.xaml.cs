@@ -225,7 +225,8 @@ public partial class MainWindow : Window
     private void Reorder(int offset) => Safe(() =>
     {
         if (session.ActiveLayer is not { } l) return;
-        session.Apply(d => LayerHierarchy.Reorder(d, l.Id, offset));
+        var selected = session.SelectedLayerIds;
+        session.Apply(d => LayerHierarchy.ReorderSelected(d, selected, offset));
     });
     private void LayerUp(object sender, RoutedEventArgs e) => Reorder(1);
     private void LayerDown(object sender, RoutedEventArgs e) => Reorder(-1);

@@ -159,6 +159,26 @@ public static class LayerHierarchy
         }
         return Normalize(doc with { Layers = layers.ToImmutableArray() });
     }
+    /// <summary>Moves selected roots one sibling step without reversing their relative order.</summary>
+    public static Document ReorderSelected(Document doc, IEnumerable<Guid> selection, int direction)
+    {
+        if (direction == 0) return doc;
+        if (direction is not (-1 or 1)) throw new ArgumentOutOfRangeException(nameof(direction));
+        var ids = SelectedRoots(doc, selection).Select(l => l.Id).ToHashSet();
+        var layers = doc.Layers.ToArray(); bool changed = false;
+        foreach (var siblings in doc.Layers.GroupBy(l => l.ParentId))
+        {
+            var slots = Enumerable.Range(0, layers.Length).Where(i => layers[i].ParentId == siblings.Key).ToArray();
+            int start = direction > 0 ? slots.Length - 2 : 1;
+            for (int i = start; direction > 0 ? i >= 0 : i < slots.Length; i -= direction)
+            {
+                int a = slots[i], b = slots[i + direction];
+                if (!ids.Contains(layers[a].Id) || ids.Contains(layers[b].Id)) continue;
+                (layers[a], layers[b]) = (layers[b], layers[a]); changed = true;
+            }
+        }
+        return changed ? Normalize(doc with { Layers = layers.ToImmutableArray() }) : doc;
+    }
     public static Document Reorder(Document doc, Guid id, int offset)
     {
         var layer = doc.Layers.First(l => l.Id == id); var siblings = doc.Layers.Where(l => l.ParentId == layer.ParentId).ToArray();

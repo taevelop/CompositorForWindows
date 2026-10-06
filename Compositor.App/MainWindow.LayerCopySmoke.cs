@@ -41,5 +41,13 @@ public partial class MainWindow
         Check(session.Document.Layers.Where(l=>l.ParentId is null).Select(l=>l.Id).SequenceEqual(new[]{target.Id,group.Id,other.Id}),"Move out did not place roots above their parent.");
         session.Undo();Check(session.Document.Layers.Count(l=>l.ParentId==target.Id)==2&&Layers.SelectedItems.Count==2,"Move out Undo failed.");
         session.Undo();Check(ReferenceEquals(relocation,session.Document)&&Layers.SelectedItems.Count==2,"Move into group Undo failed.");
+        LayerUp(this,new());
+        Check(session.Document.Layers.Where(l=>l.ParentId is null).Select(l=>l.Id).SequenceEqual(new[]{target.Id,group.Id,other.Id}),"Multiple Layer Up reversed or skipped selected roots.");
+        Check(Layers.SelectedItems.Count==2&&session.ActiveLayerId==other.Id,"Reorder lost panel selection.");
+        var ordered=session.Document;int count=session.UndoCount;LayerUp(this,new());
+        Check(ReferenceEquals(ordered,session.Document)&&session.UndoCount==count,"Boundary reorder added history.");
+        LayerDown(this,new());
+        Check(session.Document.Layers.Where(l=>l.ParentId is null).Select(l=>l.Id).SequenceEqual(new[]{group.Id,other.Id,target.Id}),"Multiple Layer Down failed.");
+        session.Undo();Check(ReferenceEquals(ordered,session.Document)&&Layers.SelectedItems.Count==2,"Multiple reorder Undo failed.");
     }
 }
