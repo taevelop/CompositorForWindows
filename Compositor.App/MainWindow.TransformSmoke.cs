@@ -50,6 +50,16 @@ public partial class MainWindow
         var applied=session.Document;session.Undo();Check(ReferenceEquals(selected,session.Document),"Selection transform Undo failed.");session.Redo();Check(ReferenceEquals(applied,session.Document),"Selection transform Redo failed.");
         session.Load(doc);StartTransform(null,new());TransformAngleSlider.Value=15;ToolPicker.SelectedIndex=1;
         Check(!Canvas.IsTransforming&&!session.InTransaction&&session.UndoCount==1,"Tool switch did not commit.");
+        var group=Layer.Group("Transform group",300,240);
+        var grouped=LayerHierarchy.Wrap(doc,doc.Layers[0].Id,group);
+        grouped=grouped with{Layers=grouped.Layers.Add(Layer.Blank("Hidden",10,10) with{Visible=false,ParentId=group.Id,Transform=new(-100,-100,10,10)})};
+        session.Load(grouped,group.Id);StartTransform(null,new());
+        Check(Canvas.TransformDraft==new LayerTransform(0,0,300,240),"Group transform used hidden layers or folder metadata.");
+        TransformScaleSlider.Value=150;TransformAngleSlider.Value=30;ApplyTransform(null,new());
+        var child=session.Document.Layers.First(l=>l.Id==doc.Layers[0].Id);
+        Check(Math.Abs(child.Transform.Width-450)<.001&&Math.Abs(child.Transform.Rotation-30)<.001,"Group sliders did not transform child.");
+        Check(session.Document.Layers[^1].Transform.X==-100&&session.UndoCount==1,"Group changed hidden layer or split Undo.");
+        session.Undo();Check(ReferenceEquals(grouped,session.Document),"Group transform Undo failed.");
         var second=Layer.Blank("Other",300,240);
         session.Load(doc with{Layers=doc.Layers.Add(second)},doc.Layers[0].Id);
         StartTransform(null,new());TransformAngleSlider.Value=12;
