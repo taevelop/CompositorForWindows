@@ -36,7 +36,7 @@ public sealed class ViewportRenderer : IDisposable
     {
         var full = new SKRect(0, 0, width, height);
         if (old is null || old.Id != current.Id || old.Width != current.Width || old.Height != current.Height || old.Layers.Length != current.Layers.Length) return full;
-        if (!ReferenceEquals(old, current) && (old.Layers.Any(l => l.IsAdjustment) || current.Layers.Any(l => l.IsAdjustment))) return full;
+        if (!ReferenceEquals(old, current) && (old.Layers.Any(l => l.IsAdjustment || l.Effects?.Shadow is { IsEnabled: true, Opacity: > 0 }) || current.Layers.Any(l => l.IsAdjustment || l.Effects?.Shadow is { IsEnabled: true, Opacity: > 0 }))) return full;
         float left = width, top = height, right = 0, bottom = 0;
         for (int i = 0; i < current.Layers.Length; i++)
         {

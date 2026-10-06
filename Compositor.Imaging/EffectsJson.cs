@@ -11,14 +11,23 @@ internal static class EffectsJson
         if (!layer.TryGetProperty("effects", out var node) || node.ValueKind == JsonValueKind.Null) return null;
         Fields(node, ["colorOverlay", "stroke", "shadow", "innerShadow", "outerGlow"]);
         foreach (var field in node.EnumerateObject())
-            if (field.Name != "colorOverlay" && field.Value.ValueKind != JsonValueKind.Null)
+            if (field.Name is not ("colorOverlay" or "shadow") && field.Value.ValueKind != JsonValueKind.Null)
                 throw new NotSupportedException($"Unsupported layer effect: {field.Name}. Nothing was opened or changed.");
-        if (!node.TryGetProperty("colorOverlay", out var overlay) || overlay.ValueKind == JsonValueKind.Null) return new();
+        ShadowEffect? shadow = null;
+        if (node.TryGetProperty("shadow", out var s) && s.ValueKind != JsonValueKind.Null)
+        {
+            Fields(s, ["angle", "distance", "blur", "red", "green", "blue", "opacity", "enabled"]);
+            shadow = new(s.GetProperty("angle").GetDouble(), s.GetProperty("distance").GetDouble(), s.GetProperty("blur").GetDouble(),
+                s.GetProperty("red").GetDouble(), s.GetProperty("green").GetDouble(), s.GetProperty("blue").GetDouble(),
+                s.GetProperty("opacity").GetDouble(), s.TryGetProperty("enabled", out var e) && e.ValueKind != JsonValueKind.Null ? e.GetBoolean() : null);
+            shadow.Validate();
+        }
+        if (!node.TryGetProperty("colorOverlay", out var overlay) || overlay.ValueKind == JsonValueKind.Null) return new(Shadow: shadow);
         Fields(overlay, ["red", "green", "blue", "opacity", "enabled"]);
         bool? enabled = overlay.TryGetProperty("enabled", out var flag) && flag.ValueKind != JsonValueKind.Null ? flag.GetBoolean() : null;
         var result = new ColorOverlayEffect(overlay.GetProperty("red").GetDouble(), overlay.GetProperty("green").GetDouble(),
             overlay.GetProperty("blue").GetDouble(), overlay.GetProperty("opacity").GetDouble(), enabled);
-        result.Validate(); return new(result);
+        result.Validate(); return new(result, shadow);
     }
     private static void Fields(JsonElement node, string[] allowed)
     {
@@ -38,6 +47,13 @@ internal static class EffectsJson
             var value = new JsonObject { ["red"] = overlay.Red, ["green"] = overlay.Green, ["blue"] = overlay.Blue, ["opacity"] = overlay.Opacity };
             if (overlay.Enabled is { } enabled) value["enabled"] = enabled;
             result["colorOverlay"] = value;
+        }
+        if (effects.Shadow is { } shadow)
+        {
+            var value = new JsonObject { ["angle"] = shadow.Angle, ["distance"] = shadow.Distance, ["blur"] = shadow.Blur,
+                ["red"] = shadow.Red, ["green"] = shadow.Green, ["blue"] = shadow.Blue, ["opacity"] = shadow.Opacity };
+            if (shadow.Enabled is { } enabled) value["enabled"] = enabled;
+            result["shadow"] = value;
         }
         return result;
     }

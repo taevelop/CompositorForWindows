@@ -41,7 +41,7 @@ public partial class ColorOverlayWindow : Window
         var settings = new ColorOverlayEffect(Read(RedValue), Read(GreenValue), Read(BlueValue), Read(OpacityValue), flag);
         settings.Validate(); return settings;
     }
-    private Document Edited(ColorOverlayEffect settings) => original.Replace(layer with { Effects = new(settings) });
+    private Document Edited(ColorOverlayEffect settings) => original.Replace(layer with { Effects = (layer.Effects ?? new()) with { ColorOverlay = settings } });
     private void ValueChanged(object sender, TextChangedEventArgs e) { if (!initialized || closed) return; timer.Stop(); timer.Start(); }
     internal bool Preview()
     {
@@ -69,7 +69,7 @@ public partial class ColorOverlayWindow : Window
     internal void RemoveEdit()
     {
         if (closed) return; timer.Stop();
-        session.Preview(original.Replace(layer with { Effects = layer.Effects is null ? null : new() })); session.Commit(); finished = true; Close();
+        session.Preview(original.Replace(layer with { Effects = layer.Effects is null ? null : layer.Effects with { ColorOverlay = null } })); session.Commit(); finished = true; Close();
     }
     internal void CancelEdit()
     {

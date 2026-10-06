@@ -24,6 +24,7 @@ public sealed class CanvasRenderer : IDisposable
     private SKImage? composite;
     public void Draw(SKCanvas canvas, Document document)
     {
+        if (!document.Layers.Any(l => l.Effects?.Shadow is { IsEnabled: true, Opacity: > 0 })) ClearShadowSource();
         if (document.Layers.Any(l => l.IsAdjustment))
         {
             if (!ReferenceEquals(compositeDocument, document))
@@ -62,6 +63,11 @@ public sealed class CanvasRenderer : IDisposable
             using var paint = new SKPaint { Color = SKColors.White.WithAlpha((byte)Math.Round(entry.Opacity * 255)),
                 BlendMode = Blend(layer.Blend), IsAntialias = false };
             var sampling = new SKSamplingOptions(t.Sampling == Sampling.Nearest ? SKFilterMode.Nearest : SKFilterMode.Linear);
+            if (layer.Effects?.Shadow is { IsEnabled: true, Opacity: > 0 } shadow)
+            {
+                DrawShadowLayer(canvas, layer, shadow, paint, sampling);
+                canvas.Restore(); continue;
+            }
             var overlay = layer.Effects?.ColorOverlay is { IsEnabled: true, Opacity: > 0 } effect ? effect : null;
             byte[]? overlayTable = overlay is null ? null : OverlayTable(overlay);
             foreach (var (key, tile) in layer.Pixels.Tiles)
@@ -91,6 +97,69 @@ public sealed class CanvasRenderer : IDisposable
         }
         canvas.Restore();
         foreach (var key in cache.Keys.Where(k => !used.Contains(k)).ToArray()) { cache[key].Image.Dispose(); cache.Remove(key); }
+    }
+
+    private Raster? shadowPixels, shadowMask;
+    private ColorOverlayEffect? shadowOverlay;
+    private SKImage? shadowSource, shadowColored;
+    private void ClearShadowSource()
+    {
+        shadowSource?.Dispose(); shadowColored?.Dispose();
+        shadowSource = shadowColored = null; shadowPixels = shadowMask = null; shadowOverlay = null;
+    }
+    private void DrawShadowLayer(SKCanvas canvas, Layer layer, ShadowEffect shadow, SKPaint layerPaint, SKSamplingOptions sampling)
+    {
+        // A single source image avoids blur seams at tile boundaries. The filter expands beyond
+        // the source rectangle; only the document clip limits the result.
+        var currentMask = layer.Mask is { Enabled: true } activeMask ? activeMask.Pixels : null;
+        var currentOverlay = layer.Effects?.ColorOverlay is { IsEnabled: true, Opacity: > 0 } activeOverlay ? activeOverlay : null;
+        if (shadowSource is null || !ReferenceEquals(shadowPixels, layer.Pixels) || !ReferenceEquals(shadowMask, currentMask) || shadowOverlay != currentOverlay)
+        {
+            ClearShadowSource();
+            using var bitmap = new SKBitmap(Info(layer.Pixels.Width, layer.Pixels.Height));
+            var bytes = bitmap.GetPixelSpan();
+            bytes.Clear();
+            foreach (var (key, tile) in layer.Pixels.Tiles)
+            for (int row = 0; row < Math.Min(256, bitmap.Height - key.Y * 256); row++)
+                tile.Bytes.Slice(row * 1024, Math.Min(256, bitmap.Width - key.X * 256) * 4)
+                    .CopyTo(bytes.Slice(((key.Y * 256 + row) * bitmap.Width + key.X * 256) * 4));
+            if (layer.Mask is { Enabled: true } mask)
+            {
+                if (mask.Pixels.Width == 1 && mask.Pixels.Height == 1)
+                {
+                    int alpha = mask.Pixels.Tiles[new(0, 0)].Bytes[0];
+                    if (alpha != 255) for (int p = 0; p < bytes.Length; p++) bytes[p] = (byte)((bytes[p] * alpha + 127) / 255);
+                }
+                else
+                {
+                    foreach (var (key, tile) in mask.Pixels.Tiles)
+                    for (int row = 0; row < Math.Min(256, bitmap.Height - key.Y * 256); row++)
+                    for (int x = 0; x < Math.Min(256, bitmap.Width - key.X * 256); x++)
+                    {
+                        int alpha = tile.Bytes[(row * 256 + x) * 4];
+                        int p = ((key.Y * 256 + row) * bitmap.Width + key.X * 256 + x) * 4;
+                        for (int c = 0; c < 4; c++) bytes[p + c] = (byte)((bytes[p + c] * alpha + 127) / 255);
+                    }
+                }
+            }
+            shadowSource = SKImage.FromBitmap(bitmap);
+            if (currentOverlay is not null)
+            {
+                ColorOverlayProcessor.ApplyLookup(bytes, OverlayTable(currentOverlay));
+                shadowColored = SKImage.FromBitmap(bitmap);
+            }
+            shadowPixels = layer.Pixels; shadowMask = currentMask; shadowOverlay = currentOverlay;
+        }
+        using var filter = SKImageFilter.CreateDropShadowOnly((float)shadow.OffsetX, (float)shadow.OffsetY,
+            (float)(shadow.Blur / 2), (float)(shadow.Blur / 2),
+            new SKColor((byte)Math.Round(shadow.Red * 255), (byte)Math.Round(shadow.Green * 255),
+                (byte)Math.Round(shadow.Blue * 255), (byte)Math.Round(shadow.Opacity * 255)));
+        using var shadowPaint = new SKPaint { ImageFilter = filter };
+        // Composite source + shadow first, then apply layer blend/opacity exactly once.
+        canvas.SaveLayer(layerPaint);
+        canvas.DrawImage(shadowSource!, 0, 0, sampling, shadowPaint);
+        canvas.DrawImage(shadowColored ?? shadowSource!, 0, 0, sampling);
+        canvas.Restore();
     }
 
     private static unsafe SKImage TileImage(Raster raster, TileKey key, Raster? mask, byte[]? overlayTable)
@@ -167,5 +236,5 @@ public sealed class CanvasRenderer : IDisposable
         BlendMode.Darken => SKBlendMode.Darken, BlendMode.Lighten => SKBlendMode.Lighten,
         BlendMode.Difference => SKBlendMode.Difference, _ => throw new NotSupportedException("Unsupported blend mode.")
     };
-    public void Dispose() { overlayTables.Clear(); composite?.Dispose(); composite = null; compositeDocument = null; foreach (var item in cache.Values) item.Image.Dispose(); cache.Clear(); }
+    public void Dispose() { ClearShadowSource(); overlayTables.Clear(); composite?.Dispose(); composite = null; compositeDocument = null; foreach (var item in cache.Values) item.Image.Dispose(); cache.Clear(); }
 }

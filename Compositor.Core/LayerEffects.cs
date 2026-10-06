@@ -11,7 +11,22 @@ public sealed record ColorOverlayEffect(double Red = 0, double Green = 0, double
     }
 }
 
-public sealed record LayerEffects(ColorOverlayEffect? ColorOverlay = null)
+public sealed record ShadowEffect(double Angle = 90, double Distance = 20, double Blur = 20,
+    double Red = 0, double Green = 0, double Blue = 0, double Opacity = .5, bool? Enabled = null)
 {
-    public void Validate() => ColorOverlay?.Validate();
+    public bool IsEnabled => Enabled != false;
+    public double OffsetX => -Math.Cos(Angle * Math.PI / 180) * Distance;
+    public double OffsetY => Math.Sin(Angle * Math.PI / 180) * Distance;
+    public void Validate()
+    {
+        new ColorOverlayEffect(Red, Green, Blue, Opacity).Validate();
+        if (!double.IsFinite(Angle) || !double.IsFinite(Distance) || !double.IsFinite(Blur) ||
+            Angle is < -360 or > 360 || Distance is < 0 or > 5000 || Blur is < 0 or > 500)
+            throw new InvalidDataException("Shadow angle must be -360..360, distance 0..5000 and blur 0..500.");
+    }
+}
+
+public sealed record LayerEffects(ColorOverlayEffect? ColorOverlay = null, ShadowEffect? Shadow = null)
+{
+    public void Validate() { ColorOverlay?.Validate(); Shadow?.Validate(); }
 }

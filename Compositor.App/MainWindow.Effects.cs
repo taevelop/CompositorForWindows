@@ -10,8 +10,15 @@ public partial class MainWindow
         try { dialog.ShowDialog(); }
         finally { dialog.CancelEdit(); Refresh(); Canvas.Focus(); }
     });
+    private void EditShadow(object sender, RoutedEventArgs e) => Safe(() =>
+    {
+        var dialog = new ShadowWindow(session) { Owner = this };
+        try { dialog.ShowDialog(); }
+        finally { dialog.CancelEdit(); Refresh(); Canvas.Focus(); }
+    });
     private void RefreshEffectsControls()
     {
+        ShadowMenu.IsEnabled = ShadowButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false };
         ColorOverlayMenu.IsEnabled = ColorOverlayButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false };
         var overlay = session.ActiveLayer?.Effects?.ColorOverlay;
         ColorOverlayInfo.Text = overlay is null ? "No color overlay" : overlay.IsEnabled ? "Color overlay enabled" : "Color overlay disabled";

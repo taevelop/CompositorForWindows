@@ -17,6 +17,7 @@ if (args.Length > 0 && args[0] == "--soak")
     return;
 }
 
+if (args.Length > 0 && args[0] == "--shadow") { ShadowBenchmark.Run(args.Length > 1 ? args[1] : "shadow-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--overlay")
 {
     ColorOverlayBenchmark.Run(args.Length > 1 ? args[1] : "overlay-benchmark.json");

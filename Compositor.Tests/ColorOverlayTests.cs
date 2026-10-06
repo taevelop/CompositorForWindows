@@ -158,7 +158,7 @@ public sealed class ColorOverlayTests : IDisposable
         }
         string text = json.ToJsonString(); if (failure == "duplicate") text = text.Replace("\"red\":1", "\"red\":1,\"red\":0");
         File.WriteAllText(file, text); byte[] prior = File.ReadAllBytes(file);
-        if (failure is "missing" or "range" or "flag" or "duplicate") { Assert.Throws<InvalidDataException>(() => ProjectStore.Load(path)); Assert.Throws<InvalidDataException>(() => ProjectStore.Save(doc, null, path)); }
+        if (failure is "missing" or "range" or "flag" or "duplicate" or "shadow" or "disabledShadow") { Assert.Throws<InvalidDataException>(() => ProjectStore.Load(path)); Assert.Throws<InvalidDataException>(() => ProjectStore.Save(doc, null, path)); }
         else { Assert.Throws<NotSupportedException>(() => ProjectStore.Load(path)); Assert.Throws<NotSupportedException>(() => ProjectStore.Save(doc, null, path)); }
         Assert.Equal(prior, File.ReadAllBytes(file));
     }
