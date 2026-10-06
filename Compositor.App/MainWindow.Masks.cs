@@ -19,6 +19,7 @@ public partial class MainWindow
         MaskEnabled.IsChecked = mask?.Enabled == true;
         EditTarget.SelectedIndex = session.EditMask ? 1 : 0;
         MaskGray.IsEnabled = session.EditMask; BrushColor.IsEnabled = !session.EditMask;
+        RefreshToolControls();
     }
     private void AddRevealMask(object sender, RoutedEventArgs e) => AddMask(255);
     private void AddHideMask(object sender, RoutedEventArgs e) => AddMask(0);

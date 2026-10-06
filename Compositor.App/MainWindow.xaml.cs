@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     {
         defaultPrompts = prompts = EditorPrompts.For(this);
         InitializeComponent();
+        InitializeToolControls();
         Canvas.Session = session; Canvas.ReadBrush = ReadBrush;
         Canvas.ReportError = ShowError;
         Canvas.ViewportChanged = UpdateStatus;
@@ -240,7 +241,8 @@ public partial class MainWindow : Window
     {
         if (Canvas is null) return;
         Canvas.CancelInteraction();
-        Canvas.Tool = (EditorTool)ToolPicker.SelectedIndex; Canvas.InvalidateVisual(); Canvas.Focus();
+        Canvas.Tool = (EditorTool)ToolPicker.SelectedIndex; RefreshToolControls(); Canvas.InvalidateVisual(); Canvas.Focus();
+        UpdateStatus();
     }
     private void Undo(object? sender, RoutedEventArgs e) => Safe(session.Undo);
     private void Redo(object? sender, RoutedEventArgs e) => Safe(session.Redo);
@@ -318,6 +320,7 @@ public partial class MainWindow : Window
         await LevelsSmokeTest(Path.ChangeExtension(screenshot, ".levels.json"));
         await CurvesSmokeTest(Path.ChangeExtension(screenshot, ".curves.json"));
         await ColorOverlaySmokeTest(Path.ChangeExtension(screenshot, ".overlay.json"));
+        await ToolControlsSmokeTest(Path.ChangeExtension(screenshot, ".tools.json"));
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         UpdateLayout();
         var bitmap = new RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, PixelFormats.Pbgra32);

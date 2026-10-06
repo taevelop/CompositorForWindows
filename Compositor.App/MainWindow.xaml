@@ -18,18 +18,53 @@
         <MenuItem Header="Effe_cts"><MenuItem x:Name="ColorOverlayMenu" Header="_Color overlay…" Click="EditColorOverlay"/></MenuItem>
         <MenuItem Header="_View"><MenuItem Header="_Fit canvas" InputGestureText="Ctrl+0" Click="Fit"/><MenuItem Header="_Actual pixels" InputGestureText="Ctrl+1" Click="ActualPixels"/></MenuItem>
       </Menu>
-      <Border Grid.Row="1" Background="{StaticResource Panel}" Padding="10,7" BorderBrush="#424650" BorderThickness="0,0,0,1">
-        <WrapPanel VerticalAlignment="Center">
-          <TextBlock Text="COMPOSITOR" Foreground="{StaticResource Ink}" FontWeight="Bold" Margin="5,0,24,0"/>
-          <ComboBox x:Name="ToolPicker" Width="120" SelectionChanged="ToolChanged"><ComboBoxItem Content="Move (V)"/><ComboBoxItem Content="Brush (B)" IsSelected="True"/><ComboBoxItem Content="Eraser (E)"/><ComboBoxItem Content="Hand (H)"/></ComboBox>
-          <Label Content="Size"/><TextBox x:Name="BrushSize" Text="40" Width="60" ToolTip="Brush diameter, 1–2000 document pixels"/>
-          <Label Content="Hardness %"/><TextBox x:Name="BrushHardness" Text="70" Width="48"/>
-          <Label Content="Opacity %"/><TextBox x:Name="BrushOpacity" Text="100" Width="48"/>
-          <Label Content="Color"/><TextBox x:Name="BrushColor" Text="#62C9B5" Width="88" ToolTip="RGB hex color"/>
-          <Label Content="Mask gray %"/><TextBox x:Name="MaskGray" Text="100" Width="48" IsEnabled="False" ToolTip="Mask brush: 100 reveals, 0 hides; Eraser hides"/>
-          <Button Content="Fit" Click="Fit"/><TextBlock Text="Wheel: zoom · Middle drag: pan" Foreground="#9DA3AF" Margin="15,0,0,0"/>
-        </WrapPanel>
+      <Border Grid.Row="1" Background="{StaticResource Panel}" Padding="10,8" BorderBrush="#424650" BorderThickness="0,0,0,1">
+        <Border.Resources><Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="Foreground" Value="{StaticResource Ink}"/></Style></Border.Resources>
+        <StackPanel>
+          <WrapPanel VerticalAlignment="Center">
+            <TextBlock Text="COMPOSITOR" FontWeight="Bold" Margin="5,0,20,0"/>
+            <ListBox x:Name="ToolPicker" SelectedIndex="1" SelectionChanged="ToolChanged" Background="Transparent" BorderThickness="0" Margin="0,0,16,0" AutomationProperties.Name="Editing tool">
+              <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ListBox.ItemsPanel>
+              <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem">
+                <Setter Property="Foreground" Value="#ECEEF2"/><Setter Property="Background" Value="#333740"/><Setter Property="Padding" Value="12,8"/><Setter Property="Margin" Value="2"/>
+                <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+                  <Border x:Name="ToolBorder" Background="{TemplateBinding Background}" BorderBrush="#555B66" BorderThickness="1" CornerRadius="5" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsSelected" Value="True"><Setter TargetName="ToolBorder" Property="Background" Value="#23574F"/><Setter TargetName="ToolBorder" Property="BorderBrush" Value="#62C9B5"/></Trigger>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ToolBorder" Property="BorderBrush" Value="White"/></Trigger>
+                    <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="ToolBorder" Property="BorderBrush" Value="White"/></Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate></Setter.Value></Setter>
+              </Style></ListBox.ItemContainerStyle>
+              <ListBoxItem Content="Move  V" ToolTip="Move the selected layer (V)"/>
+              <ListBoxItem Content="Brush  B" ToolTip="Paint (B)"/>
+              <ListBoxItem Content="Eraser  E" ToolTip="Erase pixels (E)"/>
+              <ListBoxItem Content="Hand  H" ToolTip="Pan the canvas (H)"/>
+            </ListBox>
+            <Button Content="Fit" Click="Fit" ToolTip="Fit canvas (Ctrl+0)"/>
+            <Button Content="100%" Click="ActualPixels" ToolTip="Actual pixels (Ctrl+1)"/>
+            <TextBlock x:Name="ToolHint" Foreground="#B9BDC7" Margin="14,0,4,0" Text="Wheel: zoom · Middle drag: pan"/>
+          </WrapPanel>
+          <WrapPanel x:Name="BrushOptions" Margin="0,8,0,0">
+            <StackPanel Width="190" Margin="5,0,14,0"><DockPanel><TextBlock Text="Size"/><TextBlock Text="px" DockPanel.Dock="Right"/><TextBox x:Name="BrushSize" Text="40" Width="60" AutomationProperties.Name="Brush Size"/></DockPanel><Slider Style="{StaticResource EditorSlider}" x:Name="SizeSlider" Minimum="1" Maximum="2000" Value="40" SmallChange="1" LargeChange="10" AutomationProperties.Name="Brush Size slider"/></StackPanel>
+<StackPanel Width="170" Margin="5,0,14,0"><DockPanel><TextBlock Text="Hardness"/><TextBlock Text="%" DockPanel.Dock="Right"/><TextBox x:Name="BrushHardness" Text="70" Width="60" AutomationProperties.Name="Brush Hardness"/></DockPanel><Slider Style="{StaticResource EditorSlider}" x:Name="HardnessSlider" Minimum="0" Maximum="100" Value="70" SmallChange="1" LargeChange="10" AutomationProperties.Name="Brush Hardness slider"/></StackPanel>
+<StackPanel Width="170" Margin="5,0,14,0"><DockPanel><TextBlock Text="Opacity"/><TextBlock Text="%" DockPanel.Dock="Right"/><TextBox x:Name="BrushOpacity" Text="100" Width="60" AutomationProperties.Name="Brush Opacity"/></DockPanel><Slider Style="{StaticResource EditorSlider}" x:Name="OpacitySlider" Minimum="0" Maximum="100" Value="100" SmallChange="1" LargeChange="10" AutomationProperties.Name="Brush Opacity slider"/></StackPanel>
+            <StackPanel x:Name="ColorOptions" Margin="5,0,14,0">
+              <TextBlock Text="Foreground color" Foreground="#B9BDC7" Margin="3,0,0,2"/>
+              <StackPanel Orientation="Horizontal">
+                <Button x:Name="ColorButton" Click="PickBrushColor" Padding="3" Width="46" Height="31" ToolTip="Choose foreground color" AutomationProperties.Name="Choose foreground color"><Border x:Name="ColorSwatch" Width="30" Height="19" Background="#62C9B5" BorderBrush="White" BorderThickness="1"/></Button>
+                <TextBox x:Name="BrushColor" Text="#62C9B5" Width="88" ToolTip="RGB hex color" AutomationProperties.Name="Foreground hex color"/>
+              </StackPanel>
+            </StackPanel>
+            <StackPanel x:Name="MaskOptions" Width="225" Visibility="Collapsed">
+              <DockPanel><TextBlock Text="Mask gray"/><TextBlock Text="%" DockPanel.Dock="Right"/><TextBox x:Name="MaskGray" Text="100" Width="50" IsEnabled="False" AutomationProperties.Name="Mask gray"/></DockPanel>
+              <Slider Style="{StaticResource EditorSlider}" x:Name="MaskSlider" Minimum="0" Maximum="100" Value="100" AutomationProperties.Name="Mask gray slider"/>
+              <StackPanel Orientation="Horizontal"><Button Content="Black · Hide" Click="MaskBlack" Padding="6,2"/><Button Content="White · Reveal" Click="MaskWhite" Padding="6,2"/></StackPanel>
+            </StackPanel>
+          </WrapPanel>
+        </StackPanel>
       </Border>
+
       <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="280"/></Grid.ColumnDefinitions>
         <local:EditorCanvas x:Name="Canvas" Focusable="True"/>
         <Border Grid.Column="1" Background="{StaticResource Panel}" Padding="10" BorderBrush="#424650" BorderThickness="1,0,0,0">

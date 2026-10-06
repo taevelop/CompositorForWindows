@@ -14,7 +14,7 @@ public partial class App : Application
             window.ShowInTaskbar = false; window.Left = -10000; window.Top = -10000;
             window.Loaded += async (_, _) =>
             {
-                try { await window.SmokeTest(e.Args[1]); Shutdown(0); }
+                try { await window.SmokeTest(e.Args[1]); System.IO.File.Delete(e.Args[1] + ".error.txt"); Shutdown(0); }
                 catch (Exception error) { System.IO.File.WriteAllText(e.Args[1] + ".error.txt", error.ToString()); window.CloseSmokeOnFailure(); Shutdown(1); }
             };
         }
