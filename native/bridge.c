@@ -56,3 +56,9 @@ __declspec(dllexport) int32_t compositor_brush(uint8_t *output, const uint8_t *o
 __declspec(dllexport) void compositor_black_white(uint8_t *pixels, int32_t count, const float *weights, int32_t tint, double hue, double saturation) {
     adjust_black_white(pixels, (size_t)count, 1, (size_t)count * 4, weights, tint, hue, saturation);
 }
+__declspec(dllexport) void compositor_color_balance(uint8_t *p, int32_t count, const float *s, const float *m, const float *h, int32_t preserve) {
+    adjust_color_balance(p,(size_t)count,1,(size_t)count*4,s,m,h,preserve);
+}
+__declspec(dllexport) void compositor_grain(uint8_t *p,int32_t w,int32_t h,double amount,double size,double roughness,uint32_t seed,double x,double y,double units) {
+    adjust_grain(p,(size_t)w,(size_t)h,(size_t)w*4,amount,size,roughness,seed,x,y,units);
+}

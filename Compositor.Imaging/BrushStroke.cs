@@ -12,6 +12,10 @@ public static class NativePixels
     public static extern void AlphaBounds(byte[] pixels, int width, int height, int stride, [Out] int[] bounds);
     [DllImport("Compositor.Native", EntryPoint = "compositor_clamp", CallingConvention = CallingConvention.Cdecl)]
     public static extern void Clamp([In, Out] byte[] pixels, int count);
+    [DllImport("Compositor.Native", EntryPoint="compositor_color_balance", CallingConvention=CallingConvention.Cdecl)]
+    internal static extern void ColorBalance([In,Out] byte[] pixels,int count,float[] shadows,float[] midtones,float[] highlights,int preserve);
+    [DllImport("Compositor.Native", EntryPoint="compositor_grain", CallingConvention=CallingConvention.Cdecl)]
+    internal static extern void Grain([In,Out] byte[] pixels,int width,int height,double amount,double size,double roughness,uint seed,double originX,double originY,double units);
     [DllImport("Compositor.Native", EntryPoint = "compositor_black_white", CallingConvention = CallingConvention.Cdecl)]
     internal static extern void BlackWhite([In, Out] byte[] pixels, int count, float[] weights, int tint, double hue, double saturation);
     [DllImport("Compositor.Native", EntryPoint = "compositor_levels", CallingConvention = CallingConvention.Cdecl)]

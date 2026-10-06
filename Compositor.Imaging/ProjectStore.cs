@@ -123,7 +123,7 @@ public static class ProjectStore
                     usedMaskPixels += (long)mask.Pixels.Width * mask.Pixels.Height;
                 }
                 if (adjustment is not null && mask is not null && (mask.Pixels.Width > 1 || mask.Pixels.Height > 1)) raster = new(mask.Pixels.Width, mask.Pixels.Height);
-                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask, parent, isGroup, adjustment?.Exposure, adjustment?.Levels, adjustment?.Curves, effects, adjustment?.Invert ?? false, adjustment?.BlackWhite));
+                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask, parent, isGroup, adjustment?.Exposure, adjustment?.Levels, adjustment?.Curves, effects, adjustment?.Invert ?? false, adjustment?.BlackWhite, adjustment?.ColorBalance, adjustment?.Grain));
             }
             var document = new Document(m.GetProperty("documentID").GetGuid(), width, height, OptionalDouble(m, "resolution", 72), layers.ToImmutable());
             document.Validate();
@@ -180,7 +180,9 @@ public static class ProjectStore
                 });
                 checkpoint?.Invoke(SaveCheckpoint.AssetWritten);
                 if (l.Effects is not null) records[^1]!["effects"] = EffectsJson.Write(l.Effects);
-                if (l.Invert) records[^1]!["adjustment"] = AdjustmentJson.WriteInvert();
+                if (l.ColorBalance is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.ColorBalance);
+                else if (l.Grain is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.Grain);
+                else if (l.Invert) records[^1]!["adjustment"] = AdjustmentJson.WriteInvert();
                 else if (l.BlackWhite is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.BlackWhite);
                 else if (l.Exposure is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.Exposure);
                 else if (l.Levels is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.Levels);

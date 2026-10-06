@@ -13,6 +13,8 @@ public partial class MainWindow
     private void RefreshAdjustmentControls()
     {
         RefreshEffectsControls();
+        EditColorBalanceMenu.IsEnabled=session.ActiveLayer?.ColorBalance is not null; EditColorBalanceButton.Visibility=EditColorBalanceMenu.IsEnabled?Visibility.Visible:Visibility.Collapsed;
+        EditGrainMenu.IsEnabled=session.ActiveLayer?.Grain is not null; EditGrainButton.Visibility=EditGrainMenu.IsEnabled?Visibility.Visible:Visibility.Collapsed;
         AdjustColorsMenu.IsEnabled = AdjustColorsButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false } && !session.EditMask;
         bool blackWhite = session.ActiveLayer?.BlackWhite is not null; EditBlackWhiteMenu.IsEnabled = blackWhite; EditBlackWhiteButton.Visibility = blackWhite ? Visibility.Visible : Visibility.Collapsed;
         bool exposure = session.ActiveLayer?.Exposure is not null;

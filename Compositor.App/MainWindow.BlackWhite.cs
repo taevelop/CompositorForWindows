@@ -18,4 +18,8 @@ public partial class MainWindow
         var dialog=new BlackWhiteWindow(session,create){Owner=this};
         try{dialog.ShowDialog();}finally{dialog.CancelEdit();Refresh();Canvas.Focus();}
     });
-}
+    private void AddColorBalance(object sender,RoutedEventArgs e)=>OpenExtended(false,true);
+    private void EditColorBalance(object sender,RoutedEventArgs e)=>OpenExtended(false,false);
+    private void AddGrain(object sender,RoutedEventArgs e)=>OpenExtended(true,true);
+    private void EditGrain(object sender,RoutedEventArgs e)=>OpenExtended(true,false);
+    private void OpenExtended(bool grain,bool create)=>Safe(()=>{var dialog=new ExtendedAdjustmentWindow(session,grain,create){Owner=this};try{dialog.ShowDialog();}finally{dialog.CancelEdit();Refresh();Canvas.Focus();}});}

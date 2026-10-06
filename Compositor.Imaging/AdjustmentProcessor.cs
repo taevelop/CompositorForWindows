@@ -34,7 +34,7 @@ internal static class AdjustmentProcessor
     }
     public static void Apply(SKBitmap bitmap, Document document, Layer layer, double opacity)
     {
-        bool identity = layer.Exposure?.IsIdentity ?? layer.Levels?.IsIdentity ?? layer.Curves?.IsIdentity ?? (layer.Invert || layer.BlackWhite is not null ? false : throw new InvalidOperationException("No adjustment settings."));
+        bool identity = layer.Exposure?.IsIdentity ?? layer.Levels?.IsIdentity ?? layer.Curves?.IsIdentity ?? layer.ColorBalance?.IsIdentity ?? layer.Grain?.IsIdentity ?? (layer.Invert || layer.BlackWhite is not null ? false : throw new InvalidOperationException("No adjustment settings."));
         if (identity && layer.Blend == BlendMode.Normal) return;
         var original = bitmap.GetPixelSpan();
         byte[]? converted = null;
@@ -43,6 +43,14 @@ internal static class AdjustmentProcessor
         {
             converted = original.ToArray();
             NativePixels.BlackWhite(converted, bitmap.Width * bitmap.Height, bw.Weights, bw.Tint ? 1 : 0, bw.TintHue, bw.TintSaturation / 100);
+        }
+        else if (layer.ColorBalance is { } cb)
+        {
+            converted=original.ToArray(); NativePixels.ColorBalance(converted,bitmap.Width*bitmap.Height,cb.Shadows,cb.Midtones,cb.Highlights,cb.PreserveLuminosity?1:0);
+        }
+        else if (layer.Grain is { } grain)
+        {
+            converted=original.ToArray(); NativePixels.Grain(converted,bitmap.Width,bitmap.Height,grain.Amount,grain.Size,grain.Roughness,grain.Seed,0,0,1);
         }
         else if (!layer.Invert)
         {
@@ -100,7 +108,7 @@ internal static class AdjustmentProcessor
         {
             using var canvas = new SKCanvas(bitmap); canvas.Clear();
             using var renderer = new CanvasRenderer();
-            var coverage = layer with { Pixels = mask.Pixels, Exposure = null, Levels = null, Curves = null, Invert = false, BlackWhite = null, Effects = null, Mask = null, ParentId = null, Visible = true, Opacity = 1, Blend = BlendMode.Normal };
+            var coverage = layer with { Pixels = mask.Pixels, Exposure = null, Levels = null, Curves = null, Invert = false, BlackWhite = null, ColorBalance = null, Grain = null, Effects = null, Mask = null, ParentId = null, Visible = true, Opacity = 1, Blend = BlendMode.Normal };
             renderer.Draw(canvas, doc with { Layers = [coverage] }); canvas.Flush(); return bitmap;
         }
         catch { bitmap.Dispose(); throw; }
