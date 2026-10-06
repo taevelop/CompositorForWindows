@@ -62,3 +62,7 @@ __declspec(dllexport) void compositor_color_balance(uint8_t *p, int32_t count, c
 __declspec(dllexport) void compositor_grain(uint8_t *p,int32_t w,int32_t h,double amount,double size,double roughness,uint32_t seed,double x,double y,double units) {
     adjust_grain(p,(size_t)w,(size_t)h,(size_t)w*4,amount,size,roughness,seed,x,y,units);
 }
+
+__declspec(dllexport) void compositor_gradient_map(uint8_t *p, int32_t count, const uint8_t *table) {
+    adjust_gradient_map(p,(size_t)count,1,(size_t)count*4,table);
+}

@@ -20,6 +20,9 @@ public partial class MainWindow
     });
     private void AddColorBalance(object sender,RoutedEventArgs e)=>OpenExtended(false,true);
     private void EditColorBalance(object sender,RoutedEventArgs e)=>OpenExtended(false,false);
+    private void AddGradientMap(object sender,RoutedEventArgs e)=>OpenGradientMap(true);
+    private void EditGradientMap(object sender,RoutedEventArgs e)=>OpenGradientMap(false);
+    private void OpenGradientMap(bool create)=>Safe(()=>{var dialog=new GradientMapWindow(session,create){Owner=this};try{dialog.ShowDialog();}finally{dialog.CancelEdit();Refresh();Canvas.Focus();}});
     private void AddGrain(object sender,RoutedEventArgs e)=>OpenExtended(true,true);
     private void EditGrain(object sender,RoutedEventArgs e)=>OpenExtended(true,false);
     private void OpenExtended(bool grain,bool create)=>Safe(()=>{var dialog=new ExtendedAdjustmentWindow(session,grain,create){Owner=this};try{dialog.ShowDialog();}finally{dialog.CancelEdit();Refresh();Canvas.Focus();}});}

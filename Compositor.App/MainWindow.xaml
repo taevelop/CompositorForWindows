@@ -15,7 +15,28 @@
           <Separator/><MenuItem Header="Export _PNG…" Click="ExportPng"/><MenuItem Header="Export _JPEG…" Click="ExportJpeg"/>
         </MenuItem>
         <MenuItem Header="_Edit"><MenuItem x:Name="UndoMenu" Header="_Undo" InputGestureText="Ctrl+Z" Click="Undo"/><MenuItem x:Name="RedoMenu" Header="_Redo" InputGestureText="Ctrl+Shift+Z" Click="Redo"/></MenuItem>
-        <MenuItem Header="_Image"><MenuItem Header="New Color Balance adjustment…" Click="AddColorBalance"/><MenuItem x:Name="EditColorBalanceMenu" Header="Edit Color Balance…" Click="EditColorBalance"/><MenuItem Header="New Grain adjustment…" Click="AddGrain"/><MenuItem x:Name="EditGrainMenu" Header="Edit Grain…" Click="EditGrain"/><Separator/><MenuItem Header="New Invert adjustment layer" Click="AddInvert"/><MenuItem Header="New Black &amp; White adjustment layer…" Click="AddBlackWhite"/><MenuItem x:Name="EditBlackWhiteMenu" Header="Edit Black &amp; White…" Click="EditBlackWhite"/><Separator/><MenuItem x:Name="AdjustColorsMenu" Header="Adjust _colors…" Click="AdjustColors"/><Separator/><MenuItem Header="New _Exposure adjustment layer…" Click="AddExposure"/><MenuItem x:Name="EditExposureMenu" Header="_Edit Exposure…" Click="EditExposure"/><Separator/><MenuItem Header="New _Levels adjustment layer…" Click="AddLevels"/><MenuItem x:Name="EditLevelsMenu" Header="Edit Levels…" Click="EditLevels"/><Separator/><MenuItem Header="New Curves adjustment layer…" Click="AddCurves"/><MenuItem x:Name="EditCurvesMenu" Header="Edit Curves…" Click="EditCurves"/></MenuItem>
+        <MenuItem Header="_Image">
+          <MenuItem x:Name="NewAdjustmentMenu" Header="New adjustment layer">
+            <MenuItem Header="Exposure…" Click="AddExposure"/>
+            <MenuItem Header="Levels…" Click="AddLevels"/>
+            <MenuItem Header="Curves…" Click="AddCurves"/>
+            <MenuItem Header="Invert" Click="AddInvert"/>
+            <MenuItem Header="Black &amp; White…" Click="AddBlackWhite"/>
+            <MenuItem Header="Color Balance…" Click="AddColorBalance"/>
+            <MenuItem Header="Grain…" Click="AddGrain"/>
+            <MenuItem Header="Gradient Map…" Click="AddGradientMap"/>
+          </MenuItem>
+          <MenuItem Header="Edit adjustment">
+            <MenuItem x:Name="EditExposureMenu" Header="Exposure…" Click="EditExposure"/>
+            <MenuItem x:Name="EditLevelsMenu" Header="Levels…" Click="EditLevels"/>
+            <MenuItem x:Name="EditCurvesMenu" Header="Curves…" Click="EditCurves"/>
+            <MenuItem x:Name="EditBlackWhiteMenu" Header="Black &amp; White…" Click="EditBlackWhite"/>
+            <MenuItem x:Name="EditColorBalanceMenu" Header="Color Balance…" Click="EditColorBalance"/>
+            <MenuItem x:Name="EditGrainMenu" Header="Grain…" Click="EditGrain"/>
+            <MenuItem x:Name="EditGradientMapMenu" Header="Gradient Map…" Click="EditGradientMap"/>
+          </MenuItem>
+          <Separator/><MenuItem x:Name="AdjustColorsMenu" Header="Adjust image colors…" Click="AdjustColors"/>
+        </MenuItem>
         <MenuItem Header="Effe_cts"><MenuItem x:Name="InnerShadowMenu" Header="Inner shadow…" Click="EditInnerShadow"/><MenuItem x:Name="OuterGlowMenu" Header="Outer glow…" Click="EditOuterGlow"/><MenuItem x:Name="StrokeMenu" Header="_Stroke…" Click="EditStroke"/><MenuItem x:Name="ShadowMenu" Header="_Drop shadow…" Click="EditShadow"/><MenuItem x:Name="ColorOverlayMenu" Header="_Color overlay…" Click="EditColorOverlay"/></MenuItem>
         <MenuItem Header="_View"><MenuItem Header="_Fit canvas" InputGestureText="Ctrl+0" Click="Fit"/><MenuItem Header="_Actual pixels" InputGestureText="Ctrl+1" Click="ActualPixels"/></MenuItem>
       </Menu>
@@ -90,7 +111,7 @@
               <Button x:Name="AdjustColorsButton" Content="Adjust image colors…" Click="AdjustColors" ToolTip="Brightness, contrast and saturation; select Edit image to adjust source pixels"/>
               <Button x:Name="EditExposureButton" Content="Edit Exposure…" Click="EditExposure" Visibility="Collapsed"/>
               <Button x:Name="EditLevelsButton" Content="Edit Levels…" Click="EditLevels" Visibility="Collapsed"/>
-              <Button x:Name="EditColorBalanceButton" Content="Edit Color Balance…" Click="EditColorBalance" Visibility="Collapsed"/><Button x:Name="EditGrainButton" Content="Edit Grain…" Click="EditGrain" Visibility="Collapsed"/><Button x:Name="EditBlackWhiteButton" Content="Edit Black &amp; White…" Click="EditBlackWhite" Visibility="Collapsed" Style="{StaticResource CompactButton}"/><Button x:Name="EditCurvesButton" Content="Edit Curves…" Click="EditCurves" Visibility="Collapsed"/>
+              <Button x:Name="EditColorBalanceButton" Content="Edit Color Balance…" Click="EditColorBalance" Visibility="Collapsed"/><Button x:Name="EditGradientMapButton" Content="Edit Gradient Map…" Click="EditGradientMap" Visibility="Collapsed"/><Button x:Name="EditGrainButton" Content="Edit Grain…" Click="EditGrain" Visibility="Collapsed"/><Button x:Name="EditBlackWhiteButton" Content="Edit Black &amp; White…" Click="EditBlackWhite" Visibility="Collapsed" Style="{StaticResource CompactButton}"/><Button x:Name="EditCurvesButton" Content="Edit Curves…" Click="EditCurves" Visibility="Collapsed"/>
               <TextBlock x:Name="ExposureHint" Text="Live adjustment of everything below. Paint its mask to limit coverage; transforms affect only the mask." Foreground="#B9BDC7" TextWrapping="Wrap" Margin="5" Visibility="Collapsed"/>
               <Button x:Name="InnerShadowButton" Content="Inner shadow…" Click="EditInnerShadow" Style="{StaticResource CompactButton}"/><Button x:Name="OuterGlowButton" Content="Outer glow…" Click="EditOuterGlow" Style="{StaticResource CompactButton}"/><Button x:Name="StrokeButton" Content="Stroke…" Click="EditStroke" Style="{StaticResource CompactButton}"/>
 <Button x:Name="ShadowButton" Content="Drop shadow…" Click="EditShadow" Style="{StaticResource CompactButton}"/>

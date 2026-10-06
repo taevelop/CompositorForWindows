@@ -66,6 +66,21 @@ public partial class MainWindow
                 item.ApplyTemplate();
                 Check(item.Template.FindName("MenuFrame", item) is Border, "Native menu item template leaked into dark menu.");
                 if (!item.IsEnabled) Check(((SolidColorBrush)item.Foreground).Color == Color.FromRgb(119, 126, 137), "Disabled menu text is not muted.");
+                if (item.HasItems)
+                {
+                    item.IsSubmenuOpen = true;
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                    var childPopup = (System.Windows.Controls.Primitives.Popup)item.Template.FindName("PART_Popup", item);
+                    Check(childPopup.IsOpen, "Adjustment submenu did not open.");
+                    Capture((FrameworkElement)childPopup.Child, $".menu-{MainMenu.Items.IndexOf(menu)}-child-{menu.Items.IndexOf(item)}.png");
+                    foreach (var child in item.Items.OfType<MenuItem>())
+                    {
+                        child.ApplyTemplate();
+                        Check(child.Template.FindName("MenuFrame", child) is Border, "Submenu lost dark template.");
+                        if (!child.IsEnabled) Check(((SolidColorBrush)child.Foreground).Color == Color.FromRgb(119, 126, 137), "Disabled adjustment is not muted.");
+                    }
+                    item.IsSubmenuOpen = false;
+                }
             }
             var enabledItem = menu.Items.OfType<MenuItem>().FirstOrDefault(item => item.IsEnabled);
             if (enabledItem is not null)

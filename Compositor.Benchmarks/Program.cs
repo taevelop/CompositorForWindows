@@ -17,6 +17,7 @@ if (args.Length > 0 && args[0] == "--soak")
     return;
 }
 
+if (args.Length > 0 && args[0] == "--gradient-map") { GradientMapBenchmark.Run(args.Length > 1 ? args[1] : "gradient-map-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--color-grain") { ColorBalanceGrainBenchmark.Run(args.Length > 1 ? args[1] : "color-grain-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--blackwhite") { BlackWhiteBenchmark.Run(args.Length > 1 ? args[1] : "blackwhite-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--soft-effects") { SoftEffectBenchmark.Run(args.Length > 1 ? args[1] : "soft-effects-benchmark.json"); return; }

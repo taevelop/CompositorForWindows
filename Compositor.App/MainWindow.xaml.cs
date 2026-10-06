@@ -320,6 +320,7 @@ public partial class MainWindow : Window
         await ExposureSmokeTest(Path.ChangeExtension(screenshot, ".exposure.json"));
         await BlackWhiteSmokeTest(Path.ChangeExtension(screenshot, ".blackwhite.json"));
         ExtendedAdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".extended-adjustments.json"));
+            GradientMapSmokeTest(Path.ChangeExtension(screenshot, ".gradient-map.json"));
         await LevelsSmokeTest(Path.ChangeExtension(screenshot, ".levels.json"));
         await CurvesSmokeTest(Path.ChangeExtension(screenshot, ".curves.json"));
         await ColorOverlaySmokeTest(Path.ChangeExtension(screenshot, ".overlay.json"));
