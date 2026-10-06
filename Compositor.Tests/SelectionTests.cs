@@ -146,4 +146,9 @@ public sealed class SelectionTests
             string full=System.IO.Path.GetFullPath(root);
             if(full.StartsWith(temp,StringComparison.OrdinalIgnoreCase)&&System.IO.Path.GetFileName(full).StartsWith("compositor-selection-")&&Directory.Exists(full))Directory.Delete(full,true);
         }
+    }    [Theory][InlineData(0,0)][InlineData(0,8)][InlineData(8,0)]
+    public void DegenerateBoxAwayFromOriginSelectsNothing(double width,double height)
+    {
+        var shape=SelectionGeometry.Box(17,23,width,height);
+        Assert.True(shape.IsEmpty);Assert.True(SelectionCoverage.Create(shape,100,100).IsEmpty);
     }}

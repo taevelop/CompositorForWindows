@@ -23,7 +23,7 @@ public sealed class SelectionCoverage
         var b=path.Bounds; double margin=Math.Ceiling(selection.Feather*2)+1;
         int x=(int)Math.Clamp(Math.Floor(b.Left-margin),0,width), y=(int)Math.Clamp(Math.Floor(b.Top-margin),0,height);
         int right=(int)Math.Clamp(Math.Ceiling(b.Right+margin),0,width), bottom=(int)Math.Clamp(Math.Ceiling(b.Bottom+margin),0,height);
-        if(path.IsEmpty||b.IsEmpty||right<=x||bottom<=y) return new(0,0,0,0,width,height,[]);
+        if(path.IsEmpty||b.Width<=0||b.Height<=0||right<=x||bottom<=y) return new(0,0,0,0,width,height,[]);
         int w=right-x,h=bottom-y;
         using var bitmap=new SKBitmap(CanvasRenderer.Info(w,h));
         using(var canvas=new SKCanvas(bitmap))

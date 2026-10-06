@@ -22,7 +22,7 @@ public static class SelectionGeometry
         var b = path.Bounds;
         if (!float.IsFinite(b.Left) || !float.IsFinite(b.Top) || !float.IsFinite(b.Right) || !float.IsFinite(b.Bottom))
             throw new InvalidDataException("Invalid selection coordinates.");
-        var selection = new DocumentSelection(path.IsEmpty || b.IsEmpty ? "" : path.ToSvgPathData(), antialiased, feather,
+        var selection = new DocumentSelection(path.IsEmpty || b.Width <= 0 || b.Height <= 0 ? "" : path.ToSvgPathData(), antialiased, feather,
             path.FillType is SKPathFillType.EvenOdd or SKPathFillType.InverseEvenOdd);
         selection.Validate(); return selection;
     }
@@ -37,7 +37,7 @@ public static class SelectionGeometry
         if (new[] { x, y, width, height }.Any(v => !double.IsFinite(v) || Math.Abs(v) > 1_000_000))
             throw new ArgumentOutOfRangeException("Invalid selection box.");
         var rect = new SKRect((float)Math.Min(x, x + width), (float)Math.Min(y, y + height), (float)Math.Max(x, x + width), (float)Math.Max(y, y + height));
-        using var builder = new SKPathBuilder(); if (!rect.IsEmpty) { if (ellipse) builder.AddOval(rect); else builder.AddRect(rect); }
+        using var builder = new SKPathBuilder(); if (rect.Width > 0 && rect.Height > 0) { if (ellipse) builder.AddOval(rect); else builder.AddRect(rect); }
         using var path = builder.Detach(); return Snapshot(path, antialiased);
     }
     public static DocumentSelection Polygon(IEnumerable<PointD> points, bool antialiased = true)
