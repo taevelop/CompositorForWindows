@@ -105,6 +105,10 @@ Undo/Redo 히스토리와 화면 확대·이동 상태는 저장하지 않습니
 
 일반 픽셀 레이어의 `effects.colorOverlay`를 지원한다. 필수 필드는 `red`, `green`, `blue`, `opacity`(0~1 유한 수)이며 선택적인 `enabled`는 없음/null이면 true다. 효과의 색·불투명도와 비활성 상태를 원본 PNG와 별도로 보존한다. effects 없음/null/빈 객체도 허용한다.
 
-다른 알려진 효과(stroke/shadow/innerShadow/outerGlow)의 null은 허용하지만 객체는 비활성 상태여도 거부한다. 그룹·조정 레이어의 effects와 알 수 없는/중복된 필드도 거부한다. 입력은 기존 버전 1~8, 출력은 버전 8이다. 효과 자체의 최소 버전 제한은 Mac 코드와 같이 별도로 두지 않는다.
+stroke/shadow/innerShadow/outerGlow도 지원한다. 각각의 필드·합성 범위는 [Stroke](stroke-effect.md), [Drop Shadow](drop-shadow.md), [Soft effects](soft-effects.md)를 따른다. 그룹·조정 레이어의 effects와 알 수 없는/중복된 필드도 거부한다. 입력은 기존 버전 1~8, 출력은 버전 8이다. 효과 자체의 최소 버전 제한은 Mac 코드와 같이 별도로 두지 않는다.
 
 마스크를 적용한 원본 위에 source-over 방식으로 덧입히므로 반투명 픽셀의 알파가 증가할 수 있다. 저장하는 원본 PNG에는 효과가 적용되지 않는다. 수식과 검증은 [색상 오버레이 문서](color-overlay.md)를 참고한다.
+
+## 추가 비파괴 조정
+
+Invert, Black & White, Color Balance, Grain을 지원한다. 필드와 범위는 [반전·흑백](blackwhite-invert.md), [색상 균형·그레인](color-balance-grain.md)을 따른다. 공통 필수 기본 필드, imageFile 없는 조정 레이어, 연결 마스크 및 비지원 비활성 설정 거부 규칙을 유지한다. Hue/Saturation과 Gradient Map은 아직 거부한다.
