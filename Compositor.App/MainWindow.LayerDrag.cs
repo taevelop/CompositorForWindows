@@ -50,7 +50,7 @@ public partial class MainWindow
         if(session.SelectedLayerIds.Count==0)return;
         var payload=new LayerDragPayload(session.Document,session.SelectedLayerIds.ToArray());layerDragPayload=payload;
         try{DragDrop.DoDragDrop(Layers,new DataObject(LayerDragFormat,payload),DragDropEffects.Move|DragDropEffects.Copy);}
-        finally{layerDragPayload=null;layerCopyPreview=null;ClearLayerDropMark();}
+        finally{StopLayerDragAssist();layerDragPayload=null;layerCopyPreview=null;ClearLayerDropMark();}
         e.Handled=true;
     }
     private LayerDropSlot DropSlot(Point point)
@@ -97,20 +97,15 @@ public partial class MainWindow
     {
         if(!OwnLayerDrag(e))return;
         e.Handled=true;e.Effects=DragDropEffects.None;
-        try
-        {
-            var slot=DropSlot(e.GetPosition(Layers));bool copy=CopyLayerDrag(e.KeyStates);
-            if(copy)PrepareLayerCopyDrop(layerDragPayload!,slot);else PrepareLayerDrop(layerDragPayload!,slot);
-            ShowLayerDropMark(slot);e.Effects=copy?DragDropEffects.Copy:DragDropEffects.Move;
-        }
-        catch(InvalidOperationException){ClearLayerDropMark();}
-        catch(InvalidDataException){ClearLayerDropMark();}
+        long now=Environment.TickCount64;bool copy=CopyLayerDrag(e.KeyStates);
+        TrackLayerDrag(e.GetPosition(Layers),copy,now);
+        if(RefreshLayerDragTarget(now))e.Effects=copy?DragDropEffects.Copy:DragDropEffects.Move;
     }
-    private void LayerDragLeave(object sender,DragEventArgs e){if(OwnLayerDrag(e))ClearLayerDropMark();}
+    private void LayerDragLeave(object sender,DragEventArgs e){if(OwnLayerDrag(e)){StopLayerDragAssist();ClearLayerDropMark();}}
     private void DropLayerRows(object sender,DragEventArgs e)
     {
         if(!OwnLayerDrag(e))return;
-        e.Handled=true;e.Effects=DragDropEffects.None;ClearLayerDropMark();
+        e.Handled=true;e.Effects=DragDropEffects.None;StopLayerDragAssist();ClearLayerDropMark();
         try
         {
             var slot=DropSlot(e.GetPosition(Layers));bool copy=CopyLayerDrag(e.KeyStates);
