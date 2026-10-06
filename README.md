@@ -129,4 +129,4 @@ Exposure 구현·파일 호환 범위·성능은 [Exposure 검증 문서](docs/e
 
 [색상 오버레이 검증 문서](docs/color-overlay.md)에 적용 순서·캐시·호환 범위·4K/브러시 성능을 정리했습니다. `build.ps1 -Test`는 `artifacts/ui-smoke.overlay.json`도 생성합니다.
 
-현재 우선순위는 **핵심 MVP 완료 검증**입니다. `powershell -NoProfile -ExecutionPolicy Bypass -File verify-mvp.ps1`로 회귀·실제 저장 프로세스 중단·1,200회 반복 편집·4K 성능·복사한 배포본 WPF 검사를 실행합니다. 최신 결과와 실제 Mac·마우스·다중 DPI·별도 Windows PC의 잔여 절차는 [MVP 완료 판정](docs/mvp-acceptance.md)에 있습니다. 이 실기 검증을 완료한 뒤 그림자 등 효과 확대와 제한적 PSD 가져오기를 진행합니다.
+현재 상태는 **핵심 MVP 기능 개발 완료, 검증 96%, 외부 검증 4% 보류**입니다. 2026-10-06 사용자 결정에 따라 다음 개발 단계는 그림자 효과입니다. `powershell -NoProfile -ExecutionPolicy Bypass -File verify-mvp.ps1`로 회귀·실제 저장 프로세스 중단·1,200회 반복 편집·4K 성능·복사한 배포본 WPF 검사를 실행합니다. 최신 결과와 실제 Mac·마우스·다중 DPI·별도 Windows PC의 잔여 절차는 [MVP 완료 판정](docs/mvp-acceptance.md)에 있습니다. 실제 Mac 왕복과 별도 Windows PC 검증은 장비 확보 후 재개하며, 보류 중에는 그림자 등 효과 확대와 후속 편집 기능을 진행합니다.
