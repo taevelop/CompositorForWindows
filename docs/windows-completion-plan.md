@@ -39,3 +39,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Gradient Map 구현: 원본 두 끝점 보간/C 밝기 매핑, 색상표·반전·그라디언트 미리보기, 저장·마스크·이력 및 메뉴 정리. [검증](gradient-map.md). 비파괴 조정 잔여는 Hue/Saturation이며 픽셀 필터 경로는 별도다.
 
 - Hue/Saturation 연산 기반 구현: 범위·밴드·샘플링 연산·33차원 색상 큐브·CPU 알파 보간. 아직 메뉴/저장에 연결하지 않았으며 완료 점수는 차감하지 않는다. 저장의 legacy 필드, 스펙트럼/샘플링/대상 드래그 UI, 4K 갱신과 픽셀 필터 경로를 포함한 [남은 작업](hue-saturation.md)을 기록했다. 원본 Gradient Map의 foreground/background 초기 색 연결도 추가 확인 사항이다.
+
+- Hue/Saturation 조정 레이어 연결: 구형/색상군 저장·합성·마스크·스펙트럼·Colorize·샘플링·대상 드래그·이력 및 실제 UI 검증. 원본 9종 비파괴 조정의 기본 편집 경로가 연결됐다. [상세와 한계](hue-saturation.md). 효과·조정 영역에는 별도 픽셀 필터 경로와 성능/실기 비교가 남아 있어 영역 전체 완료로 처리하지 않는다.

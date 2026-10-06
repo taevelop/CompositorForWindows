@@ -39,7 +39,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Publish
 - 크기·경도·불투명도·RGB 색상을 지정하는 브러시와 지우개
 - 256×256 불변 타일 기반 Undo/Redo; 드래그·스트로크당 한 번의 히스토리. 변화 없는 이동·속성 적용은 이력을 만들지 않으며 Redo를 유지합니다. 이력은 최대 100단계 및 현재 문서 외 고유 타일 256MiB로 제한합니다.
 - 픽셀 레이어 색상 오버레이 효과: RGB·효과 불투명도·활성화, 미리보기·제거·Undo/Redo, 마스크 적용 후 합성, 원본과 별도 저장
-- 비파괴 Exposure·Levels·Curves·Invert·Black & White·Color Balance·Grain·Gradient Map 조정 레이어: 노출·오프셋·감마 및 RGB/개별 채널 Levels·곡선, 미리보기·재편집·Undo/Redo, 합성 모드·그룹 불투명도·연결 마스크, 저장 후 설정 복원
+- 비파괴 Exposure·Levels·Curves·Invert·Black & White·Color Balance·Grain·Gradient Map·Hue/Saturation 조정 레이어: 노출·오프셋·감마 및 RGB/개별 채널 Levels·곡선, 미리보기·재편집·Undo/Redo, 합성 모드·그룹 불투명도·연결 마스크, 저장 후 설정 복원
 - 이미지 밝기·대비·채도 조정: 미리보기, 원본 비교, 초기화, 적용·취소 및 Undo/Redo. 조정된 픽셀을 저장하며 독립 조정 레이어는 아닙니다.
 - 레이어에 연결된 회색조 마스크: 전체 표시/숨김 추가, 활성화·삭제, 마스크 브러시·지우개, Undo/Redo
 - `.comp` 프로젝트 폴더 저장·열기, PNG 투명도 보존 내보내기, 흰 배경 JPEG 내보내기(품질 92)
@@ -69,7 +69,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Publish
 `.comp`는 `manifest.json`과 `images/<UUID>.png`를 담은 **폴더**입니다. Open project folder에서 `.comp` 폴더 자체를 선택합니다. Save as는 상위 폴더와 새 프로젝트 이름을 차례로 지정합니다.
 
 - 버전 1–8을 읽고 버전 8로 저장합니다. CGPoint/CGSize는 Swift Codable과 같은 2원소 숫자 배열이며, 좌표는 왼쪽 위 원점·시계 방향 회전입니다.
-- 기본 픽셀 레이어, 통과 방식 그룹, 연결된 회색조 마스크와 지원 범위의 8종 조정 레이어와 일반 픽셀 레이어의 Color Overlay·Drop Shadow·Stroke·Inner Shadow·Outer Glow 효과를 지원합니다. 그룹 마스크, 분리 이동·독립 배치·다른 레이어 참조 마스크, Hue/Saturation 등 미지원 조정 또는 보존할 수 없는 비활성 조정 설정, 미지원 효과와 그룹·조정 레이어의 효과, 도형, 텍스트, 가이드, 미지원 합성 모드 및 알 수 없는 필드는 **프로젝트 전체 열기를 거부**합니다. 기능을 조용히 버리고 덮어쓰지 않습니다.
+- 기본 픽셀 레이어, 통과 방식 그룹, 연결된 회색조 마스크와 지원 범위의 9종 조정 레이어와 일반 픽셀 레이어의 Color Overlay·Drop Shadow·Stroke·Inner Shadow·Outer Glow 효과를 지원합니다. 그룹 마스크, 분리 이동·독립 배치·다른 레이어 참조 마스크, 알 수 없는 조정 또는 보존할 수 없는 비활성 조정 설정, 미지원 효과와 그룹·조정 레이어의 효과, 도형, 텍스트, 가이드, 미지원 합성 모드 및 알 수 없는 필드는 **프로젝트 전체 열기를 거부**합니다. 기능을 조용히 버리고 덮어쓰지 않습니다.
 - 자산 경로·중복 ID·형식 버전·크기·심볼릭 링크와 junction을 검사합니다. 디스크 자산은 외부 원본 이미지에 의존하지 않습니다.
 - 완전한 임시 패키지를 쓰고 다시 읽어 검증한 다음 기존 폴더를 `.comp.recovery`로 이동하고 새 폴더를 게시합니다. 게시 실패 시 기존 폴더를 복구합니다. 같은 경로의 동시 저장은 `.write-lock`으로 차단합니다.
 - **폴더 두 번의 이름 변경 전체가 하나의 원자적 연산은 아닙니다.** 전원 중단 시 `.comp.recovery`가 남을 수 있습니다. File → **Open recovery copy…**에서 `.comp.recovery` 폴더를 선택하면 수정된 새 문서로 열립니다. Save에서 새 `.comp` 이름으로 저장하십시오. 원본과 복구 폴더는 자동으로 덮어쓰거나 삭제하지 않습니다. 복구 사본이 있으면 다음 저장은 차단됩니다. 잠금 파일은 빈 파일로 남으며, 실제 잠금은 프로세스의 파일 핸들입니다.
@@ -144,3 +144,6 @@ Exposure 구현·파일 호환 범위·성능은 [Exposure 검증 문서](docs/e
 
 
 [Gradient Map](docs/gradient-map.md)은 두 색상표·반전·그라디언트 미리보기를 제공합니다. 조정 생성은 **Image → New adjustment layer**, 재편집은 **Image → Edit adjustment**로 묶었습니다.
+
+
+[Hue/Saturation](docs/hue-saturation.md)은 색상군별 슬라이더·전후 스펙트럼·범위 핸들·Colorize와 이미지 미리보기의 Sample/Add/Remove/Target 도구를 지원합니다. 4K 전체 재합성 지연과 별도 픽셀 필터 경로는 후속 작업입니다.

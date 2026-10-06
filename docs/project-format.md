@@ -111,4 +111,4 @@ stroke/shadow/innerShadow/outerGlow도 지원한다. 각각의 필드·합성 �
 
 ## 추가 비파괴 조정
 
-Invert, Black & White, Color Balance, Grain을 지원한다. 필드와 범위는 [반전·흑백](blackwhite-invert.md), [색상 균형·그레인](color-balance-grain.md)을 따른다. 공통 필수 기본 필드, imageFile 없는 조정 레이어, 연결 마스크 및 비지원 비활성 설정 거부 규칙을 유지한다. Gradient Map도 지원하며 gradientMapSettings의 shadows/highlights 색과 reversed를 보존한다. [Gradient Map 규격과 검증](gradient-map.md)을 참고한다. Hue/Saturation은 아직 거부한다.
+Invert, Black & White, Color Balance, Grain을 지원한다. 필드와 범위는 [반전·흑백](blackwhite-invert.md), [색상 균형·그레인](color-balance-grain.md)을 따른다. 공통 필수 기본 필드, imageFile 없는 조정 레이어, 연결 마스크 및 비지원 비활성 설정 거부 규칙을 유지한다. Gradient Map도 지원하며 gradientMapSettings의 shadows/highlights 색과 reversed를 보존한다. [Gradient Map 규격과 검증](gradient-map.md)을 참고한다. Hue/Saturation도 지원한다. 구형 scalar 필드와 선택적인 hsvSettings를 따로 보존하며 색상군 사전은 Swift의 키·값 교대 배열이다. [Hue/Saturation 규격과 검증](hue-saturation.md)을 참고한다.
