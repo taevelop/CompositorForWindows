@@ -153,7 +153,7 @@
       <DockPanel><TextBlock Text="Opacity" Width="52" Foreground="{StaticResource MutedInk}"/><TextBox x:Name="LayerOpacity" DockPanel.Dock="Right" Text="100" Width="48" Padding="4,2"/><Slider x:Name="LayerOpacitySlider" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="100" Value="100" ToolTip="Layer opacity draft; use Apply properties" AutomationProperties.Name="Layer opacity slider"/></DockPanel>
       <Button Content="Apply properties" Click="ApplyLayer" HorizontalAlignment="Right" Style="{StaticResource CompactButton}"/>
      </StackPanel>
-            <ListBox Grid.Row="2" x:Name="Layers" Background="#191B20" Foreground="White" BorderThickness="0" MinHeight="100" SelectionChanged="LayerSelected" Margin="0,6,0,6">
+            <ListBox Grid.Row="2" x:Name="Layers" SelectionMode="Extended" Background="#191B20" Foreground="White" BorderThickness="0" MinHeight="100" SelectionChanged="LayerSelected" Margin="0,6,0,6">
               <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource LayerListItem}"/></ListBox.ItemContainerStyle><ListBox.ItemTemplate><DataTemplate>
                 <Grid Margin="{Binding Indent}" Opacity="{Binding RowOpacity}"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                   <Button Content="{Binding Disclosure}" IsEnabled="{Binding CanExpand}" Visibility="{Binding ExpandVisibility}" Tag="{Binding Id}" Click="ToggleGroup" Width="22" Padding="0" Margin="0,1,4,1"/>

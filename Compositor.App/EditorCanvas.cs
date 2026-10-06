@@ -28,6 +28,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     private MaskStroke? maskStroke;
     private Layer? originalLayer;
     private Document? groupMoveDocument;
+    private GroupTransform? multipleMove;
     private Document? selectionStart;
     private SelectionMode gestureSelectionMode;
     private bool movingSelection, constrainArmed;
@@ -186,7 +187,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         bool editing = originalLayer is not null || selectionStart is not null;
         pixelMove?.Dispose(); pixelMove = null;
         selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear(); polygonCursor = null;
-        originalLayer = null; groupMoveDocument = null; stroke = null; maskStroke = null; gestureButton = null;
+        originalLayer = null; groupMoveDocument = null; multipleMove = null; stroke = null; maskStroke = null; gestureButton = null;
         if (panStart is not null) { panX = panOrigin.X; panY = panOrigin.Y; panStart = null; }
         if (editing && Session?.InTransaction == true) Session.Cancel();
         if (IsMouseCaptured) ReleaseMouseCapture();
@@ -220,6 +221,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             if (layer.IsGroup) throw new InvalidOperationException("Select an image layer inside the group before painting.");
             if (!LayerHierarchy.Entries(Session.Document).First(e => e.Layer.Id == layer.Id).Visible) throw new InvalidOperationException("Show the layer and its parent groups before painting.");
         }
+        multipleMove = Tool == EditorTool.Move && Session.SelectedLayerIds.Count > 1 ? new GroupTransform(Session.Document, Session.SelectedLayerIds) : null;
         originalLayer = layer; anchor = point;
         groupMoveDocument = layer.IsGroup ? Session.Document : null;
         if (Tool is EditorTool.Brush or EditorTool.Eraser)
@@ -276,6 +278,11 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         { stroke.Append(point); if (!ReferenceEquals(Session.ActiveLayer?.Pixels, stroke.Pixels)) Session.Preview(Session.Document.Replace(originalLayer with { Pixels = stroke.Pixels })); }
         else if (Tool == EditorTool.Move)
         {
+            if (multipleMove is {} moving)
+            {
+                Session.Preview(moving.Apply(moving.Bounds with { X = moving.Bounds.X + point.X - anchor.X, Y = moving.Bounds.Y + point.Y - anchor.Y }));
+                return;
+            }
             if (groupMoveDocument is not null)
             {
                 Session.Preview(LayerHierarchy.Translate(groupMoveDocument, originalLayer.Id, point.X - anchor.X, point.Y - anchor.Y));
@@ -314,7 +321,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         bool editing = originalLayer is not null || selectionStart is not null;
         pixelMove?.Dispose(); pixelMove = null;
         selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear(); polygonCursor = null;
-        stroke = null; maskStroke = null; originalLayer = null; groupMoveDocument = null; gestureButton = null;
+        stroke = null; maskStroke = null; originalLayer = null; groupMoveDocument = null; multipleMove = null; gestureButton = null;
         if (editing) { if (commit) Session.Commit(); else Session.Cancel(); }
         InvalidateVisual();
     }
@@ -346,6 +353,12 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             using var outline = new SKPaint { Color = new(108, 154, 224), Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };
             using var path = new SKPathBuilder();
             var outlineTransform = layer.IsGroup ? LayerHierarchy.Bounds(doc, layer.Id) : layer.Transform;
+            if (Session.SelectedLayerIds.Count > 1)
+            {
+                try { outlineTransform = new GroupTransform(doc, Session.SelectedLayerIds).Bounds; }
+                catch (InvalidOperationException) { } // No visible images; Ctrl+T explains why transformation is unavailable.
+                catch (System.IO.InvalidDataException) { } // A combined box can exceed the transform limit.
+            }
             PointD[] corners = [new(0, 0), new(layer.Pixels.Width, 0), new(layer.Pixels.Width, layer.Pixels.Height), new(0, layer.Pixels.Height)];
             for (int i = 0; i < 4; i++) { var p = outlineTransform.ToDocument(corners[i], layer.Pixels.Width, layer.Pixels.Height); if (i == 0) path.MoveTo((float)p.X, (float)p.Y); else path.LineTo((float)p.X, (float)p.Y); }
             path.Close(); using var outlinePath = path.Detach(); c.DrawPath(outlinePath, outline);

@@ -73,5 +73,26 @@ public partial class MainWindow
         Check(Canvas.BeginInteraction(MouseButton.Middle,new Point(100,100)),"Transform blocked middle pan.");
         Canvas.MoveInteraction(new Point(110,110));Canvas.FinishInteraction(MouseButton.Middle,new Point(110,110));
         Check(Canvas.IsTransforming&&Canvas.TransformDraft==prior,"Panning changed transform.");CancelTransform(null,new());
+        // Exercise actual ListBox selection events without injecting global keyboard input.
+        var third=Layer.Blank("Third",20,20) with{Transform=new(340,0,20,20)};
+        var multi=doc with{Layers=doc.Layers.Add(second with{Transform=new(310,0,20,20)}).Add(third)};
+        session.Load(multi,doc.Layers[0].Id);ToolPicker.SelectedIndex=0;
+        var itemsSource=Layers.ItemsSource;
+        Layers.SelectedItems.Add(Layers.Items.Cast<LayerRow>().Single(r=>r.Id==second.Id));
+        Check(session.SelectedLayerIds.Count==2&&session.ActiveLayerId==second.Id,"ListBox additive selection failed.");
+        Check(ReferenceEquals(itemsSource,Layers.ItemsSource),"Selection reset the native range anchor.");
+        StartTransform(null,new());Check(Canvas.TransformDraft!.Width==330,"Multiple transform used only active layer.");
+        TransformAngleSlider.Value=10;
+        Layers.SelectedItems.Add(Layers.Items.Cast<LayerRow>().Single(r=>r.Id==third.Id));
+        Check(!Canvas.IsTransforming&&session.UndoCount==1&&session.SelectedLayerIds.Count==3&&session.ActiveLayerId==third.Id,"Selection change lost selection while committing transform.");
+        session.Undo();Check(session.SelectedLayerIds.Count==2&&Layers.SelectedItems.Count==2,"Undo did not restore multi-selection in panel.");
+        Canvas.BeginPointer(new(0,0));Canvas.MovePointer(new(12,8));Canvas.EndPointer(true);
+        Check(session.Document.Layers[0].Transform.X==12&&session.Document.Layers[1].Transform.X==322&&session.Document.Layers[2].Transform.X==340,"Move did not move exactly the selected layers.");
+        session.Undo();Check(ReferenceEquals(multi,session.Document),"Multiple move Undo failed.");
+        DeleteLayer(null,new());Check(session.Document.Layers.Length==1&&session.Document.Layers[0].Id==third.Id,"Delete did not remove all selected layers.");
+        session.Undo();Check(session.Document.Layers.Length==3&&Layers.SelectedItems.Count==2,"Delete Undo did not restore selection.");
+        Layers.SelectAll();Check(session.SelectedLayerIds.Count==3,"Native select-all failed.");
+        Layers.UnselectAll();Check(session.ActiveLayerId is null&&session.SelectedLayerIds.Count==0,"Native clear selection failed.");
+        session.Load(doc);
     }
 }

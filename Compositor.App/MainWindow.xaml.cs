@@ -65,7 +65,7 @@ public partial class MainWindow : Window
     }
     private void UpdateStatus()
     {
-        if (!busy) Status.Text = $"{session.Document.Width:N0} × {session.Document.Height:N0} px   ·   {session.Document.Layers.Length} layers   ·   {Canvas.Zoom:P0}   ·   {Canvas.Tool}   ·   {(session.EditMask ? "Mask" : "Image")}   ·   {(session.Document.Selection is null ? "No selection" : session.Document.Selection.IsEmpty ? "Empty selection — painting blocked" : "Selection active")}";
+        if (!busy) Status.Text = $"{session.Document.Width:N0} × {session.Document.Height:N0} px   ·   {session.Document.Layers.Length} layers / {session.SelectedLayerIds.Count} selected   ·   {Canvas.Zoom:P0}   ·   {Canvas.Tool}   ·   {(session.EditMask ? "Mask" : "Image")}   ·   {(session.Document.Selection is null ? "No selection" : session.Document.Selection.IsEmpty ? "Empty selection — painting blocked" : "Selection active")}";
     }
     private static string F(double n) => n.ToString("0.###", CultureInfo.InvariantCulture);
     private static double Number(TextBox input)
@@ -219,7 +219,8 @@ public partial class MainWindow : Window
     private void DeleteLayer(object? sender, RoutedEventArgs e) => Safe(() =>
     {
         if (session.ActiveLayer is not { } l) return;
-        session.Apply(d => LayerHierarchy.Delete(d, l.Id));
+        var ids = session.SelectedLayerIds.SelectMany(id => LayerHierarchy.Subtree(session.Document, id)).ToHashSet();
+        session.Apply(d => d with { Layers = System.Collections.Immutable.ImmutableArray.CreateRange(d.Layers.Where(layer => !ids.Contains(layer.Id))) });
     });
     private void Reorder(int offset) => Safe(() =>
     {
@@ -230,10 +231,14 @@ public partial class MainWindow : Window
     private void LayerDown(object sender, RoutedEventArgs e) => Reorder(-1);
     private void LayerSelected(object sender, SelectionChangedEventArgs e)
     {
-        if (refreshing || busy || Layers.SelectedItem is not LayerRow row) return;
+        if (refreshing) return;
+        if (busy || (session.InTransaction && !Canvas.IsTransforming)) return;
+        // Commit refreshes ItemsSource, so retain the user's new selection first.
+        var ids = Layers.SelectedItems.Cast<LayerRow>().Select(row => row.Id).ToArray();
+        var primary = e.AddedItems.Cast<LayerRow>().LastOrDefault()?.Id;
+        if (primary is null && session.ActiveLayerId is {} active && ids.Contains(active)) primary = active;
         if (Canvas.IsTransforming) Canvas.CommitTransform();
-        if (session.InTransaction) return;
-        session.ActiveLayerId = row.Id; Refresh();
+        session.SelectLayers(ids, primary);
     }
     private void ApplyLayer(object sender, RoutedEventArgs e) => Safe(() =>
     {
@@ -274,6 +279,12 @@ public partial class MainWindow : Window
         if (Canvas.Tool == EditorTool.Crop && e.Key == Key.Enter) { ApplyCrop(null, e); e.Handled = true; return; }
         if (Canvas.HandleSelectionKey(e.Key)) { e.Handled = true; return; }
         bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control), shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+        if (Layers.IsKeyboardFocusWithin && !session.InTransaction)
+        {
+            if (ctrl && e.Key == Key.A) { Layers.SelectAll(); e.Handled = true; return; }
+            if (!ctrl && e.Key == Key.Delete) { DeleteLayer(null, e); e.Handled = true; return; }
+            if (e.Key is Key.Up or Key.Down or Key.Home or Key.End) return;
+        }
         if (Canvas.IsTransforming && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
         {
             double step=shift?10:1;

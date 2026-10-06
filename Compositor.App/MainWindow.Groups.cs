@@ -22,6 +22,11 @@ public partial class MainWindow
 
     private void RefreshHierarchy()
     {
+        bool wasRefreshing = refreshing; refreshing = true;
+        try { RefreshHierarchyCore(); } finally { refreshing = wasRefreshing; }
+    }
+    private void RefreshHierarchyCore()
+    {
         if (panelDocumentId != session.Document.Id) { collapsedGroups.Clear(); panelDocumentId = session.Document.Id; }
         collapsedGroups.IntersectWith(session.Document.Layers.Where(l => l.IsGroup).Select(l => l.Id));
         // Undo or file load may select a child of a collapsed group; reveal that selection.
@@ -31,7 +36,12 @@ public partial class MainWindow
         }
         var entries = LayerHierarchy.Entries(session.Document, topFirst: true, collapsed: collapsedGroups);
         var rows = entries.Select(e => new LayerRow(e.Layer, e.Depth, e.Visible, !collapsedGroups.Contains(e.Layer.Id))).ToArray();
-        Layers.ItemsSource = rows; Layers.SelectedItem = rows.FirstOrDefault(r => r.Id == session.ActiveLayerId);
+        // Keep native Shift-selection anchor when only the selection changed.
+        if (!Layers.Items.Cast<LayerRow>().SequenceEqual(rows)) Layers.ItemsSource = rows;
+        foreach (var selected in Layers.SelectedItems.Cast<LayerRow>().ToArray())
+            if (!session.SelectedLayerIds.Contains(selected.Id)) Layers.SelectedItems.Remove(selected);
+        foreach (var row in Layers.Items.Cast<LayerRow>())
+            if (session.SelectedLayerIds.Contains(row.Id) && !Layers.SelectedItems.Contains(row)) Layers.SelectedItems.Add(row);
         var active = session.ActiveLayer;
         bool isGroup = active?.IsGroup == true;
         LayerBlend.IsEnabled = TransformPanel.IsEnabled = !isGroup && active is not null;
