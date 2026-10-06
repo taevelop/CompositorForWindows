@@ -15,7 +15,7 @@
           <Separator/><MenuItem Header="Export _PNG…" Click="ExportPng"/><MenuItem Header="Export _JPEG…" Click="ExportJpeg"/>
         </MenuItem>
         <MenuItem Header="_Edit"><MenuItem x:Name="UndoMenu" Header="_Undo" InputGestureText="Ctrl+Z" Click="Undo"/><MenuItem x:Name="RedoMenu" Header="_Redo" InputGestureText="Ctrl+Shift+Z" Click="Redo"/><Separator/><MenuItem Header="_Copy" InputGestureText="Ctrl+C" Click="CopyPixels"/><MenuItem Header="Copy _merged" InputGestureText="Ctrl+Shift+C" Click="CopyMergedPixels"/><MenuItem Header="Cu_t selection" InputGestureText="Ctrl+X" Click="CutPixels"/><MenuItem Header="_Paste" InputGestureText="Ctrl+V" Click="PastePixels"/></MenuItem>
-        <MenuItem Header="_Layer"><MenuItem Header="Duplicate / Layer via copy" InputGestureText="Ctrl+J" Click="LayerViaCopy"/><MenuItem Header="Duplicate whole layer / group" Click="DuplicateLayer"/></MenuItem>
+        <MenuItem Header="_Layer"><MenuItem Header="Transform layer / selection" InputGestureText="Ctrl+T" Click="StartTransform"/><Separator/><MenuItem Header="Duplicate / Layer via copy" InputGestureText="Ctrl+J" Click="LayerViaCopy"/><MenuItem Header="Duplicate whole layer / group" Click="DuplicateLayer"/></MenuItem>
         <MenuItem Header="_Select">
           <MenuItem Header="Select all" InputGestureText="Ctrl+A" Click="SelectAll"/>
           <MenuItem Header="Deselect" InputGestureText="Ctrl+D" Click="Deselect"/>
@@ -113,6 +113,14 @@
       <Button Content="Cancel" Click="CancelCrop" Style="{StaticResource CompactButton}"/>
       <TextBlock x:Name="CropSizeLabel" VerticalAlignment="Center" Margin="10,0" Foreground="{StaticResource MutedInk}"/>
       <TextBlock Text="Alt: center · Enter: apply · Esc: cancel" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource MutedInk}"/>
+     </StackPanel>
+     <StackPanel x:Name="TransformOptions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+      <CheckBox x:Name="TransformRatio" Content="Ratio" IsChecked="True" Click="TransformRatioChanged" Foreground="{StaticResource Ink}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+      <StackPanel Width="160" Margin="0,0,12,0"><DockPanel><TextBlock Text="Scale %" Foreground="{StaticResource MutedInk}"/><TextBox x:Name="TransformScale" Width="55" Padding="3,1" LostKeyboardFocus="TransformNumberCommit" KeyDown="TransformNumberKey" AutomationProperties.Name="Transform scale"/></DockPanel><Slider x:Name="TransformScaleSlider" Minimum="10" Maximum="400" Value="100" Style="{StaticResource EditorSlider}" ValueChanged="TransformScaleChanged"/></StackPanel>
+      <StackPanel Width="160" Margin="0,0,12,0"><DockPanel><TextBlock Text="Rotation" Foreground="{StaticResource MutedInk}"/><TextBox x:Name="TransformAngle" Width="55" Padding="3,1" LostKeyboardFocus="TransformNumberCommit" KeyDown="TransformNumberKey" AutomationProperties.Name="Transform rotation"/></DockPanel><Slider x:Name="TransformAngleSlider" Minimum="-180" Maximum="180" Value="0" Style="{StaticResource EditorSlider}" ValueChanged="TransformAngleChanged"/></StackPanel>
+      <Button Content="Flip H" Click="TransformFlipX" Style="{StaticResource CompactButton}"/><Button Content="Flip V" Click="TransformFlipY" Style="{StaticResource CompactButton}"/>
+      <Button Content="Apply" Click="ApplyTransform" Style="{StaticResource CompactButton}"/><Button Content="Cancel" Click="CancelTransform" Style="{StaticResource CompactButton}"/>
+      <TextBlock Text="Shift: constrain · Alt: center" Foreground="{StaticResource MutedInk}" FontSize="11" VerticalAlignment="Center" Margin="8,0"/>
      </StackPanel>
      <TextBlock Grid.Column="1" VerticalAlignment="Center" x:Name="ToolHint" Foreground="{StaticResource MutedInk}" Margin="6,0" Text="Wheel: zoom · Middle drag: pan" FontSize="11"/>
     </Grid>

@@ -18,7 +18,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     public Action<string>? ReportError { get; set; }
     public Action? ViewportChanged { get; set; }
     public double Zoom { get; private set; } = 1;
-    public bool HasInteraction => cropDrag is not null || pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
+    public bool HasInteraction => transformDrag is not null || cropDrag is not null || pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
     private double panX = 30, panY = 30;
     private Point? panStart;
     private Point panOrigin;
@@ -88,7 +88,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        try { MoveInteraction(e.GetPosition(this)); UpdateCropCursor(DocumentPoint(e.GetPosition(this))); }
+        try { MoveInteraction(e.GetPosition(this)); UpdateCropCursor(DocumentPoint(e.GetPosition(this))); UpdateTransformCursor(DocumentPoint(e.GetPosition(this))); }
         catch (Exception error) { CancelInteraction(); ReportError?.Invoke(error.Message); }
     }
     protected override void OnMouseUp(MouseButtonEventArgs e)
@@ -104,6 +104,12 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     // These routes are also exercised by the hidden WPF integration check.
     internal bool BeginInteraction(MouseButton button, Point point, int clickCount = 1, ModifierKeys? modifiers = null)
     {
+        if (IsTransforming)
+        {
+            if (!HasInteraction && button == MouseButton.Middle) { gestureButton = button; panOrigin = new(panX, panY); panStart = point; return true; }
+            if (HasInteraction || button != MouseButton.Left || !BeginTransformPointer(DocumentPoint(point))) return false;
+            gestureButton = button; return true;
+        }
         if (PolygonActive)
         {
             if (button != MouseButton.Left || gestureButton is not null) return false;
@@ -128,7 +134,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         {
             panX += point.X - previous.X; panY += point.Y - previous.Y; panStart = point; InvalidateVisual(); return;
         }
-        if (cropDrag is not null || pixelMove is not null || originalLayer is not null || selectionStart is not null) MovePointer(DocumentPoint(point));
+        if (transformDrag is not null || cropDrag is not null || pixelMove is not null || originalLayer is not null || selectionStart is not null) MovePointer(DocumentPoint(point));
         UpdateSelectionAutoScroll(point);
     }
     internal bool FinishInteraction(MouseButton button, Point point)
@@ -175,6 +181,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     public void CancelInteraction()
     {
         StopSelectionAutoScroll();
+        CancelTransformDrag();
         CancelCropDrag();
         bool editing = originalLayer is not null || selectionStart is not null;
         pixelMove?.Dispose(); pixelMove = null;
@@ -226,6 +233,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void MovePointer(PointD point, ModifierKeys? modifiers = null)
     {
+        if (transformDrag is not null) { MoveTransformPointer(point, modifiers ?? Keyboard.Modifiers); return; }
         if (cropDrag is not null) { MoveCrop(point, modifiers ?? Keyboard.Modifiers); return; }
         if (!Session.InTransaction) return;
         if (pixelMove is not null)
@@ -281,6 +289,11 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     public void EndPointer(bool commit)
     {
         StopSelectionAutoScroll();
+        if (transformDrag is not null)
+        {
+            if (!commit) CancelTransformDrag();
+            transformDrag = null; gestureButton = null; InvalidateVisual(); return;
+        }
         if (cropDrag is not null)
         {
             if (!commit) CancelCropDrag();
@@ -328,7 +341,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         using (var frame = renderer.Render(doc, e.Info.Width, e.Info.Height, (float)(Zoom * e.Info.Width / ActualWidth),
             (float)(panX * e.Info.Width / ActualWidth), (float)(panY * e.Info.Height / ActualHeight)))
         { c.Save(); c.ResetMatrix(); c.DrawImage(frame, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest)); c.Restore(); }
-        if (Session.ActiveLayer is { } layer && Tool == EditorTool.Move)
+        if (Session.ActiveLayer is { } layer && Tool == EditorTool.Move && !IsTransforming)
         {
             using var outline = new SKPaint { Color = new(108, 154, 224), Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };
             using var path = new SKPathBuilder();
@@ -355,7 +368,8 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             c.DrawPath(path, under); c.DrawPath(path, line);
         }
         DrawCrop(c);
+        DrawTransform(c);
         c.Restore();
     }
-    public void Dispose() { StopSelectionAutoScroll(); renderer.Dispose(); }
+    public void Dispose() { CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
 }

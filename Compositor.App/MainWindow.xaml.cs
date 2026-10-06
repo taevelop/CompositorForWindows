@@ -30,6 +30,7 @@ public partial class MainWindow : Window
         Canvas.ReportError = ShowError;
         Canvas.ViewportChanged = UpdateStatus;
         Canvas.CropChanged = RefreshCropControls;
+        Canvas.TransformChanged = RefreshTransformControls;
         Deactivated += (_, _) => Canvas.CancelInteraction();
         LayerBlend.ItemsSource = Enum.GetValues<BlendMode>();
         LayerSampling.ItemsSource = Enum.GetValues<Sampling>();
@@ -89,11 +90,13 @@ public partial class MainWindow : Window
     private void ShowError(string message) => prompts.ShowError(message);
     private void Safe(Action action)
     {
+        if (!busy && Canvas.IsTransforming) Canvas.CommitTransform();
         if (busy || session.InTransaction) return;
         try { action(); } catch (Exception e) { ShowError(e.Message); }
     }
     private async Task<bool> Work(string label, Action action)
     {
+        if (!busy && Canvas.IsTransforming) Canvas.CommitTransform();
         if (busy || session.InTransaction) return false;
         busy = true; Editor.IsEnabled = false; Status.Text = label;
         try { await Task.Run(action); return true; }
@@ -102,6 +105,7 @@ public partial class MainWindow : Window
     }
     private async Task<bool> ConfirmDiscard()
     {
+        if (!busy && Canvas.IsTransforming) Canvas.CommitTransform();
         if (busy || session.InTransaction) return false;
         if (!session.IsModified) return true;
         var response = prompts.ConfirmSaveChanges();
@@ -146,6 +150,7 @@ public partial class MainWindow : Window
     }
     private async void ImportImages(object? sender, RoutedEventArgs e)
     {
+        if (!busy && Canvas.IsTransforming) Canvas.CommitTransform();
         if (busy || session.InTransaction) return;
         var dialog = new OpenFileDialog { Title = "Import images as layers", Filter = "Images|*.png;*.jpg;*.jpeg", Multiselect = true };
         if (dialog.ShowDialog(this) == true) await Import(dialog.FileNames);
@@ -174,6 +179,7 @@ public partial class MainWindow : Window
     }
     private async Task<bool> Save(bool saveAs)
     {
+        if (!busy && Canvas.IsTransforming) Canvas.CommitTransform();
         if (busy || session.InTransaction) return false;
         string? destination = projectPath;
         if (saveAs || destination is null)
@@ -196,6 +202,7 @@ public partial class MainWindow : Window
     private async void SaveProjectAs(object? sender, RoutedEventArgs e) => await Save(true);
     private async Task Export(bool jpeg)
     {
+        if (!busy && Canvas.IsTransforming) Canvas.CommitTransform();
         if (busy || session.InTransaction) return;
         var dialog = new SaveFileDialog { Title = "Export flattened image", Filter = jpeg ? "JPEG image|*.jpg" : "PNG image|*.png", DefaultExt = jpeg ? ".jpg" : ".png", FileName = "Untitled" };
         if (dialog.ShowDialog(this) != true) return;
@@ -223,7 +230,9 @@ public partial class MainWindow : Window
     private void LayerDown(object sender, RoutedEventArgs e) => Reorder(-1);
     private void LayerSelected(object sender, SelectionChangedEventArgs e)
     {
-        if (refreshing || busy || session.InTransaction || Layers.SelectedItem is not LayerRow row) return;
+        if (refreshing || busy || Layers.SelectedItem is not LayerRow row) return;
+        if (Canvas.IsTransforming) Canvas.CommitTransform();
+        if (session.InTransaction) return;
         session.ActiveLayerId = row.Id; Refresh();
     }
     private void ApplyLayer(object sender, RoutedEventArgs e) => Safe(() =>
@@ -243,6 +252,7 @@ public partial class MainWindow : Window
     private void ToolChanged(object sender, SelectionChangedEventArgs e)
     {
         if (Canvas is null) return;
+        Canvas.CommitTransform();
         Canvas.CancelInteraction();
         Canvas.CancelCrop();
         Canvas.Cursor = null; Canvas.Tool = (EditorTool)ToolPicker.SelectedIndex; RefreshToolControls(); Canvas.InvalidateVisual(); Canvas.Focus();
@@ -255,13 +265,22 @@ public partial class MainWindow : Window
     private void WindowKeyDown(object sender, KeyEventArgs e)
     {
         if (busy) return;
+        if (Canvas.IsTransforming && e.Key == Key.Escape) { CancelTransform(null, e); e.Handled = true; return; }
         if (Canvas.Tool == EditorTool.Crop && e.Key == Key.Escape) { CancelCrop(null, e); e.Handled = true; return; }
         if (e.Key == Key.Escape && Canvas.HasInteraction) { Canvas.CancelInteraction(); e.Handled = true; return; }
         // Text editing owns its own shortcuts, including Undo and Delete.
         if (Keyboard.FocusedElement is TextBox) return;
+        if (Canvas.IsTransforming && e.Key == Key.Enter) { ApplyTransform(null, e); e.Handled = true; return; }
         if (Canvas.Tool == EditorTool.Crop && e.Key == Key.Enter) { ApplyCrop(null, e); e.Handled = true; return; }
         if (Canvas.HandleSelectionKey(e.Key)) { e.Handled = true; return; }
         bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control), shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+        if (Canvas.IsTransforming && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
+        {
+            double step=shift?10:1;
+            SetTransform(t=>t with{X=t.X+(e.Key==Key.Left?-step:e.Key==Key.Right?step:0),Y=t.Y+(e.Key==Key.Up?-step:e.Key==Key.Down?step:0)});
+            e.Handled=true;return;
+        }
+        if (Canvas.IsTransforming && ((ctrl && e.Key is Key.S or Key.Z or Key.Y) || (!ctrl && e.Key is Key.V or Key.B or Key.E or Key.H or Key.M or Key.L or Key.C))) Canvas.CommitTransform();
         if (session.InTransaction) return;
         if (ctrl && Canvas.IsSelectionTool && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
         { NudgeSelectedPixels(e.Key, shift ? 10 : 1); e.Handled = true; return; }
@@ -272,6 +291,7 @@ public partial class MainWindow : Window
             switch (e.Key)
             {
                 case Key.C: if (shift) CopyMergedPixels(null, e); else CopyPixels(null, e); break;
+                case Key.T: StartTransform(null, e); break;
                 case Key.J: LayerViaCopy(null, e); break;
                 case Key.X: CutPixels(null, e); break; case Key.V: PastePixels(null, e); break;
                 case Key.N: NewDocument(null, e); break; case Key.O: OpenProject(null, e); break; case Key.I: ImportImages(null, e); break;
@@ -343,6 +363,7 @@ public partial class MainWindow : Window
         await ImageSizeSmokeTest(Path.ChangeExtension(screenshot, ".image-size.png"));
         await CanvasSizeSmokeTest(Path.ChangeExtension(screenshot, ".canvas-size.png"));
         CropSmokeTest(Path.ChangeExtension(screenshot, ".crop.png"));
+        TransformSmokeTest(Path.ChangeExtension(screenshot, ".transform.png"));
         LayerCopySmokeTest();
         ClipboardSmokeTest(Path.ChangeExtension(screenshot, ".clipboard.json"));
         await SelectionAutoScrollSmokeTest();
