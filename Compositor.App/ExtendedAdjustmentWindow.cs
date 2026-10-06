@@ -8,6 +8,7 @@ namespace Compositor.App;
 public sealed class ExtendedAdjustmentWindow : Window
 {
     private readonly EditorSession session;
+    private readonly bool pixelEdit;
     private readonly Document original, editing;
     private readonly Layer layer;
     private readonly bool grain;
@@ -19,10 +20,10 @@ public sealed class ExtendedAdjustmentWindow : Window
     internal readonly TextBox SeedInput=new(){Width=140,HorizontalAlignment=HorizontalAlignment.Left};
     internal readonly CheckBox PreviewEnabled=new(){Content="Preview changes",IsChecked=true,Margin=new(4,10,4,4)};
     private readonly TextBlock feedback=new(){TextWrapping=TextWrapping.Wrap,Margin=new(4),MinHeight=32};
-    public ExtendedAdjustmentWindow(EditorSession session,bool grain,bool create)
+    public ExtendedAdjustmentWindow(EditorSession session,bool grain,bool create, bool pixelEdit = false)
     {
         if(session.InTransaction)throw new InvalidOperationException("Finish the active edit first.");
-        this.session=session;this.grain=grain;original=session.Document;
+        this.pixelEdit=pixelEdit; this.session=session;this.grain=grain;original=session.Document;
         if(create)
         {
             var active=session.ActiveLayer;
@@ -92,9 +93,9 @@ public sealed class ExtendedAdjustmentWindow : Window
     internal bool Preview()
     {
         timer.Stop();if(!ready||closed)return false;
-        try{var current=Read();session.Preview(PreviewEnabled.IsChecked==true?editing.Replace(current):original);feedback.Text="Source pixels stay unchanged.";return true;}
+        try{var current=Read();session.Preview(PreviewEnabled.IsChecked==true?editing.Replace(current):original);feedback.Text=pixelEdit ? "Apply changes image pixels; Undo restores them." : "Source pixels stay unchanged.";return true;}
         catch(Exception e){session.Preview(original);feedback.Text=e.Message;return false;}
     }
-    internal void ApplyEdit(){if(!Preview())return;session.Preview(editing.Replace(Read()));session.Commit();finished=true;Close();}
+    internal void ApplyEdit(){if(!Preview())return;try { session.Preview(editing.Replace(Read()));session.Commit();finished=true;Close(); } catch(Exception error){session.Preview(original);feedback.Text=error.Message;}}
     internal void CancelEdit(){if(closed)return;closed=true;timer.Stop();if(!finished&&ready)session.Cancel();}
 }

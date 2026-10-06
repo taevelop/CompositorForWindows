@@ -8,6 +8,7 @@ namespace Compositor.App;
 public sealed class GradientMapWindow : Window
 {
     private readonly EditorSession session;
+    private readonly bool pixelEdit;
     private readonly Document original, editing;
     private readonly Layer layer;
     private GradientMapAdjustment settings;
@@ -21,10 +22,10 @@ public sealed class GradientMapWindow : Window
     private readonly Border highlightSwatch = new() { Width = 42, Height = 32, Margin = new(4) };
     private readonly TextBlock feedback = new() { Margin = new(4), TextWrapping = TextWrapping.Wrap, MinHeight = 32 };
 
-    public GradientMapWindow(EditorSession session, bool create)
+    public GradientMapWindow(EditorSession session, bool create, bool pixelEdit = false)
     {
         if (session.InTransaction) throw new InvalidOperationException("Finish the active edit first.");
-        this.session = session; original = session.Document;
+        this.pixelEdit=pixelEdit; this.session = session; original = session.Document;
         if (create)
         {
             var active = session.ActiveLayer;
@@ -86,18 +87,22 @@ public sealed class GradientMapWindow : Window
     internal bool Preview()
     {
         if (!ready || closed) return false;
+        try
+        {
         settings = settings with { Reversed = Reverse.IsChecked == true };
         settings.Validate();
         var dark = DisplayColor(settings.Shadows); var light = DisplayColor(settings.Highlights);
         shadowSwatch.Background = new SolidColorBrush(dark); highlightSwatch.Background = new SolidColorBrush(light);
         ramp.Background = new LinearGradientBrush(settings.Reversed ? light : dark, settings.Reversed ? dark : light, 0);
         session.Preview(PreviewEnabled.IsChecked == true ? editing.Replace(layer with { GradientMap = settings }) : original);
-        feedback.Text = "Source pixels stay unchanged."; return true;
+        feedback.Text = pixelEdit ? "Apply changes image pixels; Undo restores them." : "Source pixels stay unchanged."; return true;
+        }
+        catch (Exception error) { session.Preview(original); feedback.Text=error.Message; return false; }
     }
     internal void ApplyEdit()
     {
         if (!Preview()) return;
-        session.Preview(editing.Replace(layer with { GradientMap = settings })); session.Commit(); finished = true; Close();
+        try { session.Preview(editing.Replace(layer with { GradientMap = settings })); session.Commit(); finished = true; Close(); } catch(Exception error){session.Preview(original);feedback.Text=error.Message;}
     }
     internal void CancelEdit()
     {

@@ -11,6 +11,7 @@ internal enum HueInputMode { None, Sample, Add, Remove, Target }
 public sealed class HueSaturationWindow : Window
 {
     private readonly EditorSession session;
+    private readonly bool pixelEdit;
     private readonly Document original,editing;
     private readonly Layer layer;
     private HueSaturationAdjustment settings;
@@ -33,10 +34,10 @@ public sealed class HueSaturationWindow : Window
     internal HueInputMode InputMode { get; private set; }
     internal HueSaturationAdjustment Settings=>settings;
 
-    public HueSaturationWindow(EditorSession session,bool create)
+    public HueSaturationWindow(EditorSession session,bool create, bool pixelEdit = false)
     {
         if(session.InTransaction)throw new InvalidOperationException("Finish the active edit first.");
-        this.session=session;original=session.Document;
+        this.pixelEdit=pixelEdit; this.session=session;original=session.Document;
         if(create)
         {
             var active=session.ActiveLayer;layer=Layer.HueSaturationLayer(original.Width,original.Height,active?.IsGroup==true?active.Id:active?.ParentId);
@@ -124,8 +125,10 @@ public sealed class HueSaturationWindow : Window
     {
         timer.Stop();if(!ready||closed)return false;
         if(inputs.Any(Validation.GetHasError)){feedback.Text="Enter valid numbers.";return false;}
+        try {
         settings.Validate();session.Preview(PreviewEnabled.IsChecked==true?editing.Replace(EditedLayer()):original);
-        Image.InvalidateVisual();feedback.Text="Source pixels stay unchanged.";return true;
+        Image.InvalidateVisual();feedback.Text=pixelEdit ? "Apply changes image pixels; Undo restores them." : "Source pixels stay unchanged.";return true;
+        } catch(Exception error){session.Preview(original);feedback.Text=error.Message;Image.InvalidateVisual();return false;}
     }
     internal void SetSettings(HueSaturationAdjustment value){value.Validate();Image.CancelGesture();settings=value;UpdateControls();if(ready)Preview();}
     internal void SetMode(HueInputMode mode)
@@ -165,7 +168,7 @@ public sealed class HueSaturationWindow : Window
     }
     internal void ApplyEdit()
     {
-        if(!Preview())return;session.Preview(editing.Replace(EditedLayer()));session.Commit();finished=true;Close();
+        if(!Preview())return;try { session.Preview(editing.Replace(EditedLayer()));session.Commit();finished=true;Close(); } catch(Exception error){session.Preview(original);feedback.Text=error.Message;}
     }
     internal void CancelEdit()
     {

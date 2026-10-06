@@ -17,6 +17,7 @@ if (args.Length > 0 && args[0] == "--soak")
     return;
 }
 
+if (args.Length > 0 && args[0] == "--pixel-adjustments") { PixelAdjustmentBenchmark.Run(args.Length > 1 ? args[1] : "pixel-adjustments-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--hue-layers") { HueLayerBenchmark.Run(args.Length > 1 ? args[1] : "hue-layers-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--hue-cube") { HueSaturationBenchmark.Run(args.Length > 1 ? args[1] : "hue-cube-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--gradient-map") { GradientMapBenchmark.Run(args.Length > 1 ? args[1] : "gradient-map-benchmark.json"); return; }

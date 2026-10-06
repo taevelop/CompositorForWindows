@@ -322,6 +322,7 @@ public partial class MainWindow : Window
         ExtendedAdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".extended-adjustments.json"));
             GradientMapSmokeTest(Path.ChangeExtension(screenshot, ".gradient-map.json"));
             HueSaturationSmokeTest(Path.ChangeExtension(screenshot, ".hue-saturation.json"));
+            PixelAdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".pixel-adjustments.json"));
         await LevelsSmokeTest(Path.ChangeExtension(screenshot, ".levels.json"));
         await CurvesSmokeTest(Path.ChangeExtension(screenshot, ".curves.json"));
         await ColorOverlaySmokeTest(Path.ChangeExtension(screenshot, ".overlay.json"));

@@ -9,15 +9,16 @@ namespace Compositor.App;
 public partial class LevelsWindow : Window
 {
     private readonly EditorSession session;
+    private readonly bool pixelEdit;
     private readonly Document original, editing;
     private readonly Layer layer;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(180) };
     private LevelsAdjustment settings;
     private bool initialized, updating, closed, finished;
-    public LevelsWindow(EditorSession session, bool create = false)
+    public LevelsWindow(EditorSession session, bool create = false, bool pixelEdit = false)
     {
         if (session.InTransaction) throw new InvalidOperationException("Finish the active edit first.");
-        this.session = session; original = session.Document;
+        this.pixelEdit = pixelEdit; this.session = session; original = session.Document;
         if (create)
         {
             if (original.Layers.Length >= 10_000) throw new InvalidOperationException("The project already has 10,000 layers.");
@@ -71,7 +72,7 @@ public partial class LevelsWindow : Window
         try
         {
             ReadFields(); session.Preview(PreviewEnabled.IsChecked == true ? editing.Replace(layer with { Levels = settings }) : original);
-            Feedback.Text = PreviewEnabled.IsChecked == true ? "Preview ready" : "Showing original; Apply uses the entered settings."; return true;
+            Feedback.Text = PreviewEnabled.IsChecked == true ? (pixelEdit ? "Apply changes image pixels; Undo restores them." : "Preview ready") : "Showing original; Apply uses the entered settings."; return true;
         }
         catch (Exception error) { session.Preview(original); Feedback.Text = error.Message; return false; }
     }
@@ -84,7 +85,8 @@ public partial class LevelsWindow : Window
     internal void ApplyEdit()
     {
         if (closed || !Preview()) return;
-        session.Preview(editing.Replace(layer with { Levels = settings })); session.Commit(); finished = true; Close();
+        try { session.Preview(editing.Replace(layer with { Levels = settings })); session.Commit(); finished = true; Close(); }
+        catch (Exception error) { session.Preview(original); Feedback.Text = error.Message; }
     }
     internal void CancelEdit()
     {

@@ -32,9 +32,10 @@ internal static class AdjustmentProcessor
             table[c * 256 + i] = (float)(settings.RGB.Value(settings.Curve((LevelsChannel)(c + 1)).Value(i)) / 255);
         return table;
     }
+    internal static bool IsIdentity(Layer layer) => layer.Exposure?.IsIdentity ?? layer.Levels?.IsIdentity ?? layer.Curves?.IsIdentity ?? layer.ColorBalance?.IsIdentity ?? layer.Grain?.IsIdentity ?? layer.HueSaturation?.IsIdentity ?? (layer.Invert || layer.BlackWhite is not null || layer.GradientMap is not null ? false : throw new InvalidOperationException("No adjustment settings."));
     public static void Apply(SKBitmap bitmap, Document document, Layer layer, double opacity)
     {
-        bool identity = layer.Exposure?.IsIdentity ?? layer.Levels?.IsIdentity ?? layer.Curves?.IsIdentity ?? layer.ColorBalance?.IsIdentity ?? layer.Grain?.IsIdentity ?? layer.HueSaturation?.IsIdentity ?? (layer.Invert || layer.BlackWhite is not null || layer.GradientMap is not null ? false : throw new InvalidOperationException("No adjustment settings."));
+        bool identity = IsIdentity(layer);
         if (identity && layer.Blend == BlendMode.Normal) return;
         var original = bitmap.GetPixelSpan();
         byte[]? converted = null;

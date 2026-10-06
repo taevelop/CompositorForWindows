@@ -37,6 +37,18 @@
             <MenuItem x:Name="EditGrainMenu" Header="Grain…" Click="EditGrain"/>
             <MenuItem x:Name="EditGradientMapMenu" Header="Gradient Map…" Click="EditGradientMap"/>
           </MenuItem>
+          <Separator/>
+          <MenuItem x:Name="PixelAdjustmentsMenu" Header="Apply to image pixels">
+            <MenuItem Header="Hue / Saturation…" Tag="HueSaturation" Click="ApplyPixelAdjustment"/>
+            <MenuItem Header="Exposure…" Tag="Exposure" Click="ApplyPixelAdjustment"/>
+            <MenuItem Header="Levels…" Tag="Levels" Click="ApplyPixelAdjustment"/>
+            <MenuItem Header="Curves…" Tag="Curves" Click="ApplyPixelAdjustment"/>
+            <MenuItem Header="Invert" Tag="Invert" Click="ApplyPixelAdjustment"/>
+            <MenuItem Header="Black &amp; White…" Tag="BlackWhite" Click="ApplyPixelAdjustment"/>
+            <MenuItem Header="Color Balance…" Tag="ColorBalance" Click="ApplyPixelAdjustment"/>
+            <MenuItem Header="Grain…" Tag="Grain" Click="ApplyPixelAdjustment"/>
+            <MenuItem Header="Gradient Map…" Tag="GradientMap" Click="ApplyPixelAdjustment"/>
+          </MenuItem>
           <Separator/><MenuItem x:Name="AdjustColorsMenu" Header="Adjust image colors…" Click="AdjustColors"/>
         </MenuItem>
         <MenuItem Header="Effe_cts"><MenuItem x:Name="InnerShadowMenu" Header="Inner shadow…" Click="EditInnerShadow"/><MenuItem x:Name="OuterGlowMenu" Header="Outer glow…" Click="EditOuterGlow"/><MenuItem x:Name="StrokeMenu" Header="_Stroke…" Click="EditStroke"/><MenuItem x:Name="ShadowMenu" Header="_Drop shadow…" Click="EditShadow"/><MenuItem x:Name="ColorOverlayMenu" Header="_Color overlay…" Click="EditColorOverlay"/></MenuItem>
