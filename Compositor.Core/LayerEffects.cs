@@ -37,7 +37,17 @@ public sealed record StrokeEffect(double Size = 4, double Red = 0, double Green 
     }
 }
 
-public sealed record LayerEffects(ColorOverlayEffect? ColorOverlay = null, ShadowEffect? Shadow = null, StrokeEffect? Stroke = null)
+public sealed record OuterGlowEffect(double Size = 20, double Red = 1, double Green = 1, double Blue = 1, double Opacity = .75, bool? Enabled = null)
 {
-    public void Validate() { ColorOverlay?.Validate(); Shadow?.Validate(); Stroke?.Validate(); }
+    public bool IsEnabled => Enabled != false;
+    public void Validate()
+    {
+        new ColorOverlayEffect(Red, Green, Blue, Opacity).Validate();
+        if (!double.IsFinite(Size) || Size is < 0 or > 500) throw new InvalidDataException("Glow size must be 0..500.");
+    }
+}
+
+public sealed record LayerEffects(ColorOverlayEffect? ColorOverlay = null, ShadowEffect? Shadow = null, StrokeEffect? Stroke = null, ShadowEffect? InnerShadow = null, OuterGlowEffect? OuterGlow = null)
+{
+    public void Validate() { ColorOverlay?.Validate(); Shadow?.Validate(); Stroke?.Validate(); InnerShadow?.Validate(); OuterGlow?.Validate(); }
 }

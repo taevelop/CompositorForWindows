@@ -22,8 +22,12 @@ public partial class MainWindow
         try { dialog.ShowDialog(); }
         finally { dialog.CancelEdit(); Refresh(); Canvas.Focus(); }
     });
+    private void EditInnerShadow(object sender, RoutedEventArgs e) => Safe(() => { var dialog = new InnerShadowWindow(session) { Owner = this }; try { dialog.ShowDialog(); } finally { dialog.CancelEdit(); Refresh(); Canvas.Focus(); } });
+    private void EditOuterGlow(object sender, RoutedEventArgs e) => Safe(() => { var dialog = new OuterGlowWindow(session) { Owner = this }; try { dialog.ShowDialog(); } finally { dialog.CancelEdit(); Refresh(); Canvas.Focus(); } });
     private void RefreshEffectsControls()
     {
+        InnerShadowMenu.IsEnabled = InnerShadowButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false };
+        OuterGlowMenu.IsEnabled = OuterGlowButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false };
         StrokeMenu.IsEnabled = StrokeButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false };
         ShadowMenu.IsEnabled = ShadowButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false };
         ColorOverlayMenu.IsEnabled = ColorOverlayButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false };

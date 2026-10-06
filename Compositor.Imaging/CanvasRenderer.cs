@@ -100,7 +100,12 @@ public sealed class CanvasRenderer : IDisposable
     }
 
     internal static bool HasSurfaceEffects(Layer layer) => layer.Effects?.Shadow is { IsEnabled: true, Opacity: > 0 } ||
-        layer.Effects?.Stroke is { IsEnabled: true, Opacity: > 0, Size: > 0 };
+        layer.Effects?.Stroke is { IsEnabled: true, Opacity: > 0, Size: > 0 } ||
+        layer.Effects?.InnerShadow is { IsEnabled: true, Opacity: > 0 } || layer.Effects?.OuterGlow is { IsEnabled: true, Opacity: > 0 };
+    private SKImage? innerImage, glowImage;
+    private ShadowEffect? cachedInner;
+    private OuterGlowEffect? cachedGlow;
+    private int glowInset;
     private SKImage? strokeImage;
     private StrokeEffect? cachedStroke;
     private int strokeInset;
@@ -109,6 +114,7 @@ public sealed class CanvasRenderer : IDisposable
     private SKImage? shadowSource, shadowColored;
     private void ClearShadowSource()
     {
+        innerImage?.Dispose(); glowImage?.Dispose(); innerImage = glowImage = null; cachedInner = null; cachedGlow = null;
         strokeImage?.Dispose(); strokeImage = null; cachedStroke = null;
         shadowSource?.Dispose(); shadowColored?.Dispose();
         shadowSource = shadowColored = null; shadowPixels = shadowMask = null; shadowOverlay = null;
@@ -163,6 +169,22 @@ public sealed class CanvasRenderer : IDisposable
             if (stroke is not null) strokeImage = StrokeProcessor.Render(shadowSource!, stroke, out strokeInset);
             cachedStroke = stroke;
         }
+        var inner = layer.Effects?.InnerShadow is { IsEnabled: true, Opacity: > 0 } i ? i : null;
+        var glow = layer.Effects?.OuterGlow is { IsEnabled: true, Opacity: > 0 } g ? g : null;
+        if (inner != cachedInner)
+        {
+            innerImage?.Dispose(); innerImage = null; cachedInner = null;
+            if (inner is not null) innerImage = SoftEffectProcessor.Render(shadowSource!, inner.OffsetX, inner.OffsetY, inner.Blur,
+                inner.Red, inner.Green, inner.Blue, inner.Opacity, true, out _);
+            cachedInner = inner;
+        }
+        if (glow != cachedGlow)
+        {
+            glowImage?.Dispose(); glowImage = null; cachedGlow = null;
+            if (glow is not null) glowImage = SoftEffectProcessor.Render(shadowSource!, 0, 0, glow.Size,
+                glow.Red, glow.Green, glow.Blue, glow.Opacity, false, out glowInset);
+            cachedGlow = glow;
+        }
         canvas.SaveLayer(layerPaint);
         if (layer.Effects?.Shadow is { IsEnabled: true, Opacity: > 0 } shadow)
         {
@@ -174,8 +196,10 @@ public sealed class CanvasRenderer : IDisposable
         // Composite source + shadow first, then apply layer blend/opacity exactly once.
         canvas.DrawImage(shadowSource!, 0, 0, sampling, shadowPaint);
         }
+        if (glowImage is not null) canvas.DrawImage(glowImage, -glowInset, -glowInset, sampling);
         if (stroke is { Inside: false }) canvas.DrawImage(strokeImage!, -strokeInset, -strokeInset, sampling);
         canvas.DrawImage(shadowColored ?? shadowSource!, 0, 0, sampling);
+        if (innerImage is not null) canvas.DrawImage(innerImage, 0, 0, sampling);
         if (stroke is { Inside: true }) canvas.DrawImage(strokeImage!, -strokeInset, -strokeInset, sampling);
         canvas.Restore();
     }
