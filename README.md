@@ -147,3 +147,6 @@ Exposure 구현·파일 호환 범위·성능은 [Exposure 검증 문서](docs/e
 
 
 [Hue/Saturation](docs/hue-saturation.md)은 색상군별 슬라이더·전후 스펙트럼·범위 핸들·Colorize와 이미지 미리보기의 Sample/Add/Remove/Target 도구를 지원합니다. 4K 전체 재합성 지연과 별도 픽셀 필터 경로는 후속 작업입니다.
+
+
+**Image → Apply to image pixels**에서 9종 조정을 선택한 이미지에 반영할 수 있습니다. 한 번의 Undo·원본 비교·취소를 지원하며, 저장 후에는 조정값이 아닌 결과 픽셀이 남습니다. [픽셀 적용과 성능/제한](docs/pixel-adjustments.md)을 참고하십시오.
