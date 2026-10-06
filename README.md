@@ -39,7 +39,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Publish
 - 크기·경도·불투명도·RGB 색상을 지정하는 브러시와 지우개
 - 256×256 불변 타일 기반 Undo/Redo; 드래그·스트로크당 한 번의 히스토리. 변화 없는 이동·속성 적용은 이력을 만들지 않으며 Redo를 유지합니다. 이력은 최대 100단계 및 현재 문서 외 고유 타일 256MiB로 제한합니다.
 - 픽셀 레이어 색상 오버레이 효과: RGB·효과 불투명도·활성화, 미리보기·제거·Undo/Redo, 마스크 적용 후 합성, 원본과 별도 저장
-- 비파괴 Exposure·Levels·Curves·Invert·Black & White·Color Balance·Grain 조정 레이어: 노출·오프셋·감마 및 RGB/개별 채널 Levels·곡선, 미리보기·재편집·Undo/Redo, 합성 모드·그룹 불투명도·연결 마스크, 저장 후 설정 복원
+- 비파괴 Exposure·Levels·Curves·Invert·Black & White·Color Balance·Grain·Gradient Map 조정 레이어: 노출·오프셋·감마 및 RGB/개별 채널 Levels·곡선, 미리보기·재편집·Undo/Redo, 합성 모드·그룹 불투명도·연결 마스크, 저장 후 설정 복원
 - 이미지 밝기·대비·채도 조정: 미리보기, 원본 비교, 초기화, 적용·취소 및 Undo/Redo. 조정된 픽셀을 저장하며 독립 조정 레이어는 아닙니다.
 - 레이어에 연결된 회색조 마스크: 전체 표시/숨김 추가, 활성화·삭제, 마스크 브러시·지우개, Undo/Redo
 - `.comp` 프로젝트 폴더 저장·열기, PNG 투명도 보존 내보내기, 흰 배경 JPEG 내보내기(품질 92)
@@ -56,20 +56,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Publish
 
 이미지 색상은 **Image → Adjust colors…** 또는 오른쪽 **Adjust image colors…**에서 조정합니다. 세 값은 −100~100이며 0은 변화 없음입니다. **Preview changes**를 끄면 원본과 비교하고, **Reset**은 세 값을 초기화합니다. **Apply**는 한 번의 Undo로 묶이며 **Cancel/Esc/창 닫기**는 원본을 유지합니다. 그룹이나 **Edit mask**가 선택돼 있으면 색상 조정을 사용할 수 없습니다. 저장 후 다시 열면 조정값을 재편집하거나 이전 픽셀로 Undo할 수 없습니다.
 
-**Image → New Exposure adjustment layer…**는 선택한 일반 레이어 바로 위에 Exposure 조정 레이어를 만듭니다. 그룹 선택 시 그 그룹의 첫 자식으로 추가합니다. 선택 후 **Edit Exposure…**에서 노출·오프셋·감마를 다시 편집할 수 있습니다. 아래에 보이는 합성 결과를 조정하며 위 레이어와 원본 이미지 픽셀은 변경하지 않습니다. 연결 마스크는 적용 범위를 제한하고, 저장 후에도 설정을 다시 편집할 수 있습니다. 새 조정 창에서 Cancel/Esc로 닫으면 레이어 생성도 취소합니다.
+**Image → New adjustment layer → Exposure…**는 선택한 일반 레이어 바로 위에 Exposure 조정 레이어를 만듭니다. 그룹 선택 시 그 그룹의 첫 자식으로 추가합니다. 선택 후 **Edit Exposure…**에서 노출·오프셋·감마를 다시 편집할 수 있습니다. 아래에 보이는 합성 결과를 조정하며 위 레이어와 원본 이미지 픽셀은 변경하지 않습니다. 연결 마스크는 적용 범위를 제한하고, 저장 후에도 설정을 다시 편집할 수 있습니다. 새 조정 창에서 Cancel/Esc로 닫으면 레이어 생성도 취소합니다.
 
-**Image → New Levels adjustment layer…**에서 RGB·Red·Green·Blue의 입력 검정/흰색, 감마, 출력 검정/흰색을 조절합니다. **Edit Levels…**에서 재편집하며, 개별 색 채널 계산 후 RGB 계산을 적용합니다. 채널별 값은 전환 중에도 유지됩니다. Reset channel은 현재 채널, Reset all은 전체를 초기화합니다. 히스토그램·자동 레벨·스포이트는 아직 제공하지 않습니다.
+**Image → New adjustment layer → Levels…**에서 RGB·Red·Green·Blue의 입력 검정/흰색, 감마, 출력 검정/흰색을 조절합니다. **Edit Levels…**에서 재편집하며, 개별 색 채널 계산 후 RGB 계산을 적용합니다. 채널별 값은 전환 중에도 유지됩니다. Reset channel은 현재 채널, Reset all은 전체를 초기화합니다. 히스토그램·자동 레벨·스포이트는 아직 제공하지 않습니다.
 
 **Effects → Color overlay…**에서 선택한 픽셀 레이어에 색을 덧입힙니다. RGB와 효과 불투명도는 0~1로 입력하며, 활성화·원본 비교·제거·Undo/Redo를 지원합니다. 원본과 마스크를 보존하고 저장 후 재편집할 수 있습니다. Mac과 같은 source-over 합성이므로 반투명 경계는 더 불투명해질 수 있습니다.
 
-**Image → New Curves adjustment layer…**에서 RGB·개별 채널 곡선을 편집합니다. 그래프를 클릭해 점을 추가·선택하고 끌어서 이동하거나 Input/Output 숫자를 입력합니다. 채널당 2~32점, 내부 점 삭제, 채널/전체 초기화, 미리보기 비교를 지원합니다. **Edit Curves…**로 저장 후에도 다시 편집할 수 있습니다.
+**Image → New adjustment layer → Curves…**에서 RGB·개별 채널 곡선을 편집합니다. 그래프를 클릭해 점을 추가·선택하고 끌어서 이동하거나 Input/Output 숫자를 입력합니다. 채널당 2~32점, 내부 점 삭제, 채널/전체 초기화, 미리보기 비교를 지원합니다. **Edit Curves…**로 저장 후에도 다시 편집할 수 있습니다.
 
 ## 프로젝트 호환성과 저장 보호
 
 `.comp`는 `manifest.json`과 `images/<UUID>.png`를 담은 **폴더**입니다. Open project folder에서 `.comp` 폴더 자체를 선택합니다. Save as는 상위 폴더와 새 프로젝트 이름을 차례로 지정합니다.
 
 - 버전 1–8을 읽고 버전 8로 저장합니다. CGPoint/CGSize는 Swift Codable과 같은 2원소 숫자 배열이며, 좌표는 왼쪽 위 원점·시계 방향 회전입니다.
-- 기본 픽셀 레이어, 통과 방식 그룹, 연결된 회색조 마스크와 지원 범위의 7종 조정 레이어와 일반 픽셀 레이어의 Color Overlay·Drop Shadow·Stroke·Inner Shadow·Outer Glow 효과를 지원합니다. 그룹 마스크, 분리 이동·독립 배치·다른 레이어 참조 마스크, Hue/Saturation·Gradient Map 등 미지원 조정 또는 보존할 수 없는 비활성 조정 설정, 미지원 효과와 그룹·조정 레이어의 효과, 도형, 텍스트, 가이드, 미지원 합성 모드 및 알 수 없는 필드는 **프로젝트 전체 열기를 거부**합니다. 기능을 조용히 버리고 덮어쓰지 않습니다.
+- 기본 픽셀 레이어, 통과 방식 그룹, 연결된 회색조 마스크와 지원 범위의 8종 조정 레이어와 일반 픽셀 레이어의 Color Overlay·Drop Shadow·Stroke·Inner Shadow·Outer Glow 효과를 지원합니다. 그룹 마스크, 분리 이동·독립 배치·다른 레이어 참조 마스크, Hue/Saturation 등 미지원 조정 또는 보존할 수 없는 비활성 조정 설정, 미지원 효과와 그룹·조정 레이어의 효과, 도형, 텍스트, 가이드, 미지원 합성 모드 및 알 수 없는 필드는 **프로젝트 전체 열기를 거부**합니다. 기능을 조용히 버리고 덮어쓰지 않습니다.
 - 자산 경로·중복 ID·형식 버전·크기·심볼릭 링크와 junction을 검사합니다. 디스크 자산은 외부 원본 이미지에 의존하지 않습니다.
 - 완전한 임시 패키지를 쓰고 다시 읽어 검증한 다음 기존 폴더를 `.comp.recovery`로 이동하고 새 폴더를 게시합니다. 게시 실패 시 기존 폴더를 복구합니다. 같은 경로의 동시 저장은 `.write-lock`으로 차단합니다.
 - **폴더 두 번의 이름 변경 전체가 하나의 원자적 연산은 아닙니다.** 전원 중단 시 `.comp.recovery`가 남을 수 있습니다. File → **Open recovery copy…**에서 `.comp.recovery` 폴더를 선택하면 수정된 새 문서로 열립니다. Save에서 새 `.comp` 이름으로 저장하십시오. 원본과 복구 폴더는 자동으로 덮어쓰거나 삭제하지 않습니다. 복구 사본이 있으면 다음 저장은 차단됩니다. 잠금 파일은 빈 파일로 남으며, 실제 잠금은 프로세스의 파일 핸들입니다.
@@ -141,3 +141,6 @@ Exposure 구현·파일 호환 범위·성능은 [Exposure 검증 문서](docs/e
 
 
 색상 균형·그레인의 사용법, 검증 및 4K 성능 잔여는 [Color Balance / Grain](docs/color-balance-grain.md)에 있습니다.
+
+
+[Gradient Map](docs/gradient-map.md)은 두 색상표·반전·그라디언트 미리보기를 제공합니다. 조정 생성은 **Image → New adjustment layer**, 재편집은 **Image → Edit adjustment**로 묶었습니다.

@@ -35,3 +35,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Invert/Black & White 조정 구현: 원본 C 커널, 6색 가중치·틴트, 마스크/이력/저장. [검증 및 4K 지연](blackwhite-invert.md). 조정 잔여는 Hue/Saturation, Gradient Map, Grain, Color Balance 4종이며 픽셀 필터 경로는 별도다.
 
 - Color Balance/Grain 비파괴 조정 구현: 슬라이더·원본 C 커널·문서 좌표/시드·마스크·저장·이력 연결. [검증과 성능 잔여](color-balance-grain.md). 추가 조정 잔여는 Hue/Saturation, Gradient Map. 색상 균형 4K 최초 합성 3.93초는 최적화 잔여로 유지한다.
+
+- Gradient Map 구현: 원본 두 끝점 보간/C 밝기 매핑, 색상표·반전·그라디언트 미리보기, 저장·마스크·이력 및 메뉴 정리. [검증](gradient-map.md). 비파괴 조정 잔여는 Hue/Saturation이며 픽셀 필터 경로는 별도다.
