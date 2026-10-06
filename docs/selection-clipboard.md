@@ -1,4 +1,4 @@
-﻿# Windows 선택 클립보드
+# Windows 선택 클립보드
 
 2026-10-06: 선택 복사/합성 복사/잘라내기/붙여넣기를 Edit 메뉴와 단축키에 연결했다.
 
@@ -28,6 +28,6 @@ WindowsPixelClipboard는 PNG와 WPF BitmapSource를 함께 게시한다. 읽기�
 - 실제 WPF 스모크: PNG/BitmapSource IDataObject 생성 및 디코딩, 알파·색상 왕복, 소유권/시퀀스 변경, 일반 메뉴 핸들러, 실패 복구, 손상 PNG와 빈 클립보드.
 - 자동 스모크는 주입한 IDataObject 저장소를 사용한다. 사용자의 시스템 클립보드를 읽거나 덮어쓰지 않는다. 따라서 실제 OLE 클립보드 게시와 다른 프로그램과의 왕복은 아직 검증 완료로 표시하지 않는다.
 - 큰 이미지 복사/붙여넣기 시간·메모리와 외부 프로그램별 PNG/비트맵 알파 호환성은 잔여다.
-- Layer via Copy(Ctrl+J), 전체 레이어 복제, 파일/텍스트/벡터 클립보드 가져오기는 이 단계에 포함하지 않는다. 원본에서 지원하는 레이어 복제는 후속 작업이다.
+- [Layer via Copy(Ctrl+J)와 전체 레이어/그룹 복제](layer-copy.md)를 연결했다. 파일/텍스트/벡터 클립보드 가져오기는 후속 범위다.
 
 최종 Release 빌드 경고/오류 0, 411개 테스트 및 WPF 스모크 통과. artifacts/publish-clipboard/Compositor.Windows.exe 패키지의 verify-portable.ps1 -Runs 1 격리 실행도 통과했다. 이 검증 역시 주입한 클립보드 전송 계층을 사용하므로 실제 프로그램 간 왕복을 대신하지 않는다.
