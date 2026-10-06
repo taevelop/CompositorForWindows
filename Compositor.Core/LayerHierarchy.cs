@@ -67,6 +67,36 @@ public static class LayerHierarchy
         int index = doc.Layers.IndexOf(layer);
         return Normalize(doc with { Layers = doc.Layers.SetItem(index, layer with { ParentId = group.Id }).Insert(index, group with { ParentId = layer.ParentId }) });
     }
+    /// <summary>Wraps selected roots at their closest common parent, matching the original editor.</summary>
+    public static Document WrapSelected(Document doc, IEnumerable<Guid> selection, Layer group)
+    {
+        doc.Validate();
+        if (!group.IsGroup || doc.Layers.Any(l => l.Id == group.Id)) throw new InvalidOperationException("Invalid new group.");
+        var byId = doc.Layers.ToDictionary(l => l.Id);
+        var selected = selection.ToHashSet();
+        if (selected.Count == 0 || selected.Any(id => !byId.ContainsKey(id))) throw new InvalidOperationException("Select existing layers to group.");
+        List<Guid?> Ancestors(Guid id)
+        {
+            var result = new List<Guid?>();
+            for (var parent = byId[id].ParentId; parent is {} p; parent = byId[p].ParentId) result.Add(p);
+            result.Add(null); return result;
+        }
+        var roots = selected.Where(id => !Ancestors(id).Any(p => p is {} parent && selected.Contains(parent))).ToHashSet();
+        var ordered = Entries(doc).Select(e => e.Layer.Id).Where(roots.Contains).ToArray();
+        Guid? common = Ancestors(ordered[0]).First(candidate => ordered.All(id => Ancestors(id).Contains(candidate)));
+        var branches = ordered.Select(id =>
+        {
+            while (byId[id].ParentId is {} parent && parent != common) id = parent;
+            return id;
+        }).ToHashSet();
+        int highest = -1;
+        for (int i = 0; i < doc.Layers.Length; i++) if (branches.Contains(doc.Layers[i].Id)) highest = i;
+        int insertion = doc.Layers.Take(highest + 1).Count(l => !roots.Contains(l.Id));
+        var layers = doc.Layers.Where(l => !roots.Contains(l.Id)).ToList();
+        layers.Insert(insertion, group with { ParentId = common });
+        layers.AddRange(ordered.Select(id => byId[id] with { ParentId = group.Id }));
+        return Normalize(doc with { Layers = layers.ToImmutableArray() });
+    }
     public static Document Delete(Document doc, Guid id)
     {
         var remove = Subtree(doc, id); return Normalize(doc with { Layers = doc.Layers.Where(l => !remove.Contains(l.Id)).ToImmutableArray() });

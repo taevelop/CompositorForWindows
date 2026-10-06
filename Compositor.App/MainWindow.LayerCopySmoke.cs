@@ -26,5 +26,10 @@ public partial class MainWindow
         var copiedGroup=session.Document.Layers.Single(l=>l.IsGroup&&l.Id!=group.Id);
         Check(collapsedGroups.Contains(copiedGroup.Id),"Multiple duplicate lost collapsed group state.");
         session.Undo();Check(ReferenceEquals(multiple,session.Document)&&session.SelectedLayerIds.SetEquals(new[]{group.Id,other.Id}),"Multiple duplicate Undo selection failed.");
+        WrapInGroup(this,new());var combined=session.ActiveLayer!;
+        Check(combined.IsGroup&&session.SelectedLayerIds.Count==1&&session.Document.Layers.Count(l=>l.ParentId==combined.Id)==2,"Multiple grouping did not wrap selected roots.");
+        Check(session.Document.Layers.Single(l=>l.Id==d.Layers[0].Id).ParentId==group.Id,"Multiple grouping flattened selected folder.");
+        session.Undo();Check(ReferenceEquals(multiple,session.Document)&&Layers.SelectedItems.Count==2,"Multiple grouping Undo lost selection.");
+        session.Redo();Check(session.ActiveLayerId==combined.Id&&Layers.SelectedItems.Count==1,"Multiple grouping Redo lost active group.");
     }
 }

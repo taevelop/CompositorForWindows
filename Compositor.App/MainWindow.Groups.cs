@@ -79,7 +79,8 @@ public partial class MainWindow
     {
         if (session.ActiveLayer is not { } layer) return;
         var group = Layer.Group($"Group {session.Document.Layers.Count(l => l.IsGroup) + 1}", session.Document.Width, session.Document.Height);
-        session.Apply(d => LayerHierarchy.Wrap(d, layer.Id, group)); session.ActiveLayerId = group.Id; Refresh();
+        var selected = session.SelectedLayerIds;
+        session.Apply(d => { var next = LayerHierarchy.WrapSelected(d, selected, group); session.ActiveLayerId = group.Id; return next; }); Refresh();
     });
     private void Ungroup(object sender, RoutedEventArgs e) => Safe(() =>
     {
