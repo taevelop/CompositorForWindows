@@ -5,23 +5,68 @@
     <Style TargetType="Window"><Setter Property="Background" Value="#1C1E22"/><Setter Property="Foreground" Value="{StaticResource Ink}"/><Setter Property="FontFamily" Value="Segoe UI"/><Setter Property="FontSize" Value="13"/></Style>
     <Style TargetType="Button"><Setter Property="Padding" Value="12,7"/><Setter Property="Margin" Value="3"/><Setter Property="Background" Value="#393D46"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#515661"/></Style>
     <Style TargetType="TextBox"><Setter Property="Background" Value="#191B20"/><Setter Property="Foreground" Value="White"/><Setter Property="CaretBrush" Value="White"/><Setter Property="BorderBrush" Value="#4A4E58"/><Setter Property="Padding" Value="6"/><Setter Property="Margin" Value="3"/></Style>
-    <Style TargetType="ComboBox"><Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="5"/><Setter Property="Foreground" Value="#191B20"/></Style>
+
     <Style TargetType="TextBlock"><Setter Property="VerticalAlignment" Value="Center"/></Style>
-    <Style TargetType="MenuItem"><Setter Property="Padding" Value="10,6"/></Style>
+    <Style TargetType="MenuItem"><Setter Property="Padding" Value="10,6"/><Setter Property="Background" Value="{StaticResource Panel}"/><Setter Property="Foreground" Value="{StaticResource Ink}"/></Style>
     <Style TargetType="Label"><Setter Property="Foreground" Value="#B9BDC7"/></Style>
+
+    <SolidColorBrush x:Key="Accent" Color="#6C9AE0"/>
+    <SolidColorBrush x:Key="AccentMuted" Color="#293A52"/>
+    <SolidColorBrush x:Key="MutedInk" Color="#A7ADB7"/>
+    <SolidColorBrush x:Key="Divider" Color="#393E46"/>
+    <Style x:Key="CompactButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Padding" Value="9,4"/><Setter Property="Margin" Value="2"/><Setter Property="MinHeight" Value="26"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Border x:Name="ButtonFrame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+        <ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonFrame" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="ButtonFrame" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger><Trigger Property="IsPressed" Value="True"><Setter TargetName="ButtonFrame" Property="Background" Value="{StaticResource AccentMuted}"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value=".4"/></Trigger></ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="LayerListItem" TargetType="ListBoxItem">
+      <Setter Property="Foreground" Value="{StaticResource Ink}"/><Setter Property="Background" Value="Transparent"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="6,10"/><Setter Property="Margin" Value="0,1"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+        <Border x:Name="ItemFrame" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="1" CornerRadius="4" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/></Border>
+        <ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="ItemFrame" Property="Background" Value="{StaticResource AccentMuted}"/><Setter TargetName="ItemFrame" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ItemFrame" Property="BorderBrush" Value="#656C78"/></Trigger><Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="ItemFrame" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger></ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="RailToolItem" TargetType="ListBoxItem" BasedOn="{StaticResource LayerListItem}"><Setter Property="Width" Value="38"/><Setter Property="Height" Value="38"/><Setter Property="Margin" Value="3,3"/><Setter Property="Padding" Value="8"/><Setter Property="HorizontalContentAlignment" Value="Center"/></Style>
     <Style x:Key="EditorSlider" TargetType="Slider">
       <Setter Property="Height" Value="24"/><Setter Property="IsMoveToPointEnabled" Value="True"/>
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Slider">
         <Grid Margin="2,0">
-          <Border x:Name="FocusRing" BorderBrush="#62C9B5" BorderThickness="1" CornerRadius="4" Opacity="0"/>
+          <Border x:Name="FocusRing" BorderBrush="{StaticResource Accent}" BorderThickness="1" CornerRadius="4" Opacity="0"/>
           <Track x:Name="PART_Track" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}" IsDirectionReversed="{TemplateBinding IsDirectionReversed}">
-            <Track.DecreaseRepeatButton><RepeatButton Command="{x:Static Slider.DecreaseLarge}" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Height="4" Background="#62C9B5" CornerRadius="2"/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton>
-            <Track.Thumb><Thumb Width="14" Height="14"><Thumb.Template><ControlTemplate TargetType="Thumb"><Ellipse Fill="#ECEEF2" Stroke="#62C9B5" StrokeThickness="2"/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+            <Track.DecreaseRepeatButton><RepeatButton Command="{x:Static Slider.DecreaseLarge}" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Height="4" Background="{StaticResource Accent}" CornerRadius="2"/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton>
+            <Track.Thumb><Thumb Width="14" Height="14"><Thumb.Template><ControlTemplate TargetType="Thumb"><Ellipse Fill="#ECEEF2" Stroke="{StaticResource Accent}" StrokeThickness="2"/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
             <Track.IncreaseRepeatButton><RepeatButton Command="{x:Static Slider.IncreaseLarge}" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Height="4" Background="#555B66" CornerRadius="2"/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton>
           </Track>
         </Grid>
         <ControlTemplate.Triggers><Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="FocusRing" Property="Opacity" Value="1"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value=".4"/></Trigger></ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="DarkComboItem" TargetType="ComboBoxItem"><Setter Property="Foreground" Value="{StaticResource Ink}"/><Setter Property="Padding" Value="8,5"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBoxItem"><Border x:Name="Choice" Background="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsHighlighted" Value="True"><Setter TargetName="Choice" Property="Background" Value="{StaticResource AccentMuted}"/></Trigger><Trigger Property="IsSelected" Value="True"><Setter TargetName="Choice" Property="Background" Value="{StaticResource AccentMuted}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+    <Style TargetType="ComboBox">
+      <Setter Property="Foreground" Value="{StaticResource Ink}"/><Setter Property="Background" Value="#2D3138"/><Setter Property="Margin" Value="3"/><Setter Property="MinHeight" Value="28"/><Setter Property="ItemContainerStyle" Value="{StaticResource DarkComboItem}"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox">
+        <Grid>
+          <ToggleButton Focusable="False" IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+            <ToggleButton.Template><ControlTemplate TargetType="ToggleButton"><Border Background="#2D3138" BorderBrush="#4A505A" BorderThickness="1" CornerRadius="4"><Path Data="M0,0 L4,4 8,0" Stroke="#C9CED6" StrokeThickness="1.5" Width="8" Height="4" HorizontalAlignment="Right" Margin="0,0,8,0"/></Border></ControlTemplate></ToggleButton.Template>
+          </ToggleButton>
+          <ContentPresenter Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" IsHitTestVisible="False" Margin="8,4,24,4" VerticalAlignment="Center"/>
+          <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False"><Border Background="{StaticResource Panel}" BorderBrush="#555B66" BorderThickness="1" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"><ScrollViewer MaxHeight="260"><StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer></Border></Popup>
+        </Grid>
+        <ControlTemplate.Triggers><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value=".4"/></Trigger></ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="HueSlider" TargetType="Slider">
+      <Setter Property="Orientation" Value="Vertical"/><Setter Property="IsMoveToPointEnabled" Value="True"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Slider"><Grid>
+        <Border Width="18" Margin="0,3"><Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="Red" Offset="0"/><GradientStop Color="Magenta" Offset=".16667"/><GradientStop Color="Blue" Offset=".33333"/><GradientStop Color="Cyan" Offset=".5"/><GradientStop Color="Lime" Offset=".66667"/><GradientStop Color="Yellow" Offset=".83333"/><GradientStop Color="Red" Offset="1"/></LinearGradientBrush></Border.Background></Border>
+        <Track x:Name="PART_Track" Orientation="Vertical" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}">
+          <Track.DecreaseRepeatButton><RepeatButton Command="{x:Static Slider.DecreaseLarge}" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent"/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton>
+          <Track.Thumb><Thumb Width="28" Height="6"><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="White" BorderBrush="#202020" BorderThickness="1" CornerRadius="1"/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+          <Track.IncreaseRepeatButton><RepeatButton Command="{x:Static Slider.IncreaseLarge}" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent"/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton>
+        </Track>
+      </Grid></ControlTemplate></Setter.Value></Setter>
     </Style>
   </Application.Resources>
 </Application>

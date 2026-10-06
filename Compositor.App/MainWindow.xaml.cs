@@ -40,6 +40,7 @@ public partial class MainWindow : Window
     {
         Canvas.InvalidateVisual();
         Title = $"{(projectPath is null ? "Untitled" : Path.GetFileName(projectPath))}{(session.IsModified ? " *" : "")} — Compositor for Windows";
+        DocumentLabel.Text = $"{(projectPath is null ? "Untitled" : Path.GetFileName(projectPath))}{(session.IsModified ? " *" : "")}";
         if (session.InTransaction) return;
         refreshing = true;
         RefreshHierarchy();

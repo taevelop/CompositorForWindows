@@ -35,7 +35,7 @@ public partial class MainWindow
 
         bool? ShowPicker(Action<ColorPickerWindow> action, out Color selected)
         {
-            var dialog = new ColorPickerWindow(Color.FromRgb(98, 201, 181)) { Owner = this }; Exception? failure = null;
+            var dialog = new ColorPickerWindow(Color.FromRgb(92, 132, 196)) { Owner = this }; Exception? failure = null;
             dialog.Loaded += (_, _) => { try { action(dialog); } catch (Exception ex) { failure = ex; } finally { if (dialog.IsVisible) dialog.Close(); } };
             bool? result = dialog.ShowDialog(); selected = dialog.SelectedColor;
             if (failure is not null) throw new InvalidOperationException("Color picker failed.", failure);
@@ -45,19 +45,21 @@ public partial class MainWindow
         Check(ShowPicker(d => { d.SetColor(Colors.Red); d.Close(); }, out _) != true && BrushColor.Text == previous, "Cancel changed the brush color.");
         Check(ShowPicker(d =>
         {
+            d.RgbInputs[0].Text = "256"; Check(!d.ApplyButton.IsEnabled, "Invalid RGB is accepted.");
+            d.RgbInputs[0].Text = "64"; Check(d.SelectedColor.R == 64, "RGB edit failed.");
             d.HexInput.Text = "#NOTHEX"; Check(!d.ApplyButton.IsEnabled, "Invalid hex is accepted.");
             d.HexInput.Text = "#FF0000"; d.Hue.Value = 120;
             Check(d.SelectedColor == Colors.Lime, "Hue strip did not update the color.");
             d.Field.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(d), Environment.TickCount, Key.Left) { RoutedEvent = Keyboard.KeyDownEvent });
             Check(d.SelectedColor.R > 0 && d.SelectedColor.G == 255, "Color field keyboard adjustment failed.");
-            d.SetColor(Color.FromRgb(98, 201, 181)); d.UpdateLayout();
+            d.SetColor(Color.FromRgb(92, 132, 196)); d.UpdateLayout();
             var image = new RenderTargetBitmap((int)d.ActualWidth, (int)d.ActualHeight, 96, 96, PixelFormats.Pbgra32); image.Render(d);
             var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(image));
             using (var output = File.Create(Path.ChangeExtension(reportPath, ".picker.png"))) encoder.Save(output);
             d.ApplyButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         }, out var chosen) == true, "Color could not be applied.");
         BrushColor.Text = ColorPickerWindow.Hex(chosen);
-        Check(ReadBrush().Red == 98 && ReadBrush().Green == 201 && ReadBrush().Blue == 181, "Chosen color not used by brush.");
+        Check(ReadBrush().Red == 92 && ReadBrush().Green == 132 && ReadBrush().Blue == 196, "Chosen color not used by brush.");
         foreach (var color in new[] { Colors.Black, Colors.White, Colors.Red, Colors.Lime, Colors.Blue, Color.FromRgb(23, 155, 89) })
         { var field = new ColorField(); field.SetColor(color); Check(field.SelectedColor == color, "RGB/HSV round trip changed color."); }
 
@@ -69,12 +71,30 @@ public partial class MainWindow
         EditTarget.SelectedIndex = 0; Refresh();
         Check(ColorOptions.Visibility == Visibility.Visible && MaskOptions.Visibility == Visibility.Collapsed, "Image color controls not restored.");
         SizeSlider.Value = 180; HardnessSlider.Value = 60; OpacitySlider.Value = 100;
-        double width = Width; Width = 1000; UpdateLayout();
+        double width = Width, height = Height; Width = 1000; Height = 650; LayerInspector.IsExpanded = true; UpdateLayout();
+        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        UpdateLayout();
+        Check(Layers.ActualHeight >= 100, "Layer list disappeared behind the inspector.");
+        Check(LayerInspector.TranslatePoint(new Point(0, LayerInspector.ActualHeight), this).Y <= Canvas.TranslatePoint(new Point(0, Canvas.ActualHeight), this).Y + 1, "Inspector exceeds the canvas area.");
+        Check(ToolPicker.TranslatePoint(new Point(0, 0), this).X < Canvas.TranslatePoint(new Point(0, 0), this).X, "Tool rail is not left of canvas.");
+        Check(ToolOptionsBar.ActualHeight <= 90, "Options bar is not compact at minimum width.");
+        var compact = new RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, PixelFormats.Pbgra32); compact.Render(this);
+        var compactEncoder = new PngBitmapEncoder(); compactEncoder.Frames.Add(BitmapFrame.Create(compact));
+        using (var output = File.Create(Path.ChangeExtension(reportPath, ".compact.png"))) compactEncoder.Save(output);
         Check(BrushOptions.ActualWidth <= Editor.ActualWidth, "Toolbar overflows minimum window width.");
-        Width = width; UpdateLayout(); Canvas.Fit();
+        LayerInspector.IsExpanded = false; Width = width; Height = height; UpdateLayout(); Canvas.Fit();
+        var originalBlend = LayerBlend.SelectedItem; LayerBlend.IsDropDownOpen = true;
+        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        Check(LayerBlend.Template.FindName("PART_Popup", LayerBlend) is System.Windows.Controls.Primitives.Popup { IsOpen: true }, "Blend popup did not open.");
+        LayerBlend.SelectedItem = BlendMode.Screen; LayerBlend.IsDropDownOpen = false; LayerBlend.SelectedItem = originalBlend;
+        var beforeOpacity = session.Document; LayerOpacitySlider.Value = 45;
+        Check(Number(LayerOpacity) == 45 && ReferenceEquals(beforeOpacity, session.Document), "Opacity draft edited the document.");
+        ApplyLayer(this, new()); Check(session.ActiveLayer!.Opacity == .45, "Layer opacity slider could not apply.");
+        session.Undo(); Refresh();
+        Check(((SolidColorBrush)FindResource("Accent")).Color == Color.FromRgb(108, 154, 224), "Blue accent resource changed.");
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         File.WriteAllText(reportPath, JsonSerializer.Serialize(new { timeUtc = DateTimeOffset.UtcNow,
-            checks = new[] { "four direct tool selectors", "contextual options", "slider/number synchronization", "invalid draft and bounds", "settings preserve document/history", "picker cancel and apply", "hex validation", "hue and keyboard color field", "RGB/HSV round trip", "mask presets", "minimum width layout" },
+            checks = new[] { "four direct tool selectors", "contextual options", "slider/number synchronization", "invalid draft and bounds", "settings preserve document/history", "picker cancel and apply", "hex validation", "hue and keyboard color field", "RGB/HSV round trip", "mask presets", "minimum width layout", "RGB validation", "vertical tool rail", "compact options", "visible layer list with expanded inspector", "dark blend popup", "layer opacity draft/apply/undo", "blue theme resource" },
             note = "Hidden WPF control checks; a changed toolbar still needs a user usability check." }, new JsonSerializerOptions { WriteIndented = true }));
     }
 }

@@ -9,6 +9,7 @@ public partial class MainWindow
     {
         public Guid Id => Layer.Id;
         public string Label => (Layer.IsGroup ? "Group · " : Layer.IsAdjustment ? "Adjustment · " : "") + Layer.Name;
+        public string Kind => Layer.IsGroup ? "Folder" : Layer.IsAdjustment ? "Adjustment" : $"{Layer.Pixels.Width} × {Layer.Pixels.Height} px";
         public string Disclosure => Layer.IsGroup ? Expanded ? "−" : "+" : "";
         public bool CanExpand => Layer.IsGroup;
         public Visibility ExpandVisibility => Layer.IsGroup ? Visibility.Visible : Visibility.Hidden;

@@ -1,10 +1,11 @@
 <Window x:Class="Compositor.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Compositor.App"
-        Title="Compositor for Windows" Width="1320" Height="860" MinWidth="1000" MinHeight="650" AllowDrop="True" Drop="DropFiles" Closing="WindowClosing" PreviewKeyDown="WindowKeyDown">
-  <DockPanel>
-    <Border DockPanel.Dock="Bottom" Background="#25272C" Padding="12,8"><TextBlock x:Name="Status" Text="Ready" Foreground="#B9BDC7"/></Border>
-    <Grid x:Name="Editor">
-      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <Menu Background="#E7E9ED" Foreground="#22252C">
+ Title="Compositor for Windows" Width="1320" Height="860" MinWidth="1000" MinHeight="650" AllowDrop="True" Drop="DropFiles" Closing="WindowClosing" PreviewKeyDown="WindowKeyDown">
+ <Window.Resources><Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="Foreground" Value="{StaticResource Ink}"/></Style></Window.Resources>
+ <DockPanel>
+  <Border DockPanel.Dock="Bottom" Background="{StaticResource Panel}" BorderBrush="{StaticResource Divider}" BorderThickness="0,1,0,0" Padding="12,6"><TextBlock x:Name="Status" Text="Ready" Foreground="{StaticResource MutedInk}" FontSize="11"/></Border>
+  <Grid x:Name="Editor">
+   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+      <Menu Background="{StaticResource Panel}" Foreground="{StaticResource Ink}">
         <MenuItem Header="_File">
           <MenuItem Header="_New canvas…" InputGestureText="Ctrl+N" Click="NewDocument"/>
           <MenuItem Header="_Open project folder…" InputGestureText="Ctrl+O" Click="OpenProject"/>
@@ -18,66 +19,57 @@
         <MenuItem Header="Effe_cts"><MenuItem x:Name="ColorOverlayMenu" Header="_Color overlay…" Click="EditColorOverlay"/></MenuItem>
         <MenuItem Header="_View"><MenuItem Header="_Fit canvas" InputGestureText="Ctrl+0" Click="Fit"/><MenuItem Header="_Actual pixels" InputGestureText="Ctrl+1" Click="ActualPixels"/></MenuItem>
       </Menu>
-      <Border Grid.Row="1" Background="{StaticResource Panel}" Padding="10,8" BorderBrush="#424650" BorderThickness="0,0,0,1">
-        <Border.Resources><Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="Foreground" Value="{StaticResource Ink}"/></Style></Border.Resources>
-        <StackPanel>
-          <WrapPanel VerticalAlignment="Center">
-            <TextBlock Text="COMPOSITOR" FontWeight="Bold" Margin="5,0,20,0"/>
-            <ListBox x:Name="ToolPicker" SelectedIndex="1" SelectionChanged="ToolChanged" Background="Transparent" BorderThickness="0" Margin="0,0,16,0" AutomationProperties.Name="Editing tool">
-              <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ListBox.ItemsPanel>
-              <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem">
-                <Setter Property="Foreground" Value="#ECEEF2"/><Setter Property="Background" Value="#333740"/><Setter Property="Padding" Value="12,8"/><Setter Property="Margin" Value="2"/>
-                <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
-                  <Border x:Name="ToolBorder" Background="{TemplateBinding Background}" BorderBrush="#555B66" BorderThickness="1" CornerRadius="5" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border>
-                  <ControlTemplate.Triggers>
-                    <Trigger Property="IsSelected" Value="True"><Setter TargetName="ToolBorder" Property="Background" Value="#23574F"/><Setter TargetName="ToolBorder" Property="BorderBrush" Value="#62C9B5"/></Trigger>
-                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ToolBorder" Property="BorderBrush" Value="White"/></Trigger>
-                    <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="ToolBorder" Property="BorderBrush" Value="White"/></Trigger>
-                  </ControlTemplate.Triggers>
-                </ControlTemplate></Setter.Value></Setter>
-              </Style></ListBox.ItemContainerStyle>
-              <ListBoxItem Content="Move  V" ToolTip="Move the selected layer (V)"/>
-              <ListBoxItem Content="Brush  B" ToolTip="Paint (B)"/>
-              <ListBoxItem Content="Eraser  E" ToolTip="Erase pixels (E)"/>
-              <ListBoxItem Content="Hand  H" ToolTip="Pan the canvas (H)"/>
+   <Border Grid.Row="1" Background="#202226" Padding="12,5" BorderBrush="{StaticResource Divider}" BorderThickness="0,0,0,1"><DockPanel>
+    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="Import" Click="ImportImages" Style="{StaticResource CompactButton}"/><Button Content="Export PNG" Click="ExportPng" Style="{StaticResource CompactButton}"/><Border Width="1" Background="{StaticResource Divider}" Margin="8,4"/><Button Content="Fit" Click="Fit" Style="{StaticResource CompactButton}"/><Button Content="100%" Click="ActualPixels" Style="{StaticResource CompactButton}"/></StackPanel>
+    <Border Background="#2C3037" CornerRadius="5" HorizontalAlignment="Left" Padding="12,5"><StackPanel Orientation="Horizontal"><Ellipse Fill="{StaticResource Accent}" Width="6" Height="6" Margin="0,0,8,0"/><TextBlock x:Name="DocumentLabel" Text="Untitled" MaxWidth="400" TextTrimming="CharacterEllipsis"/></StackPanel></Border>
+   </DockPanel></Border>
+   <Border x:Name="ToolOptionsBar" Grid.Row="2" Background="{StaticResource Panel}" Padding="14,6" MinHeight="65" BorderBrush="{StaticResource Divider}" BorderThickness="0,0,0,1">
+    <WrapPanel><TextBlock x:Name="ToolTitle" Text="Brush" Width="78" FontWeight="SemiBold" Margin="0,0,8,0"/>
+     <WrapPanel x:Name="BrushOptions">
+<StackPanel Width="150" Margin="0,0,18,0"><DockPanel><TextBlock Text="Size" Foreground="{StaticResource MutedInk}"/><TextBox x:Name="BrushSize" Text="40" Width="54" Padding="4,2" HorizontalAlignment="Right" AutomationProperties.Name="Brush Size"/></DockPanel><Slider x:Name="SizeSlider" Style="{StaticResource EditorSlider}" Minimum="1" Maximum="2000" Value="40" SmallChange="1" LargeChange="10" AutomationProperties.Name="Brush Size slider"/></StackPanel>
+<StackPanel Width="155" Margin="0,0,18,0"><DockPanel><TextBlock Text="Hardness" Foreground="{StaticResource MutedInk}"/><TextBox x:Name="BrushHardness" Text="70" Width="54" Padding="4,2" HorizontalAlignment="Right" AutomationProperties.Name="Brush Hardness"/></DockPanel><Slider x:Name="HardnessSlider" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="100" Value="70" SmallChange="1" LargeChange="10" AutomationProperties.Name="Brush Hardness slider"/></StackPanel>
+<StackPanel Width="155" Margin="0,0,18,0"><DockPanel><TextBlock Text="Opacity" Foreground="{StaticResource MutedInk}"/><TextBox x:Name="BrushOpacity" Text="100" Width="54" Padding="4,2" HorizontalAlignment="Right" AutomationProperties.Name="Brush Opacity"/></DockPanel><Slider x:Name="OpacitySlider" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="100" Value="100" SmallChange="1" LargeChange="10" AutomationProperties.Name="Brush Opacity slider"/></StackPanel>
+      <StackPanel x:Name="ColorOptions" Width="125" Margin="0,0,12,0"><TextBlock Text="Color" Foreground="{StaticResource MutedInk}"/><TextBox x:Name="BrushColor" Text="#202020" Width="95" HorizontalAlignment="Left" Padding="4,2" ToolTip="Hex RGB; click the rail swatch for the color picker" AutomationProperties.Name="Foreground hex color"/></StackPanel>
+      <StackPanel x:Name="MaskOptions" Width="210" Visibility="Collapsed"><DockPanel><TextBlock Text="Mask gray"/><TextBox x:Name="MaskGray" Text="100" Width="45" Padding="4,2" IsEnabled="False" AutomationProperties.Name="Mask gray"/></DockPanel><DockPanel><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="Black" Click="MaskBlack" Style="{StaticResource CompactButton}"/><Button Content="White" Click="MaskWhite" Style="{StaticResource CompactButton}"/></StackPanel><Slider x:Name="MaskSlider" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="100" Value="100" AutomationProperties.Name="Mask gray slider"/></DockPanel></StackPanel>
+     </WrapPanel>
+     <TextBlock x:Name="ToolHint" Foreground="{StaticResource MutedInk}" Margin="6,0" Text="Wheel: zoom · Middle drag: pan" FontSize="11"/>
+    </WrapPanel>
+   </Border>
+   <Grid Grid.Row="3">
+    <Grid.ColumnDefinitions><ColumnDefinition Width="56"/><ColumnDefinition Width="*"/><ColumnDefinition Width="5"/><ColumnDefinition Width="280" MinWidth="245" MaxWidth="420"/></Grid.ColumnDefinitions>
+    <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Divider}" BorderThickness="0,0,1,0"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="0,8">
+     <ListBox x:Name="ToolPicker" SelectedIndex="1" SelectionChanged="ToolChanged" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Editing tool rail">
+      <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource RailToolItem}"/></ListBox.ItemContainerStyle>
+<ListBoxItem ToolTip="Move (V)" AutomationProperties.Name="Move (V)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M12,2 L12,22 M2,12 L22,12 M8,6 L12,2 16,6 M8,18 L12,22 16,18 M6,8 L2,12 6,16 M18,8 L22,12 18,16"/></ListBoxItem>
+<ListBoxItem ToolTip="Brush (B)" AutomationProperties.Name="Brush (B)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M8,15 L17,3 Q19,1 21,3 Q23,5 21,7 L12,17 Z M8,15 Q3,14 4,19 Q4,21 2,22 Q10,23 12,17"/></ListBoxItem>
+<ListBoxItem ToolTip="Eraser (E)" AutomationProperties.Name="Eraser (E)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M3,14 L13,3 Q14,2 15,3 L22,10 10,22 5,22 1,18 Z M7,10 L16,18 M10,22 L23,22"/></ListBoxItem>
+<ListBoxItem ToolTip="Hand (H)" AutomationProperties.Name="Hand (H)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M7,12 L7,4 Q7,1 10,3 L10,10 10,2 Q12,0 13,2 L13,10 13,3 Q16,1 16,4 L16,11 17,7 Q20,5 20,9 L20,15 Q20,22 13,23 L10,23 Q7,23 5,19 L2,13 Q1,10 4,11 Z"/></ListBoxItem>
+     </ListBox>
+     <Border Height="1" Background="{StaticResource Divider}" Margin="10,10"/>
+     <Button x:Name="ColorButton" Click="PickBrushColor" Width="38" Height="38" Padding="5" ToolTip="Foreground color" AutomationProperties.Name="Choose foreground color" Style="{StaticResource CompactButton}"><Border x:Name="ColorSwatch" Background="#202020" Width="24" Height="24" BorderBrush="#CCCCCC" BorderThickness="1" CornerRadius="3"/></Button>
+    </StackPanel></ScrollViewer></Border>
+    <local:EditorCanvas x:Name="Canvas" Grid.Column="1" Focusable="True"/>
+    <GridSplitter Grid.Column="2" HorizontalAlignment="Stretch" Background="{StaticResource Divider}" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Resize layers panel"/>
+    <Border Grid.Column="3" Background="{StaticResource Panel}" BorderBrush="{StaticResource Divider}" BorderThickness="1,0,0,0" Padding="8"><Grid>
+     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+     <TextBlock Text="Layers" FontWeight="SemiBold" Margin="5,4,0,10"/>
+     <StackPanel Grid.Row="1">
+      <DockPanel><TextBlock Text="Blend" Width="52" Foreground="{StaticResource MutedInk}"/><ComboBox x:Name="LayerBlend"/></DockPanel>
+      <DockPanel><TextBlock Text="Opacity" Width="52" Foreground="{StaticResource MutedInk}"/><TextBox x:Name="LayerOpacity" DockPanel.Dock="Right" Text="100" Width="48" Padding="4,2"/><Slider x:Name="LayerOpacitySlider" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="100" Value="100" ToolTip="Layer opacity draft; use Apply properties" AutomationProperties.Name="Layer opacity slider"/></DockPanel>
+      <Button Content="Apply properties" Click="ApplyLayer" HorizontalAlignment="Right" Style="{StaticResource CompactButton}"/>
+     </StackPanel>
+            <ListBox Grid.Row="2" x:Name="Layers" Background="#191B20" Foreground="White" BorderThickness="0" MinHeight="100" SelectionChanged="LayerSelected" Margin="0,6,0,6">
+              <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource LayerListItem}"/></ListBox.ItemContainerStyle><ListBox.ItemTemplate><DataTemplate>
+                <Grid Margin="{Binding Indent}" Opacity="{Binding RowOpacity}"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                  <Button Content="{Binding Disclosure}" IsEnabled="{Binding CanExpand}" Visibility="{Binding ExpandVisibility}" Tag="{Binding Id}" Click="ToggleGroup" Width="22" Padding="0" Margin="0,1,4,1"/>
+                  <StackPanel Grid.Column="1"><TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Label}"/><TextBlock Text="{Binding Kind}" Foreground="{StaticResource MutedInk}" FontSize="10" Margin="0,3,0,0"/></StackPanel>
+                </Grid>
+              </DataTemplate></ListBox.ItemTemplate>
             </ListBox>
-            <Button Content="Fit" Click="Fit" ToolTip="Fit canvas (Ctrl+0)"/>
-            <Button Content="100%" Click="ActualPixels" ToolTip="Actual pixels (Ctrl+1)"/>
-            <TextBlock x:Name="ToolHint" Foreground="#B9BDC7" Margin="14,0,4,0" Text="Wheel: zoom · Middle drag: pan"/>
-          </WrapPanel>
-          <WrapPanel x:Name="BrushOptions" Margin="0,8,0,0">
-            <StackPanel Width="190" Margin="5,0,14,0"><DockPanel><TextBlock Text="Size"/><TextBlock Text="px" DockPanel.Dock="Right"/><TextBox x:Name="BrushSize" Text="40" Width="60" AutomationProperties.Name="Brush Size"/></DockPanel><Slider Style="{StaticResource EditorSlider}" x:Name="SizeSlider" Minimum="1" Maximum="2000" Value="40" SmallChange="1" LargeChange="10" AutomationProperties.Name="Brush Size slider"/></StackPanel>
-<StackPanel Width="170" Margin="5,0,14,0"><DockPanel><TextBlock Text="Hardness"/><TextBlock Text="%" DockPanel.Dock="Right"/><TextBox x:Name="BrushHardness" Text="70" Width="60" AutomationProperties.Name="Brush Hardness"/></DockPanel><Slider Style="{StaticResource EditorSlider}" x:Name="HardnessSlider" Minimum="0" Maximum="100" Value="70" SmallChange="1" LargeChange="10" AutomationProperties.Name="Brush Hardness slider"/></StackPanel>
-<StackPanel Width="170" Margin="5,0,14,0"><DockPanel><TextBlock Text="Opacity"/><TextBlock Text="%" DockPanel.Dock="Right"/><TextBox x:Name="BrushOpacity" Text="100" Width="60" AutomationProperties.Name="Brush Opacity"/></DockPanel><Slider Style="{StaticResource EditorSlider}" x:Name="OpacitySlider" Minimum="0" Maximum="100" Value="100" SmallChange="1" LargeChange="10" AutomationProperties.Name="Brush Opacity slider"/></StackPanel>
-            <StackPanel x:Name="ColorOptions" Margin="5,0,14,0">
-              <TextBlock Text="Foreground color" Foreground="#B9BDC7" Margin="3,0,0,2"/>
-              <StackPanel Orientation="Horizontal">
-                <Button x:Name="ColorButton" Click="PickBrushColor" Padding="3" Width="46" Height="31" ToolTip="Choose foreground color" AutomationProperties.Name="Choose foreground color"><Border x:Name="ColorSwatch" Width="30" Height="19" Background="#62C9B5" BorderBrush="White" BorderThickness="1"/></Button>
-                <TextBox x:Name="BrushColor" Text="#62C9B5" Width="88" ToolTip="RGB hex color" AutomationProperties.Name="Foreground hex color"/>
-              </StackPanel>
-            </StackPanel>
-            <StackPanel x:Name="MaskOptions" Width="225" Visibility="Collapsed">
-              <DockPanel><TextBlock Text="Mask gray"/><TextBlock Text="%" DockPanel.Dock="Right"/><TextBox x:Name="MaskGray" Text="100" Width="50" IsEnabled="False" AutomationProperties.Name="Mask gray"/></DockPanel>
-              <Slider Style="{StaticResource EditorSlider}" x:Name="MaskSlider" Minimum="0" Maximum="100" Value="100" AutomationProperties.Name="Mask gray slider"/>
-              <StackPanel Orientation="Horizontal"><Button Content="Black · Hide" Click="MaskBlack" Padding="6,2"/><Button Content="White · Reveal" Click="MaskWhite" Padding="6,2"/></StackPanel>
-            </StackPanel>
-          </WrapPanel>
-        </StackPanel>
-      </Border>
 
-      <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="280"/></Grid.ColumnDefinitions>
-        <local:EditorCanvas x:Name="Canvas" Focusable="True"/>
-        <Border Grid.Column="1" Background="{StaticResource Panel}" Padding="10" BorderBrush="#424650" BorderThickness="1,0,0,0">
-          <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-          <StackPanel>
-            <StackPanel>
-              <TextBlock Text="LAYER PROPERTIES" FontWeight="SemiBold" Foreground="#B9BDC7" Margin="5,6,0,12"/>
-              <TextBox x:Name="LayerName" ToolTip="Layer name"/>
-              <CheckBox x:Name="LayerVisible" Content="Visible" Foreground="White" Margin="6"/>
-              <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-                <StackPanel><Label Content="Opacity %"/><TextBox x:Name="LayerOpacity" Text="100"/></StackPanel>
-                <StackPanel Grid.Column="1"><Label Content="Blend mode"/><ComboBox x:Name="LayerBlend"/></StackPanel>
-              </Grid>
+     <WrapPanel Grid.Row="3"><Button Content="+" ToolTip="New layer" Click="AddLayer" Style="{StaticResource CompactButton}"/><Button Content="−" ToolTip="Delete layer" Click="DeleteLayer" Style="{StaticResource CompactButton}"/><Button Content="↑" Click="LayerUp" Style="{StaticResource CompactButton}"/><Button Content="↓" Click="LayerDown" Style="{StaticResource CompactButton}"/></WrapPanel>
+     <Expander x:Name="LayerInspector" Grid.Row="4" Header="Selected layer" Foreground="{StaticResource Ink}" Margin="0,6,0,0"><ScrollViewer x:Name="InspectorScroll" MaxHeight="300" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel>
+      <TextBox x:Name="LayerName" ToolTip="Layer name"/><CheckBox x:Name="LayerVisible" Content="Visible" Foreground="White" Margin="6"/>
               <Expander x:Name="TransformPanel" Header="Position, size and rotation" Foreground="White" Margin="5,8,5,0">
               <StackPanel>
               <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
@@ -89,7 +81,7 @@
               <ComboBox x:Name="LayerSampling" ToolTip="Image resampling"/>
               </StackPanel>
               </Expander>
-              <Button Content="Apply layer properties" Click="ApplyLayer"/>
+
               <Button x:Name="AdjustColorsButton" Content="Adjust image colors…" Click="AdjustColors" ToolTip="Brightness, contrast and saturation; select Edit image to adjust source pixels"/>
               <Button x:Name="EditExposureButton" Content="Edit Exposure…" Click="EditExposure" Visibility="Collapsed"/>
               <Button x:Name="EditLevelsButton" Content="Edit Levels…" Click="EditLevels" Visibility="Collapsed"/>
@@ -105,26 +97,16 @@
               <ComboBox x:Name="EditTarget" SelectedIndex="0" SelectionChanged="EditTargetChanged" ToolTip="Choose what the brush and eraser edit"><ComboBoxItem Content="Edit image"/><ComboBoxItem Content="Edit mask"/></ComboBox>
               <TextBlock Text="Linked to layer · Brush gray: 0 hides, 100 reveals · Eraser hides" TextWrapping="Wrap" Foreground="#9DA3AF" Margin="5"/>
               </StackPanel></Expander>
-              <TextBlock Text="LAYERS" FontWeight="SemiBold" Foreground="#B9BDC7" Margin="5,18,0,8"/>
-              <WrapPanel><Button Content="+" ToolTip="New blank layer" Click="AddLayer"/><Button Content="−" ToolTip="Delete selected layer or group and its children" Click="DeleteLayer"/><Button Content="↑" ToolTip="Move layer up" Click="LayerUp"/><Button Content="↓" ToolTip="Move layer down" Click="LayerDown"/></WrapPanel>
+
               <WrapPanel><Button Content="+ Group" Click="AddGroup" ToolTip="New empty group"/><Button x:Name="WrapGroupButton" Content="Group" Click="WrapInGroup" ToolTip="Wrap the selected layer or group"/><Button x:Name="UngroupButton" Content="Ungroup" Click="Ungroup" ToolTip="Keep children and preserve group appearance"/></WrapPanel>
               <Expander Header="Move into a group" Foreground="White" Margin="5"><StackPanel>
                 <ComboBox x:Name="ParentGroup" DisplayMemberPath="Label"/>
                 <WrapPanel><Button x:Name="MoveToGroupButton" Content="Move here" Click="MoveToGroup"/><Button x:Name="MoveOutButton" Content="Move out" Click="MoveOutOfGroup"/></WrapPanel>
               </StackPanel></Expander>
-            </StackPanel>
-            <ListBox x:Name="Layers" Background="#191B20" Foreground="White" BorderThickness="0" MinHeight="140" MaxHeight="300" SelectionChanged="LayerSelected" Margin="3,8,3,3">
-              <ListBox.ItemTemplate><DataTemplate>
-                <StackPanel Orientation="Horizontal" Margin="{Binding Indent}" Opacity="{Binding RowOpacity}">
-                  <Button Content="{Binding Disclosure}" IsEnabled="{Binding CanExpand}" Visibility="{Binding ExpandVisibility}" Tag="{Binding Id}" Click="ToggleGroup" Width="22" Padding="0" Margin="0,1,4,1"/>
-                  <TextBlock Text="{Binding Label}" VerticalAlignment="Center" ToolTip="{Binding Label}"/>
-                </StackPanel>
-              </DataTemplate></ListBox.ItemTemplate>
-            </ListBox>
-          </StackPanel>
-          </ScrollViewer>
-        </Border>
-      </Grid>
-    </Grid>
-  </DockPanel>
+
+     </StackPanel></ScrollViewer></Expander>
+    </Grid></Border>
+   </Grid>
+  </Grid>
+ </DockPanel>
 </Window>

@@ -9,12 +9,13 @@ namespace Compositor.App;
 
 internal sealed class ColorPickerWindow : Window
 {
-    internal readonly ColorField Field = new() { Width = 280, Height = 220, Margin = new Thickness(3, 6, 3, 6) };
+    internal readonly ColorField Field = new() { Width = 256, Height = 256, Margin = new Thickness(3, 6, 3, 6) };
     internal readonly Slider Hue = new() { Minimum = 0, Maximum = 360, SmallChange = 1, LargeChange = 15, Margin = new Thickness(3, 8, 3, 12) };
     internal readonly TextBox HexInput = new() { Width = 110 };
     internal readonly Button ApplyButton = new() { Content = "Use color", IsDefault = true, MinWidth = 100 };
     private readonly Border preview = new() { Width = 64, Height = 40, Margin = new Thickness(3), BorderBrush = Brushes.White, BorderThickness = new Thickness(1) };
-    private readonly TextBlock error = new() { Foreground = Brushes.Salmon, Text = "Enter six hex digits, e.g. #62C9B5", Visibility = Visibility.Collapsed, Margin = new Thickness(3) };
+    private readonly TextBlock error = new() { Foreground = Brushes.Salmon, Text = "Enter six hex digits, e.g. #6C9AE0", Visibility = Visibility.Collapsed, Margin = new Thickness(3) };
+    internal readonly TextBox[] RgbInputs = Enumerable.Range(0, 3).Select(_ => new TextBox { Width = 78, Padding = new Thickness(4, 2, 4, 2) }).ToArray();
     private bool updating;
     public Color SelectedColor => Field.SelectedColor;
 
@@ -26,38 +27,50 @@ internal sealed class ColorPickerWindow : Window
         var root = new StackPanel { Margin = new Thickness(18) };
         var textStyle = new Style(typeof(TextBlock), (Style)Application.Current.FindResource(typeof(TextBlock)));
         textStyle.Setters.Add(new Setter(TextBlock.ForegroundProperty, Brushes.White)); root.Resources.Add(typeof(TextBlock), textStyle);
-        Hue.Style = (Style)Application.Current.FindResource("EditorSlider");
-        root.Children.Add(new TextBlock { Text = "Choose a color", FontSize = 18, FontWeight = FontWeights.SemiBold });
-        root.Children.Add(new TextBlock { Text = "Drag in the field for saturation and brightness.", Margin = new Thickness(3, 6, 3, 0) });
-        root.Children.Add(Field);
-        var gradient = new LinearGradientBrush { StartPoint = new Point(0, .5), EndPoint = new Point(1, .5) };
-        for (int i = 0; i <= 6; i++) gradient.GradientStops.Add(new GradientStop(ColorField.FromHsv(i * 60, 1, 1), i / 6.0));
-        root.Children.Add(new Border { Height = 12, Background = gradient, Margin = new Thickness(3, 0, 3, 0) });
-        AutomationProperties.SetName(Hue, "Hue"); root.Children.Add(Hue);
-        var samples = new WrapPanel();
-        foreach (string hex in new[] { "#000000", "#FFFFFF", "#EF4444", "#F59E0B", "#FDE047", "#22C55E", "#62C9B5", "#3B82F6", "#8B5CF6", "#EC4899" })
+        root.Children.Add(new TextBlock { Text = "Foreground color", FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(3, 0, 0, 12) });
+        var body = new StackPanel { Orientation = Orientation.Horizontal };
+        body.Children.Add(Field);
+        Hue.Style = (Style)Application.Current.FindResource("HueSlider"); Hue.Width = 28; Hue.Height = 256; Hue.Margin = new Thickness(8, 6, 12, 6);
+        AutomationProperties.SetName(Hue, "Hue"); body.Children.Add(Hue);
+        var details = new StackPanel { Width = 152, Margin = new Thickness(0, 6, 0, 0) };
+        var swatches = new StackPanel { Orientation = Orientation.Horizontal };
+        swatches.Children.Add(new StackPanel { Children = { new TextBlock { Text = "Current" }, new Border { Width = 64, Height = 40, Margin = new Thickness(3), Background = new SolidColorBrush(original), BorderBrush = Brushes.Gray, BorderThickness = new Thickness(1) } } });
+        swatches.Children.Add(new StackPanel { Children = { new TextBlock { Text = "New" }, preview } }); details.Children.Add(swatches);
+        ApplyButton.Style = (Style)Application.Current.FindResource("CompactButton"); ApplyButton.Background = (Brush)Application.Current.FindResource("Accent"); ApplyButton.Foreground = Brushes.Black;
+        details.Children.Add(ApplyButton);
+        details.Children.Add(new Button { Content = "Cancel", IsCancel = true, Style = (Style)Application.Current.FindResource("CompactButton") });
+        for (int channel = 0; channel < 3; channel++)
+        {
+            var row = new DockPanel { Margin = new Thickness(3, channel == 0 ? 12 : 0, 3, 0) };
+            row.Children.Add(new TextBlock { Text = new[] { "R", "G", "B" }[channel], Width = 24 }); row.Children.Add(RgbInputs[channel]);
+            AutomationProperties.SetName(RgbInputs[channel], new[] { "Red", "Green", "Blue" }[channel]); details.Children.Add(row);
+        }
+        var hexRow = new DockPanel { Margin = new Thickness(3, 0, 3, 0) }; hexRow.Children.Add(new TextBlock { Text = "#", Width = 24 }); hexRow.Children.Add(HexInput); details.Children.Add(hexRow);
+        AutomationProperties.SetName(HexInput, "Hex RGB color"); body.Children.Add(details); root.Children.Add(body);
+        var samples = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+        foreach (string hex in new[] { "#000000", "#FFFFFF", "#EF4444", "#F59E0B", "#FDE047", "#22C55E", "#38BDF8", "#6C9AE0", "#8B5CF6", "#EC4899" })
         {
             TryHex(hex, out var color);
             var button = new Button { Width = 26, Height = 26, Padding = new Thickness(0), Margin = new Thickness(2), Background = new SolidColorBrush(color), ToolTip = hex };
-            AutomationProperties.SetName(button, "Color " + hex);
-            button.Click += (_, _) => SetColor(color); samples.Children.Add(button);
+            AutomationProperties.SetName(button, "Color " + hex); button.Click += (_, _) => SetColor(color); samples.Children.Add(button);
         }
-        root.Children.Add(samples);
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 6) };
-        row.Children.Add(new StackPanel { Children = { new TextBlock { Text = "Current" }, new Border { Width = 64, Height = 40, Margin = new Thickness(3), Background = new SolidColorBrush(original), BorderBrush = Brushes.White, BorderThickness = new Thickness(1) } } });
-        row.Children.Add(new StackPanel { Children = { new TextBlock { Text = "New" }, preview } });
-        row.Children.Add(new StackPanel { Margin = new Thickness(12, 0, 0, 0), Children = { new TextBlock { Text = "Hex RGB" }, HexInput } });
-        AutomationProperties.SetName(HexInput, "Hex RGB color"); root.Children.Add(row); root.Children.Add(error);
-        root.Children.Add(new TextBlock { Text = "Arrow keys in the field adjust color; Shift = larger step.", FontSize = 11, Foreground = Brushes.LightGray });
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
-        actions.Children.Add(new Button { Content = "Cancel", IsCancel = true }); actions.Children.Add(ApplyButton); root.Children.Add(actions);
+        root.Children.Add(samples); root.Children.Add(error);
+        root.Children.Add(new TextBlock { Text = "Drag to choose · Arrow keys adjust the field · Shift for larger steps", FontSize = 11, Foreground = Brushes.LightGray, Margin = new Thickness(3, 8, 0, 0) });
         Content = root;
+        foreach (var input in RgbInputs) input.TextChanged += (_, _) =>
+        {
+            if (updating) return;
+            bool valid = byte.TryParse(RgbInputs[0].Text, out byte r) & byte.TryParse(RgbInputs[1].Text, out byte g) & byte.TryParse(RgbInputs[2].Text, out byte b);
+            ApplyButton.IsEnabled = valid; error.Text = "RGB channels must be whole numbers from 0 to 255."; error.Visibility = valid ? Visibility.Collapsed : Visibility.Visible;
+            if (valid) { Field.SetColor(Color.FromRgb(r, g, b)); Refresh(false); }
+        };
+
         Hue.ValueChanged += (_, _) => { if (!updating) { Field.Hue = Hue.Value; Field.InvalidateVisual(); Refresh(false); } };
         Field.Changed += () => Refresh(false);
         HexInput.TextChanged += (_, _) =>
         {
             if (updating) return;
-            bool valid = TryHex(HexInput.Text, out var color);
+            bool valid = TryHex(HexInput.Text, out var color); error.Text = "Enter six hex digits, e.g. #6C9AE0";
             ApplyButton.IsEnabled = valid; error.Visibility = valid ? Visibility.Collapsed : Visibility.Visible;
             if (valid) { Field.SetColor(color); Refresh(true); }
         };
@@ -69,6 +82,7 @@ internal sealed class ColorPickerWindow : Window
     {
         updating = true; Hue.Value = Field.Hue; preview.Background = new SolidColorBrush(SelectedColor);
         if (!keepDraft) HexInput.Text = Hex(SelectedColor);
+        RgbInputs[0].Text = SelectedColor.R.ToString(); RgbInputs[1].Text = SelectedColor.G.ToString(); RgbInputs[2].Text = SelectedColor.B.ToString();
         ApplyButton.IsEnabled = true; error.Visibility = Visibility.Collapsed; updating = false;
     }
     internal static string Hex(Color color) => $"#{color.R:X2}{color.G:X2}{color.B:X2}";
