@@ -272,6 +272,7 @@ public partial class MainWindow : Window
             switch (e.Key)
             {
                 case Key.C: if (shift) CopyMergedPixels(null, e); else CopyPixels(null, e); break;
+                case Key.J: LayerViaCopy(null, e); break;
                 case Key.X: CutPixels(null, e); break; case Key.V: PastePixels(null, e); break;
                 case Key.N: NewDocument(null, e); break; case Key.O: OpenProject(null, e); break; case Key.I: ImportImages(null, e); break;
                 case Key.S: if (shift) SaveProjectAs(null, e); else SaveProject(null, e); break;
@@ -342,6 +343,7 @@ public partial class MainWindow : Window
         await ImageSizeSmokeTest(Path.ChangeExtension(screenshot, ".image-size.png"));
         await CanvasSizeSmokeTest(Path.ChangeExtension(screenshot, ".canvas-size.png"));
         CropSmokeTest(Path.ChangeExtension(screenshot, ".crop.png"));
+        LayerCopySmokeTest();
         ClipboardSmokeTest(Path.ChangeExtension(screenshot, ".clipboard.json"));
         await SelectionSmokeTest(Path.ChangeExtension(screenshot, ".selection.json"));
         await LevelsSmokeTest(Path.ChangeExtension(screenshot, ".levels.json"));

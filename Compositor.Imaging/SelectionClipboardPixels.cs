@@ -1,4 +1,4 @@
-﻿using Compositor.Core;
+using Compositor.Core;
 using SkiaSharp;
 namespace Compositor.Imaging;
 
@@ -75,13 +75,13 @@ public static class SelectionClipboardPixels
         session.Apply(_=>{publish(copied);return next;});return true;
     }
 
-    public static Guid Paste(EditorSession session,PixelClipboardContent content,bool preserveOrigin=true)
+    public static Guid Paste(EditorSession session,PixelClipboardContent content,bool preserveOrigin=true,string name="Pasted pixels")
     {
         if(session.InTransaction)throw new InvalidOperationException("Finish the active edit first.");
         var doc=session.Document;
         var origin=preserveOrigin?content.Origin:new(Math.Floor((doc.Width-content.Pixels.Width)/2d),Math.Floor((doc.Height-content.Pixels.Height)/2d));
         var active=session.ActiveLayer;Guid? parent=active?.IsGroup==true?active.Id:active?.ParentId;
-        var layer=new Layer(Guid.NewGuid(),"Pasted pixels",content.Pixels,new(origin.X,origin.Y,content.Pixels.Width,content.Pixels.Height),ParentId:parent);
+        var layer=new Layer(Guid.NewGuid(),name,content.Pixels,new(origin.X,origin.Y,content.Pixels.Width,content.Pixels.Height),ParentId:parent);
         int index=active is null?doc.Layers.Length:doc.Layers.IndexOf(active)+1;
         var next=doc with{Layers=doc.Layers.Insert(index,layer),Selection=null};next.Validate();
         session.Apply(_=>{session.ActiveLayerId=layer.Id;session.EditMask=false;return next;});
