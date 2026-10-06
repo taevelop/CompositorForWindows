@@ -1,4 +1,4 @@
-﻿# Image Size 연산 기반
+# Image Size
 
 ## 원본과 구현
 
@@ -20,9 +20,12 @@ macOS/Compositor/IO/ImageResizer.swift 및 UI/ImageSizeSheet.swift를 대조했�
 
 ## 남은 연결과 품질
 
-아직 Image Size 메뉴/대화상자에 연결하지 않았다. 비동기 적용·진행 중 취소·늦은 결과 폐기, 크기/해상도/샘플링 컨트롤과 실제 WPF 검증을 이어간다.
+Image > Image size…에 크기/해상도/샘플링 대화상자를 연결했다. Pixels/Percent/Inches/Centimeters, 비율 잠금, Resample 전환과 작업 중 진행 표시를 제공한다. 계산은 백그라운드에서 수행하고 완료 후 원본 문서가 유지되는지 확인한 뒤 한 번의 Undo로 적용한다. 취소/닫기 뒤 늦은 결과는 폐기한다.
 현재 각 레이어의 입력/출력 비트맵을 전체 크기로 만든다. 큰 문서의 피크 메모리·지연 측정과 개선이 필요하며, Skia 한 번의 DrawImage 호출 도중에는 즉시 취소되지 않는다. 타일별 취소와 반환 전 취소 검사로 늦은 결과 적용은 막는다.
 원본 코드 일부는 크기 변경 시 효과 필드를 누락하지만 Windows에서는 데이터 손실을 피하도록 효과 설정을 보존한다. 실제 Mac 비교는 보류 항목이며 샘플링 품질의 동등성을 주장하지 않는다.
-현재 실행 패키지는 artifacts/publish-canvas-size/Compositor.Windows.exe이며 Image Size UI는 아직 없다.
+현재 실행 패키지는 artifacts/publish-image-size/Compositor.Windows.exe이다.
 
-./build.ps1 -Test: 경고/오류 0, 456개 코어 테스트 및 기존 실제 WPF 회귀 검사 통과. 이번에는 사용자 기능 UI가 추가되지 않아 실행 패키지를 새로 발행하지 않았다.
+./build.ps1 -Test: 경고/오류 0, 456개 코어 테스트 및 기존 실제 WPF 회귀 검사 통과. 실제 WPF에서 메뉴 실행, 잘못된 입력, 비율 잠금, 리샘플링 적용, DPI만 변경 시 픽셀 참조 보존, 단일 Undo/Redo, 계산 중 취소와 늦은 결과 폐기를 검사한다.
+
+Image Size UI 실제 WPF 검증 및 artifacts/ui-smoke.image-size.png 화면 점검 통과.
+verify-portable.ps1 -Runs 1 격리 실행 통과. 현재 개발 PC의 공백 경로·제한 PATH·공유 런타임 미사용 검사이며 별도 Windows PC 실기 검증을 대체하지 않는다.

@@ -40,14 +40,14 @@
 
 1. 캔버스 밖 선택 드래그의 자동 스크롤.
 2. 색 채우기와 픽셀 변형, 레이어 복제. 선택 복사·합성 복사·잘라내기·붙여넣기는 연결했으며 실제 외부 프로그램 상호 운용 검증은 [별도 잔여](selection-clipboard.md)다. 선택 도구에서 Ctrl 이동·Ctrl+Alt 복제는 구현했다. Move 도구는 기존처럼 레이어를 이동한다. [사용법](selected-pixel-move.md).
-3. 크롭 도구 연결 완료. [Canvas Size](canvas-size.md) 연결 완료. Image Size 대화상자, 가이드/전역 Snap To 설정은 후속 범위.
+3. 크롭 도구 연결 완료. [Canvas Size](canvas-size.md) 연결 완료. [Image Size](image-size.md) 연결 완료. 가이드/전역 Snap To 설정은 후속 범위.
 4. 마스크에 대한 픽셀 색상 조정 경로 및 조정 레이어 추가 시 선택의 마스크 변환.
 5. 4K/800px 선택 브러시 및 큰 페더의 지연·메모리 측정. 현재 CPU 경로이며 전용 선택 성능 통과를 주장하지 않는다.
 6. 선택 윤곽 애니메이션 및 원본과의 실기 비교. 사용자 지시로 보류한 실제 Mac 및 별도 Windows PC 검증은 그대로 보류한다.
 
 ## 실행 패키지
 
-artifacts/publish-canvas-size/Compositor.Windows.exe. 기존 패키지를 덮어쓰지 않았다.
+artifacts/publish-image-size/Compositor.Windows.exe. 기존 패키지를 덮어쓰지 않았다.
 verify-portable.ps1 -Runs 1 격리 실행이 통과했다. 공백 경로·제한 PATH·공유 런타임 미사용 조건의 현재 개발 PC 검사이며, 별도 Windows PC 실기 검증을 대체하지 않는다.
 
 

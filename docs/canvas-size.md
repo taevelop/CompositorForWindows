@@ -1,4 +1,4 @@
-﻿# Canvas Size
+# Canvas Size
 
 ## 원본 기준과 구현
 
@@ -22,7 +22,7 @@ Image > Canvas size…에서 캔버스 크기를 변경한다. Pixels / Percent 
 
 ## 잔여와 실행
 
-이미지 자체를 재샘플링하는 Image Size는 별도 후속 작업이다. 선택 자동 스크롤·픽셀 변형·대용량 성능, 전역 배경색 팔레트도 남아 있다. 실제 Mac 왕복과 별도 Windows PC 검증은 사용자 지시로 보류한다.
+[Image Size](image-size.md)의 재샘플링 대화상자를 연결했다. 선택 자동 스크롤·픽셀 변형·대용량 성능, 전역 배경색 팔레트도 남아 있다. 실제 Mac 왕복과 별도 Windows PC 검증은 사용자 지시로 보류한다.
 
-실행 패키지: artifacts/publish-canvas-size/Compositor.Windows.exe.
+실행 패키지: artifacts/publish-image-size/Compositor.Windows.exe.
 verify-portable.ps1 -Runs 1 격리 실행 통과. 공백 경로·제한 PATH·공유 런타임 미사용 조건의 개발 PC 검사이며 별도 PC 실기 검증을 대체하지 않는다.
