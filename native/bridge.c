@@ -52,3 +52,7 @@ __declspec(dllexport) int32_t compositor_brush(uint8_t *output, const uint8_t *o
     }
     return changed;
 }
+
+__declspec(dllexport) void compositor_black_white(uint8_t *pixels, int32_t count, const float *weights, int32_t tint, double hue, double saturation) {
+    adjust_black_white(pixels, (size_t)count, 1, (size_t)count * 4, weights, tint, hue, saturation);
+}

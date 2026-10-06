@@ -14,6 +14,7 @@ public partial class MainWindow
     {
         RefreshEffectsControls();
         AdjustColorsMenu.IsEnabled = AdjustColorsButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false } && !session.EditMask;
+        bool blackWhite = session.ActiveLayer?.BlackWhite is not null; EditBlackWhiteMenu.IsEnabled = blackWhite; EditBlackWhiteButton.Visibility = blackWhite ? Visibility.Visible : Visibility.Collapsed;
         bool exposure = session.ActiveLayer?.Exposure is not null;
         EditExposureMenu.IsEnabled = exposure;
         EditExposureButton.Visibility = exposure ? Visibility.Visible : Visibility.Collapsed;
@@ -23,6 +24,6 @@ public partial class MainWindow
         bool curves = session.ActiveLayer?.Curves is not null;
         EditCurvesMenu.IsEnabled = curves;
         EditCurvesButton.Visibility = curves ? Visibility.Visible : Visibility.Collapsed;
-        ExposureHint.Visibility = exposure || levels || curves ? Visibility.Visible : Visibility.Collapsed;
+        ExposureHint.Visibility = session.ActiveLayer?.IsAdjustment == true ? Visibility.Visible : Visibility.Collapsed;
     }
 }

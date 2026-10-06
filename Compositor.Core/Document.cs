@@ -31,9 +31,9 @@ public sealed record LayerTransform(double X, double Y, double Width, double Hei
     }
 }
 public sealed record Layer(Guid Id, string Name, Raster Pixels, LayerTransform Transform,
-    bool Visible = true, double Opacity = 1, BlendMode Blend = BlendMode.Normal, LayerMask? Mask = null, Guid? ParentId = null, bool IsGroup = false, ExposureAdjustment? Exposure = null, LevelsAdjustment? Levels = null, CurvesAdjustment? Curves = null, LayerEffects? Effects = null)
+    bool Visible = true, double Opacity = 1, BlendMode Blend = BlendMode.Normal, LayerMask? Mask = null, Guid? ParentId = null, bool IsGroup = false, ExposureAdjustment? Exposure = null, LevelsAdjustment? Levels = null, CurvesAdjustment? Curves = null, LayerEffects? Effects = null, bool Invert = false, BlackWhiteAdjustment? BlackWhite = null)
 {
-    public bool IsAdjustment => Exposure is not null || Levels is not null || Curves is not null;
+    public bool IsAdjustment => Exposure is not null || Levels is not null || Curves is not null || Invert || BlackWhite is not null;
     public IEnumerable<PixelTile> RetainedTiles => Pixels.Tiles.Values.Concat(Mask?.Pixels.Tiles.Values ?? Enumerable.Empty<PixelTile>());
     public static Layer Group(string name, int width, int height, Guid? parent = null) =>
         new(Guid.NewGuid(), name, new(1, 1), new(0, 0, width, height), ParentId: parent, IsGroup: true);
@@ -43,6 +43,10 @@ public sealed record Layer(Guid Id, string Name, Raster Pixels, LayerTransform T
         new(Guid.NewGuid(), "Levels", new(width, height), new(0, 0, width, height), ParentId: parent, Levels: new());
     public static Layer CurvesLayer(int width, int height, Guid? parent = null) =>
         new(Guid.NewGuid(), "Curves", new(width, height), new(0, 0, width, height), ParentId: parent, Curves: new());
+    public static Layer InvertLayer(int width,int height,Guid? parent=null) =>
+        new(Guid.NewGuid(),"Invert",new(width,height),new(0,0,width,height),ParentId:parent,Invert:true);
+    public static Layer BlackWhiteLayer(int width,int height,Guid? parent=null) =>
+        new(Guid.NewGuid(),"Black & White",new(width,height),new(0,0,width,height),ParentId:parent,BlackWhite:new());
     public static Layer Blank(string name, int width, int height) =>
         new(Guid.NewGuid(), name, new(width, height), new(0, 0, width, height));
 }
@@ -68,8 +72,8 @@ public sealed record Document(Guid Id, int Width, int Height, double Resolution,
                 System.Text.Encoding.UTF8.GetByteCount(layer.Name) > 16384 ||
                 !double.IsFinite(layer.Opacity) || layer.Opacity is < 0 or > 1 || !Enum.IsDefined(layer.Blend))
                 throw new InvalidDataException("Invalid layer metadata.");
-            if ((layer.Exposure is not null ? 1 : 0) + (layer.Levels is not null ? 1 : 0) + (layer.Curves is not null ? 1 : 0) > 1) throw new InvalidDataException("A layer cannot contain two adjustments.");
-            layer.Exposure?.Validate(); layer.Levels?.Validate(); layer.Curves?.Validate(); layer.Effects?.Validate();
+            if ((layer.Exposure is not null ? 1 : 0) + (layer.Levels is not null ? 1 : 0) + (layer.Curves is not null ? 1 : 0) + (layer.Invert ? 1 : 0) + (layer.BlackWhite is not null ? 1 : 0) > 1) throw new InvalidDataException("A layer cannot contain two adjustments.");
+            layer.Exposure?.Validate(); layer.Levels?.Validate(); layer.Curves?.Validate(); layer.Effects?.Validate(); layer.BlackWhite?.Validate();
             if (layer.Effects is not null && (layer.IsGroup || layer.IsAdjustment)) throw new NotSupportedException("Effects are supported on pixel layers only.");
             if (layer.IsAdjustment && (layer.IsGroup || layer.Pixels.Tiles.Count != 0)) throw new InvalidDataException("Adjustment layers cannot contain source pixels or be groups.");
             if (layer.Mask is { } mask)

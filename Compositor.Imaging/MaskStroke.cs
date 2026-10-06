@@ -14,7 +14,7 @@ public sealed class MaskStroke
         if (!current.Enabled) throw new InvalidOperationException("Enable the mask before painting it.");
         // Match the Mac mask brush: its grayscale control supplies the red component.
         byte gray = settings.Erase ? (byte)0 : settings.Red;
-        stroke = new(layer with { Pixels = current.EditingPixels(layer.Pixels.Width, layer.Pixels.Height), Mask = null, Exposure = null, Levels = null, Curves = null, Effects = null },
+        stroke = new(layer with { Pixels = current.EditingPixels(layer.Pixels.Width, layer.Pixels.Height), Mask = null, Exposure = null, Levels = null, Curves = null, Invert = false, BlackWhite = null, Effects = null },
             settings with { Red = gray, Green = gray, Blue = gray, Erase = false }, width, height);
     }
     public void Append(PointD point)
