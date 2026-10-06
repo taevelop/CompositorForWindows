@@ -114,7 +114,7 @@ dotnet run --project Compositor.Benchmarks/Compositor.Benchmarks.csproj -c Relea
 - Nearest 외 Smooth/High는 현재 bilinear 샘플링입니다. Mac의 고품질 축소와 동일한 필터는 아닙니다.
 - 연결된 마스크는 원본과 같은 픽셀 크기 또는 균일한 1×1만 지원합니다. 내부 회색조 값은 RGBA 타일에 담고 파일은 8비트 회색조 PNG로 저장합니다. Mac 앱에서의 실제 양방향 열기와 동일 필터 결과는 아직 검증하지 않았습니다.
 - 그룹은 자식별로 배경과 합성하고 그룹 불투명도를 곱합니다. 그룹을 하나의 이미지로 합성하는 모드, 그룹 마스크·단위 회전/크기 변경, 다중 선택·드래그로 계층 이동은 미지원입니다. 그룹 전체 이동은 Move 도구, 계층 이동은 부모 선택을 사용합니다.
-- Exposure·Levels·Curves를 지원하며, 다른 종류의 비파괴 조정은 아직 지원하지 않습니다. 조정 레이어가 있는 문서의 편집은 전체 문서 해상도 합성 비용이 발생합니다. 선택·크롭·다중 문서 탭·PSD는 후속 구현 대상입니다. RAW·AI·편집 가능한 텍스트·자동 업데이트도 이번 MVP에 포함하지 않습니다.
+- Exposure·Levels·Curves·Invert·Black & White를 지원하며, 다른 종류의 비파괴 조정은 아직 지원하지 않습니다. 조정 레이어가 있는 문서의 편집은 전체 문서 해상도 합성 비용이 발생합니다. 선택·크롭·다중 문서 탭·PSD는 후속 구현 대상입니다. RAW·AI·편집 가능한 텍스트·자동 업데이트도 이번 MVP에 포함하지 않습니다.
 - GPU, 설치/서명, 전체 Mac 기능 동등성은 아직 구현하지 않았습니다.
 
 마스크 구현·성능 결과와 사용법은 [마스크 검증 문서](docs/layer-masks.md)에 있습니다. 마스크 성능 측정은 `dotnet run --project Compositor.Benchmarks/Compositor.Benchmarks.csproj -c Release -- --masks artifacts/mask-benchmark.json`으로 실행합니다.
@@ -136,3 +136,5 @@ Exposure 구현·파일 호환 범위·성능은 [Exposure 검증 문서](docs/e
 외곽선 사용법과 검증은 [Stroke](docs/stroke-effect.md)에 기록합니다.
 
 안쪽 그림자와 외부 광선은 [Soft effects](docs/soft-effects.md)에 기록합니다. 큰 문서의 효과 재계산 지연은 성능 개선 대상입니다.
+
+반전·흑백 비파괴 조정의 사용법과 검증은 [Invert / Black & White](docs/blackwhite-invert.md)에 있습니다.

@@ -31,3 +31,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 
 - Inner Shadow/Outer Glow 구현: 5종 효과 합성·저장·편집 연결. [검증과 성능 잔여](soft-effects.md).
 - 원본 LayerAdjustment.swift 대조: 추가 비파괴 조정은 Hue/Saturation, Gradient Map, Grain, Invert, Black & White, Color Balance 6종. Filters.swift의 Gaussian Blur, Motion Blur, Add Noise, Lens Correction, Remove Background, Content-Aware Fill도 후속 범위로 명시한다. 기존 Exposure/Levels/Curves와 같은 이름이라도 픽셀 필터 경로는 별도 대조가 필요하다.
+
+- Invert/Black & White 조정 구현: 원본 C 커널, 6색 가중치·틴트, 마스크/이력/저장. [검증 및 4K 지연](blackwhite-invert.md). 조정 잔여는 Hue/Saturation, Gradient Map, Grain, Color Balance 4종이며 픽셀 필터 경로는 별도다.
