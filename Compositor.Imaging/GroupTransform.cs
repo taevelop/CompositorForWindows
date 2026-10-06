@@ -9,9 +9,10 @@ public sealed class GroupTransform
     private readonly HashSet<Guid> members;
     public LayerTransform Bounds {get;}
     public int MemberCount=>members.Count;
-    public GroupTransform(Document document,Guid root)
+    public GroupTransform(Document document,Guid root):this(document,new[]{root}) {}
+    public GroupTransform(Document document,IEnumerable<Guid> roots)
     {
-        original=document;var subtree=LayerHierarchy.Subtree(document,root);
+        original=document;var subtree=roots.SelectMany(root=>LayerHierarchy.Subtree(document,root)).ToHashSet();
         members=LayerHierarchy.Entries(document).Where(e=>subtree.Contains(e.Layer.Id)&&e.Visible&&!e.Layer.IsGroup&&!e.Layer.IsAdjustment).Select(e=>e.Layer.Id).ToHashSet();
         if(members.Count==0)throw new InvalidOperationException("The group has no visible image layers to transform.");
         var points=document.Layers.Where(l=>members.Contains(l.Id)).SelectMany(l=>new[]{new PointD(0,0),new PointD(1,0),new PointD(1,1),new PointD(0,1)}.Select(p=>l.Transform.ToDocument(p,1,1))).ToArray();

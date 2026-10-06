@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 namespace Compositor.Core;
 
 /// <summary>History shares immutable tiles; saved revisions do not retain an extra document.</summary>
@@ -11,14 +12,24 @@ public sealed class EditorSession
         return before.Layers.SelectMany(l => l.RetainedTiles).Distinct().Count(t => !retained.Contains(t)) * (long)PixelTile.ByteCount;
     }
 
-    private sealed record State(Document Document, long Revision, Guid? ActiveLayer, bool EditMask);
+    private sealed record State(Document Document, long Revision, Guid? ActiveLayer, bool EditMask, ImmutableHashSet<Guid> SelectedLayers);
     private readonly List<State> undo = [];
     private readonly List<State> redo = [];
     private State? transaction;
     private long revision, nextRevision, savedRevision;
     public Document Document { get; private set; }
     private Guid? activeLayerId;
-    public Guid? ActiveLayerId { get => activeLayerId; set { if (activeLayerId != value) EditMask = false; activeLayerId = value; } }
+    public Guid? ActiveLayerId { get => activeLayerId; set { if (activeLayerId != value) EditMask = false; activeLayerId = value; SelectedLayerIds = value is {} id ? ImmutableHashSet.Create(id) : ImmutableHashSet<Guid>.Empty; } }
+    public ImmutableHashSet<Guid> SelectedLayerIds { get; private set; } = ImmutableHashSet<Guid>.Empty;
+    public void SelectLayers(IEnumerable<Guid> ids, Guid? active = null)
+    {
+        if (InTransaction) throw new InvalidOperationException("Finish the active edit before changing layer selection.");
+        var selected = ids.ToImmutableHashSet();
+        if (selected.Any(id => !Document.Layers.Any(l => l.Id == id))) throw new ArgumentException("Unknown selected layer.", nameof(ids));
+        if (active is {} id && !selected.Contains(id)) throw new ArgumentException("The active layer must be selected.", nameof(active));
+        var next = active ?? (activeLayerId is {} old && selected.Contains(old) ? old : Document.Layers.LastOrDefault(l => selected.Contains(l.Id))?.Id);
+        ActiveLayerId = next; SelectedLayerIds = selected; Changed?.Invoke();
+    }
     public bool EditMask { get; set; }
     public Layer? ActiveLayer => Document.Layers.FirstOrDefault(l => l.Id == ActiveLayerId);
     public bool IsModified => revision != savedRevision || (transaction is not null && !Equivalent(transaction.Document, Document));
@@ -52,10 +63,10 @@ public sealed class EditorSession
         if (InTransaction) throw new InvalidOperationException("Finish the active edit before saving.");
         savedRevision = revision; Changed?.Invoke();
     }
-    private State Capture() => new(Document, revision, ActiveLayerId, EditMask);
+    private State Capture() => new(Document, revision, ActiveLayerId, EditMask, SelectedLayerIds);
     private void Restore(State state)
     {
-        Document = state.Document; revision = state.Revision; ActiveLayerId = state.ActiveLayer; EditMask = state.EditMask; ReconcileActive();
+        Document = state.Document; revision = state.Revision; ActiveLayerId = state.ActiveLayer; EditMask = state.EditMask; SelectedLayerIds = state.SelectedLayers; ReconcileActive();
     }
     public void Begin()
     {
@@ -108,7 +119,14 @@ public sealed class EditorSession
         undo.Add(Capture()); var state = redo[^1]; redo.RemoveAt(redo.Count - 1);
         Restore(state); TrimHistory(); Changed?.Invoke();
     }
-    private void ReconcileActive() { if (ActiveLayer is null) ActiveLayerId = Document.Layers.LastOrDefault()?.Id; if (ActiveLayer?.Mask is null) EditMask = false; }
+    private void ReconcileActive()
+    {
+        var valid = SelectedLayerIds.Intersect(Document.Layers.Select(l => l.Id)).ToImmutableHashSet();
+        if (activeLayerId is not null && ActiveLayer is null) ActiveLayerId = Document.Layers.LastOrDefault(l => valid.Contains(l.Id))?.Id ?? Document.Layers.LastOrDefault()?.Id;
+        if (ActiveLayerId is {} id) valid = valid.Add(id);
+        SelectedLayerIds = valid;
+        if (ActiveLayer?.Mask is null) EditMask = false;
+    }
     private void TrimHistory()
     {
         while (undo.Count + redo.Count > 100 || HistoryRetainedBytes > MaxHistoryBytes)

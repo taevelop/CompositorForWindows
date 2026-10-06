@@ -16,18 +16,18 @@ public sealed class LayerTransformEdit:IDisposable
     private LayerTransformEdit(EditorSession session,Layer layer,SelectionTransformPixels? selected)
     {
         this.session=session;this.layer=layer;this.selected=selected;original=session.Document;
-        group=layer.IsGroup?new GroupTransform(original,layer.Id):null;
+        group=session.SelectedLayerIds.Count>1||layer.IsGroup?new GroupTransform(original,session.SelectedLayerIds):null;
         InitialTransform=Draft=group?.Bounds??selected?.InitialTransform??layer.Transform;session.Begin();
     }
     public static LayerTransformEdit Begin(EditorSession session)
     {
         if(session.InTransaction)throw new InvalidOperationException("Finish the active edit first.");
-        if(session.ActiveLayer is not {IsAdjustment:false} layer)
+        if(session.ActiveLayer is not {} layer || (layer.IsAdjustment && session.SelectedLayerIds.Count<=1))
             throw new InvalidOperationException("Select an image layer or group to transform.");
-        if(!LayerHierarchy.Entries(session.Document).First(e=>e.Layer.Id==layer.Id).Visible)
+        if(session.SelectedLayerIds.Count<=1&&!LayerHierarchy.Entries(session.Document).First(e=>e.Layer.Id==layer.Id).Visible)
             throw new InvalidOperationException("Show the layer and its parents before transforming.");
         SelectionTransformPixels? selection=null;
-        if(!layer.IsGroup&&!session.EditMask&&session.Document.Selection is {IsEmpty:false})
+        if(session.SelectedLayerIds.Count<=1&&!layer.IsGroup&&!session.EditMask&&session.Document.Selection is {IsEmpty:false})
             selection=SelectionTransformPixels.Create(session.Document,layer.Id)??throw new InvalidOperationException("The selection does not intersect the canvas.");
         return new(session,layer,selection);
     }
