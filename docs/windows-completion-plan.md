@@ -67,3 +67,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Image Size UI 연결: 단위/크기/해상도/비율/Resample/샘플링, 백그라운드 계산과 진행 표시·취소·늦은 결과 폐기·단일 Undo. 코어 456개 및 실제 WPF 검증과 화면 점검 통과. [대용량 메모리 및 Mac 보간 비교 잔여](image-size.md)를 유지한다.
 
 - Layer via Copy/Ctrl+J 및 전체 레이어·그룹 복제 연결: 선택 raw 픽셀/마스크의 제자리 새 레이어, 그룹 자식 ID 매핑·메타데이터·접힘 상태, 타일 공유, 문서 예산·활성 레이어 Undo. 코어 460개 및 실제 WPF 검증. [다중 선택/Alt-drag 및 큰 선택 복사 성능 잔여](layer-copy.md).
+
+- 선택 자동 스크롤: 원본의 12 DIP 여백·60Hz·40 DIP 상한, 사각형/타원/윤곽 이동, 줌 반영·정지 포인터 추종·단일 Undo 및 버튼/캡처/취소/도구 전환 정지. 코어 468개와 실제 WPF 틱/Dispatcher 검사. [하드웨어 실기·실효 속도 측정 잔여](selection-autoscroll.md).
