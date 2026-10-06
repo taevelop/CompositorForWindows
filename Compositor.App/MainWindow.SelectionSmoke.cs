@@ -152,10 +152,26 @@ public partial class MainWindow
         Check(!Canvas.IsMouseCaptured&&Canvas.PolygonActive,"Backspace during press retained capture.");
         PolygonClick(45,5);Canvas.HandleSelectionKey(Key.Escape);
         PolygonClick(5,5);ToolPicker.SelectedIndex=1;
-        Check(!Canvas.HasInteraction&&!session.InTransaction,"Tool switch did not cancel polygon.");        session.Load(painted);ToolPicker.SelectedIndex=4;Canvas.Fit();UpdateLayout();
+        Check(!Canvas.HasInteraction&&!session.InTransaction,"Tool switch did not cancel polygon.");        var moveDoc=original.Replace(original.Layers[0] with{Pixels=Raster.FromRgba(2,1,[180,20,10,255,0,0,0,0]),Transform=new(10,10,2,1)}) with{Selection=SelectionGeometry.Box(10,10,1,1,false,false)};
+        foreach(bool duplicate in new[]{false,true})
+        {
+            session.Load(moveDoc);Canvas.ActualPixels();ToolPicker.SelectedIndex=4;
+            Check(Canvas.BeginInteraction(MouseButton.Left,new Point(40.5,40.5),modifiers:ModifierKeys.Control|(duplicate?ModifierKeys.Alt:ModifierKeys.None)),"Pixel drag did not start.");
+            Canvas.MoveInteraction(new Point(45.5,40.5));Check(Canvas.HasInteraction,"Pixel drag lost ownership.");
+            Canvas.FinishInteraction(MouseButton.Left,new Point(45.5,40.5));
+            Check(!Canvas.HasInteraction&&!session.InTransaction&&session.UndoCount==1,"Pixel drag did not commit once.");
+            Check(session.ActiveLayer!.Transform.X==(duplicate?10:15)&&session.ActiveLayer.Pixels.Width==(duplicate?6:1),"Move/duplicate result incorrect.");
+            session.Undo();Check(ReferenceEquals(moveDoc,session.Document),"Pixel drag Undo failed.");
+            Canvas.BeginInteraction(MouseButton.Left,new Point(40.5,40.5),modifiers:ModifierKeys.Control);
+            Canvas.MoveInteraction(new Point(60,50));Canvas.CancelInteraction();
+            Check(ReferenceEquals(moveDoc,session.Document)&&!session.InTransaction&&!Canvas.HasInteraction,"Pixel drag cancellation failed.");
+        }
+        session.Load(moveDoc);NudgeSelectedPixels(Key.Right,10);
+        Check(session.ActiveLayer!.Transform.X==20&&session.UndoCount==1,"Pixel nudge failed.");
+        session.Undo();        session.Load(painted);ToolPicker.SelectedIndex=4;Canvas.Fit();UpdateLayout();
         var bitmap=new RenderTargetBitmap((int)ActualWidth,(int)ActualHeight,96,96,PixelFormats.Pbgra32);bitmap.Render(this);
         var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(bitmap));using(var file=File.Create(Path.ChangeExtension(path,".png")))png.Save(file);
         ToolPicker.SelectedIndex=1;
-        File.WriteAllText(path,JsonSerializer.Serialize(new{passed=true,checks=new[]{"rectangle/ellipse/center/snap","freehand/polygonal lasso","polygon capture/Enter/Backspace/Esc/double-click/near-origin/tool-switch","outline move/nudge/click deselect","feather/expand/contract preview/compare/apply/cancel","hole subtraction","button ownership/cancel","single Undo/Redo","brush clipping","clear/Undo","basic adjustment","explicit empty","select all/invert/deselect"}}));
+        File.WriteAllText(path,JsonSerializer.Serialize(new{passed=true,checks=new[]{"rectangle/ellipse/center/snap","freehand/polygonal lasso","polygon capture/Enter/Backspace/Esc/double-click/near-origin/tool-switch","outline move/nudge/click deselect","feather/expand/contract preview/compare/apply/cancel","hole subtraction","button ownership/cancel","single Undo/Redo","pixel move/duplicate/cancel/nudge","brush clipping","clear/Undo","basic adjustment","explicit empty","select all/invert/deselect"}}));
     }
 }

@@ -18,12 +18,13 @@ public sealed class EditorCanvas : SKElement, IDisposable
     public Action<string>? ReportError { get; set; }
     public Action? ViewportChanged { get; set; }
     public double Zoom { get; private set; } = 1;
-    public bool HasInteraction => selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
+    public bool HasInteraction => pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
     private double panX = 30, panY = 30;
     private Point? panStart;
     private Point panOrigin;
     private MouseButton? gestureButton;
     private BrushStroke? stroke;
+    private SelectionPixelMoveEdit? pixelMove;
     private MaskStroke? maskStroke;
     private Layer? originalLayer;
     private Document? groupMoveDocument;
@@ -100,7 +101,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
         catch (Exception error) { CancelInteraction(); ReportError?.Invoke(error.Message); }
     }
     // These routes are also exercised by the hidden WPF integration check.
-    internal bool BeginInteraction(MouseButton button, Point point, int clickCount = 1)
+    internal bool BeginInteraction(MouseButton button, Point point, int clickCount = 1, ModifierKeys? modifiers = null)
     {
         if (PolygonActive)
         {
@@ -116,7 +117,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
             gestureButton = button; panOrigin = new(panX, panY); panStart = point; return true;
         }
         if (button != MouseButton.Left) return false;
-        BeginPointer(DocumentPoint(point));
+        BeginPointer(DocumentPoint(point), modifiers);
         if (!Session.InTransaction) return false;
         gestureButton = button; return true;
     }
@@ -126,7 +127,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
         {
             panX += point.X - previous.X; panY += point.Y - previous.Y; panStart = point; InvalidateVisual(); return;
         }
-        if (originalLayer is not null || selectionStart is not null) MovePointer(DocumentPoint(point));
+        if (pixelMove is not null || originalLayer is not null || selectionStart is not null) MovePointer(DocumentPoint(point));
     }
     internal bool FinishInteraction(MouseButton button, Point point)
     {
@@ -171,6 +172,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     public void CancelInteraction()
     {
         bool editing = originalLayer is not null || selectionStart is not null;
+        pixelMove?.Dispose(); pixelMove = null;
         selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear(); polygonCursor = null;
         originalLayer = null; groupMoveDocument = null; stroke = null; maskStroke = null; gestureButton = null;
         if (panStart is not null) { panX = panOrigin.X; panY = panOrigin.Y; panStart = null; }
@@ -178,9 +180,15 @@ public sealed class EditorCanvas : SKElement, IDisposable
         if (IsMouseCaptured) ReleaseMouseCapture();
         InvalidateVisual();
     }
-    public void BeginPointer(PointD point)
+    public void BeginPointer(PointD point, ModifierKeys? modifiers = null)
     {
         if (Session.InTransaction) return;
+        var keys = modifiers ?? Keyboard.Modifiers;
+        if (IsSelectionTool && keys.HasFlag(ModifierKeys.Control) && Session.Document.Selection is { IsEmpty: false } selectedPixels && SelectionGeometry.Contains(selectedPixels, point))
+        {
+            pixelMove = SelectionPixelMoveEdit.Begin(Session, keys.HasFlag(ModifierKeys.Alt));
+            anchor = point; return;
+        }
         if (IsSelectionTool)
         {
             selectionStart = Session.Document;
@@ -213,6 +221,12 @@ public sealed class EditorCanvas : SKElement, IDisposable
     public void MovePointer(PointD point)
     {
         if (!Session.InTransaction) return;
+        if (pixelMove is not null)
+        {
+            double dx = point.X - anchor.X, dy = point.Y - anchor.Y;
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) { if (Math.Abs(dx) >= Math.Abs(dy)) dy = 0; else dx = 0; }
+            pixelMove.Preview(dx, dy); return;
+        }
         if (selectionStart is { } start)
         {
             if (movingSelection)
@@ -259,12 +273,19 @@ public sealed class EditorCanvas : SKElement, IDisposable
     }
     public void EndPointer(bool commit)
     {
+        if (pixelMove is { } move)
+        {
+            pixelMove = null; gestureButton = null;
+            try { if (commit) move.Complete(); } finally { move.Dispose(); InvalidateVisual(); }
+            return;
+        }
         if (commit && selectionStart is { } lassoStart && !movingSelection && IsLassoTool && drawnSelection is { IsEmpty: false } shape)
             Session.Preview(lassoStart with { Selection = SelectionGeometry.Combine(lassoStart.Selection, shape, gestureSelectionMode, lassoStart.Width, lassoStart.Height) });
         if (commit && selectionStart is { } start && gestureSelectionMode == SelectionMode.Replace &&
             (movingSelection ? ReferenceEquals(start, Session.Document) : drawnSelection?.IsEmpty != false))
             Session.Preview(start with { Selection = null });
         bool editing = originalLayer is not null || selectionStart is not null;
+        pixelMove?.Dispose(); pixelMove = null;
         selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear(); polygonCursor = null;
         stroke = null; maskStroke = null; originalLayer = null; groupMoveDocument = null; gestureButton = null;
         if (editing) { if (commit) Session.Commit(); else Session.Cancel(); }

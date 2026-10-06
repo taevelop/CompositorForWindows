@@ -258,6 +258,8 @@ public partial class MainWindow : Window
         if (Canvas.HandleSelectionKey(e.Key)) { e.Handled = true; return; }
         bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control), shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
         if (session.InTransaction) return;
+        if (ctrl && Canvas.IsSelectionTool && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
+        { NudgeSelectedPixels(e.Key, shift ? 10 : 1); e.Handled = true; return; }
         if (!ctrl && Canvas.IsSelectionTool && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
         { NudgeSelection(e.Key, shift ? 10 : 1); e.Handled = true; return; }
         if (ctrl)

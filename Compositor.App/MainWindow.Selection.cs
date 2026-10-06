@@ -9,6 +9,14 @@ public partial class MainWindow
 {
     private void SelectionCenterChanged(object sender, RoutedEventArgs e)
     { Canvas.CancelInteraction(); Canvas.SelectionFromCenter = SelectionCenter.IsChecked == true; }
+    private void NudgeSelectedPixels(System.Windows.Input.Key key, int distance) => Safe(() =>
+    {
+        using var move = SelectionPixelMoveEdit.Begin(session);
+        if (move is null) return;
+        double dx = key == System.Windows.Input.Key.Left ? -distance : key == System.Windows.Input.Key.Right ? distance : 0;
+        double dy = key == System.Windows.Input.Key.Up ? -distance : key == System.Windows.Input.Key.Down ? distance : 0;
+        move.Preview(dx, dy); move.Complete(); Canvas.InvalidateVisual();
+    });
     private void NudgeSelection(System.Windows.Input.Key key, int distance) => Safe(() =>
     {
         if (session.Document.Selection is not { IsEmpty: false } selected) return;

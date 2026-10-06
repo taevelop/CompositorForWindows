@@ -79,7 +79,7 @@
       </StackPanel>
       <StackPanel x:Name="MaskOptions" Width="210" Visibility="Collapsed"><DockPanel><TextBlock Text="Mask gray"/><TextBox x:Name="MaskGray" Text="100" Width="45" Padding="4,2" IsEnabled="False" AutomationProperties.Name="Mask gray"/></DockPanel><DockPanel><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="Black" Click="MaskBlack" Style="{StaticResource CompactButton}"/><Button Content="White" Click="MaskWhite" Style="{StaticResource CompactButton}"/></StackPanel><Slider x:Name="MaskSlider" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="100" Value="100" AutomationProperties.Name="Mask gray slider"/></DockPanel></StackPanel>
      </WrapPanel>
-     <StackPanel x:Name="SelectionOptions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+     <StackPanel x:Name="SelectionOptions" ToolTip="Inside selection: drag outline · Ctrl-drag: move pixels · Ctrl+Alt-drag: duplicate pixels · Ctrl+arrows: move pixels" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
       <StackPanel.Resources>
        <Style TargetType="RadioButton">
         <Setter Property="Foreground" Value="{StaticResource Ink}"/><Setter Property="Padding" Value="9,5"/>
