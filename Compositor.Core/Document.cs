@@ -31,7 +31,7 @@ public sealed record LayerTransform(double X, double Y, double Width, double Hei
     }
 }
 public sealed record Layer(Guid Id, string Name, Raster Pixels, LayerTransform Transform,
-    bool Visible = true, double Opacity = 1, BlendMode Blend = BlendMode.Normal, LayerMask? Mask = null, Guid? ParentId = null, bool IsGroup = false, ExposureAdjustment? Exposure = null, LevelsAdjustment? Levels = null, CurvesAdjustment? Curves = null)
+    bool Visible = true, double Opacity = 1, BlendMode Blend = BlendMode.Normal, LayerMask? Mask = null, Guid? ParentId = null, bool IsGroup = false, ExposureAdjustment? Exposure = null, LevelsAdjustment? Levels = null, CurvesAdjustment? Curves = null, LayerEffects? Effects = null)
 {
     public bool IsAdjustment => Exposure is not null || Levels is not null || Curves is not null;
     public IEnumerable<PixelTile> RetainedTiles => Pixels.Tiles.Values.Concat(Mask?.Pixels.Tiles.Values ?? Enumerable.Empty<PixelTile>());
@@ -69,7 +69,8 @@ public sealed record Document(Guid Id, int Width, int Height, double Resolution,
                 !double.IsFinite(layer.Opacity) || layer.Opacity is < 0 or > 1 || !Enum.IsDefined(layer.Blend))
                 throw new InvalidDataException("Invalid layer metadata.");
             if ((layer.Exposure is not null ? 1 : 0) + (layer.Levels is not null ? 1 : 0) + (layer.Curves is not null ? 1 : 0) > 1) throw new InvalidDataException("A layer cannot contain two adjustments.");
-            layer.Exposure?.Validate(); layer.Levels?.Validate(); layer.Curves?.Validate();
+            layer.Exposure?.Validate(); layer.Levels?.Validate(); layer.Curves?.Validate(); layer.Effects?.Validate();
+            if (layer.Effects is not null && (layer.IsGroup || layer.IsAdjustment)) throw new NotSupportedException("Effects are supported on pixel layers only.");
             if (layer.IsAdjustment && (layer.IsGroup || layer.Pixels.Tiles.Count != 0)) throw new InvalidDataException("Adjustment layers cannot contain source pixels or be groups.");
             if (layer.Mask is { } mask)
             {

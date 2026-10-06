@@ -13,7 +13,7 @@ public static class ProjectStore
     private static readonly string[] RootFields = ["format", "version", "colorSpace", "resolution", "documentID", "width", "height", "activeLayerID", "layers", "guides"];
     private static readonly string[] LayerFields = ["id", "name", "isVisible", "transform", "imageFile", "parentID", "isGroup", "opacity", "blendMode",
         "maskFile", "maskEnabled", "maskSourceID", "adjustment", "maskPlacement", "maskLinked", "shape", "effects", "text"];
-    private static readonly string[] UnsupportedFields = ["maskSourceID", "maskPlacement", "shape", "effects", "text"];
+    private static readonly string[] UnsupportedFields = ["maskSourceID", "maskPlacement", "shape", "text"];
 
     public static LoadedProject LoadRecovery(string path)
     {
@@ -50,6 +50,9 @@ public static class ProjectStore
                     if (l.TryGetProperty(field, out var v) && v.ValueKind != JsonValueKind.Null)
                         throw new NotSupportedException($"Layer '{l.GetProperty("name").GetString()}' contains unsupported {field}. Nothing was opened or changed.");
                 var adjustment = AdjustmentJson.Read(l);
+                var effects = EffectsJson.Read(l);
+                if (effects is not null && (OptionalBool(l, "isGroup") == true || adjustment is not null))
+                    throw new NotSupportedException("Effects on groups or adjustment layers cannot be preserved yet.");
                 if (adjustment is not null && (version < 7 || OptionalBool(l, "isGroup") == true || OptionalString(l, "imageFile") is not null))
                     throw new InvalidDataException("Adjustments require version 7 or later and a non-group layer without imageFile.");
                 string? maskFile = OptionalString(l, "maskFile");
@@ -91,6 +94,9 @@ public static class ProjectStore
                 Raster raster;
                 string? asset = OptionalString(l, "imageFile");
                 var adjustment = AdjustmentJson.Read(l);
+                var effects = EffectsJson.Read(l);
+                if (effects is not null && (OptionalBool(l, "isGroup") == true || adjustment is not null))
+                    throw new NotSupportedException("Effects on groups or adjustment layers cannot be preserved yet.");
                 if (adjustment is not null) raster = new(width, height);
                 else if (isGroup) raster = new(1, 1);
                 else if (asset is not null)
@@ -117,7 +123,7 @@ public static class ProjectStore
                     usedMaskPixels += (long)mask.Pixels.Width * mask.Pixels.Height;
                 }
                 if (adjustment is not null && mask is not null && (mask.Pixels.Width > 1 || mask.Pixels.Height > 1)) raster = new(mask.Pixels.Width, mask.Pixels.Height);
-                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask, parent, isGroup, adjustment?.Exposure, adjustment?.Levels, adjustment?.Curves));
+                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask, parent, isGroup, adjustment?.Exposure, adjustment?.Levels, adjustment?.Curves, effects));
             }
             var document = new Document(m.GetProperty("documentID").GetGuid(), width, height, OptionalDouble(m, "resolution", 72), layers.ToImmutable());
             document.Validate();
@@ -171,6 +177,7 @@ public static class ProjectStore
                         ["sampling"] = t.Sampling == Sampling.High ? "High quality" : t.Sampling.ToString()
                     }
                 });
+                if (l.Effects is not null) records[^1]!["effects"] = EffectsJson.Write(l.Effects);
                 if (l.Exposure is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.Exposure);
                 else if (l.Levels is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.Levels);
                 else if (l.Curves is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.Curves);

@@ -6,8 +6,16 @@ namespace Compositor.Imaging;
 /// <summary>Shared screen/export renderer. Caches tiles; Adjustment documents also cache one canonical composite.</summary>
 public sealed class CanvasRenderer : IDisposable
 {
-    private sealed record Cached(PixelTile?[] Neighbors, SKImage Image);
+    private sealed record Cached(PixelTile?[] Neighbors, ColorOverlayEffect? Overlay, SKImage Image);
     private readonly Dictionary<(Guid, TileKey), Cached> cache = [];
+    // Bounded independently of document layer count; tile images only retain the effect values.
+    private readonly Dictionary<ColorOverlayEffect, byte[]> overlayTables = [];
+    private byte[] OverlayTable(ColorOverlayEffect effect)
+    {
+        if (overlayTables.TryGetValue(effect, out var table)) return table;
+        if (overlayTables.Count >= 8) overlayTables.Clear();
+        return overlayTables[effect] = ColorOverlayProcessor.Lookup(effect);
+    }
     private static readonly SKColorSpace WorkingColorSpace = SKColorSpace.CreateSrgb();
     public static SKImageInfo Info(int width, int height) =>
         new(width, height, SKColorType.Rgba8888, SKAlphaType.Premul, WorkingColorSpace);
@@ -54,6 +62,8 @@ public sealed class CanvasRenderer : IDisposable
             using var paint = new SKPaint { Color = SKColors.White.WithAlpha((byte)Math.Round(entry.Opacity * 255)),
                 BlendMode = Blend(layer.Blend), IsAntialias = false };
             var sampling = new SKSamplingOptions(t.Sampling == Sampling.Nearest ? SKFilterMode.Nearest : SKFilterMode.Linear);
+            var overlay = layer.Effects?.ColorOverlay is { IsEnabled: true, Opacity: > 0 } effect ? effect : null;
+            byte[]? overlayTable = overlay is null ? null : OverlayTable(overlay);
             foreach (var (key, tile) in layer.Pixels.Tiles)
             {
                 float x = key.X * 256, y = key.Y * 256;
@@ -68,10 +78,10 @@ public sealed class CanvasRenderer : IDisposable
                 if (mask is not null)
                     for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++)
                         neighbors[index++] = mask.Tiles.GetValueOrDefault(mask.Width == 1 && mask.Height == 1 ? new(0, 0) : new(key.X + dx, key.Y + dy));
-                if (!cache.TryGetValue(cacheKey, out var cached) || !cached.Neighbors.SequenceEqual(neighbors))
+                if (!cache.TryGetValue(cacheKey, out var cached) || cached.Overlay != overlay || !cached.Neighbors.SequenceEqual(neighbors))
                 {
                     cached?.Image.Dispose();
-                    cached = new(neighbors, TileImage(layer.Pixels, key, mask)); cache[cacheKey] = cached;
+                    cached = new(neighbors, overlay, TileImage(layer.Pixels, key, mask, overlayTable)); cache[cacheKey] = cached;
                 }
                 canvas.Save(); canvas.ClipRect(bounds, SKClipOperation.Intersect, false);
                 canvas.DrawImage(cached.Image, new SKRect(x - 1, y - 1, x + 257, y + 257), sampling, paint);
@@ -83,7 +93,7 @@ public sealed class CanvasRenderer : IDisposable
         foreach (var key in cache.Keys.Where(k => !used.Contains(k)).ToArray()) { cache[key].Image.Dispose(); cache.Remove(key); }
     }
 
-    private static unsafe SKImage TileImage(Raster raster, TileKey key, Raster? mask)
+    private static unsafe SKImage TileImage(Raster raster, TileKey key, Raster? mask, byte[]? overlayTable)
     {
         // One-pixel neighboring gutters prevent interpolation seams between tiles.
         using var bitmap = new SKBitmap(Info(258, 258));
@@ -137,6 +147,7 @@ public sealed class CanvasRenderer : IDisposable
                 }
             }
         }
+        if (overlayTable is not null) ColorOverlayProcessor.ApplyLookup(bytes, overlayTable);
         bitmap.SetImmutable();
         return SKImage.FromBitmap(bitmap);
     }
@@ -156,5 +167,5 @@ public sealed class CanvasRenderer : IDisposable
         BlendMode.Darken => SKBlendMode.Darken, BlendMode.Lighten => SKBlendMode.Lighten,
         BlendMode.Difference => SKBlendMode.Difference, _ => throw new NotSupportedException("Unsupported blend mode.")
     };
-    public void Dispose() { composite?.Dispose(); composite = null; compositeDocument = null; foreach (var item in cache.Values) item.Image.Dispose(); cache.Clear(); }
+    public void Dispose() { overlayTables.Clear(); composite?.Dispose(); composite = null; compositeDocument = null; foreach (var item in cache.Values) item.Image.Dispose(); cache.Clear(); }
 }

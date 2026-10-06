@@ -41,7 +41,7 @@ public sealed class ViewportRenderer : IDisposable
         for (int i = 0; i < current.Layers.Length; i++)
         {
             var a = old.Layers[i]; var b = current.Layers[i];
-            if (a.Id != b.Id || a.ParentId != b.ParentId || a.IsGroup != b.IsGroup || a.Transform != b.Transform || a.Opacity != b.Opacity || a.Visible != b.Visible || a.Blend != b.Blend ||
+            if (a.Id != b.Id || a.ParentId != b.ParentId || a.IsGroup != b.IsGroup || a.Transform != b.Transform || a.Opacity != b.Opacity || a.Visible != b.Visible || a.Blend != b.Blend || a.Effects != b.Effects ||
                 a.Pixels.Width != b.Pixels.Width || a.Pixels.Height != b.Pixels.Height) return full;
             var am = a.Mask is { Enabled: true } aMask ? aMask.Pixels : null;
             var bm = b.Mask is { Enabled: true } bMask ? bMask.Pixels : null;

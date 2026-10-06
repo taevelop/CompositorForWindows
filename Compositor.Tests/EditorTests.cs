@@ -159,7 +159,7 @@ public sealed class EditorTests : IDisposable
     {
         var doc = Sample(); string path = Path.Combine(temporary, "Unsupported.comp"); ProjectStore.Save(doc, null, path);
         string manifest = Path.Combine(path, "manifest.json"); var json = JsonNode.Parse(File.ReadAllText(manifest))!;
-        json["layers"]![0]![field] = new JsonObject();
+        json["layers"]![0]![field] = field == "effects" ? new JsonObject { ["shadow"] = new JsonObject() } : new JsonObject();
         File.WriteAllText(manifest, json.ToJsonString()); byte[] before = File.ReadAllBytes(manifest);
         Assert.Throws<NotSupportedException>(() => ProjectStore.Load(path));
         Assert.Throws<NotSupportedException>(() => ProjectStore.Save(doc, null, path)); Assert.Equal(before, File.ReadAllBytes(manifest));

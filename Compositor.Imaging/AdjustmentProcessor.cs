@@ -91,7 +91,7 @@ internal static class AdjustmentProcessor
         {
             using var canvas = new SKCanvas(bitmap); canvas.Clear();
             using var renderer = new CanvasRenderer();
-            var coverage = layer with { Pixels = mask.Pixels, Exposure = null, Levels = null, Curves = null, Mask = null, ParentId = null, Visible = true, Opacity = 1, Blend = BlendMode.Normal };
+            var coverage = layer with { Pixels = mask.Pixels, Exposure = null, Levels = null, Curves = null, Effects = null, Mask = null, ParentId = null, Visible = true, Opacity = 1, Blend = BlendMode.Normal };
             renderer.Draw(canvas, doc with { Layers = [coverage] }); canvas.Flush(); return bitmap;
         }
         catch { bitmap.Dispose(); throw; }
