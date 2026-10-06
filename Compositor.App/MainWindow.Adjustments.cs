@@ -12,6 +12,7 @@ public partial class MainWindow
     });
     private void RefreshAdjustmentControls()
     {
+        RefreshEffectsControls();
         AdjustColorsMenu.IsEnabled = AdjustColorsButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false } && !session.EditMask;
         bool exposure = session.ActiveLayer?.Exposure is not null;
         EditExposureMenu.IsEnabled = exposure;

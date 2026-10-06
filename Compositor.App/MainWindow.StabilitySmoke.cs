@@ -81,7 +81,7 @@ public partial class MainWindow
 
             string invalid = Path.Combine(root, "Unsupported.comp"); ProjectStore.Save(session.Document, session.ActiveLayerId, invalid);
             string manifest = Path.Combine(invalid, "manifest.json"); var json = JsonNode.Parse(File.ReadAllText(manifest))!;
-            json["layers"]![0]!["effects"] = new JsonObject(); File.WriteAllText(manifest, json.ToJsonString());
+            json["layers"]![0]!["effects"] = new JsonObject { ["shadow"] = new JsonObject() }; File.WriteAllText(manifest, json.ToJsonString());
             session.Apply(d => d.Replace(d.Layers[0] with { Name = "Keep pending edits" }));
             int undoBeforeLoad = session.UndoCount;
             before = session.Document; prompts = new(() => MessageBoxResult.Cancel, errors.Add);
