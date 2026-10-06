@@ -339,6 +339,7 @@ public partial class MainWindow : Window
             GradientMapSmokeTest(Path.ChangeExtension(screenshot, ".gradient-map.json"));
             HueSaturationSmokeTest(Path.ChangeExtension(screenshot, ".hue-saturation.json"));
             PixelAdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".pixel-adjustments.json"));
+        await CanvasSizeSmokeTest(Path.ChangeExtension(screenshot, ".canvas-size.png"));
         CropSmokeTest(Path.ChangeExtension(screenshot, ".crop.png"));
         ClipboardSmokeTest(Path.ChangeExtension(screenshot, ".clipboard.json"));
         await SelectionSmokeTest(Path.ChangeExtension(screenshot, ".selection.json"));

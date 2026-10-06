@@ -1,0 +1,49 @@
+<Window x:Class="Compositor.App.CanvasSizeWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="Canvas Size" Width="550" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Style="{StaticResource {x:Type Window}}">
+ <Window.Resources>
+  <Style TargetType="ToggleButton">
+   <Setter Property="Foreground" Value="{StaticResource Ink}"/><Setter Property="Background" Value="#2D3138"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ToggleButton">
+    <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{StaticResource Divider}" BorderThickness="1" CornerRadius="3">
+     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Border>
+    <ControlTemplate.Triggers>
+     <Trigger Property="IsChecked" Value="True"><Setter TargetName="Frame" Property="Background" Value="{StaticResource AccentMuted}"/><Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger>
+     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource Ink}"/></Trigger>
+    </ControlTemplate.Triggers>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style>
+ </Window.Resources>
+ <StackPanel Margin="22">
+  <TextBlock Text="Canvas Size" FontSize="20" FontWeight="SemiBold"/>
+  <TextBlock x:Name="CurrentLabel" Foreground="{StaticResource MutedInk}" Margin="0,8,0,16"/>
+  <Grid x:Name="Options">
+   <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+   <TextBlock Text="Units" VerticalAlignment="Center"/><ComboBox x:Name="UnitPicker" Grid.Column="1" SelectionChanged="UnitChanged" Margin="0,3" AutomationProperties.Name="Canvas size units"/>
+   <TextBlock Text="Width" Grid.Row="1" VerticalAlignment="Center"/><TextBox x:Name="WidthField" Grid.Row="1" Grid.Column="1" TextChanged="WidthChanged" Margin="0,3" AutomationProperties.Name="Canvas width"/>
+   <TextBlock Text="Height" Grid.Row="2" VerticalAlignment="Center"/><TextBox x:Name="HeightField" Grid.Row="2" Grid.Column="1" TextChanged="HeightChanged" Margin="0,3" AutomationProperties.Name="Canvas height"/>
+   <CheckBox x:Name="Relative" Grid.Row="3" Grid.ColumnSpan="2" Content="Relative to current dimensions" Click="RelativeChanged" Margin="0,10,0,5" Foreground="{StaticResource Ink}"/>
+   <CheckBox x:Name="Locked" Grid.Row="4" Grid.ColumnSpan="2" Content="Lock original aspect ratio" Click="LockedChanged" Margin="0,5,0,14" Foreground="{StaticResource Ink}"/>
+   <StackPanel Grid.Row="5"><TextBlock Text="Anchor"/><UniformGrid x:Name="Anchors" Rows="3" Columns="3" Margin="0,8,10,8"/></StackPanel>
+   <Border Grid.Row="5" Grid.Column="1" Background="#191B20" BorderBrush="{StaticResource Divider}" BorderThickness="1" Margin="8,0,0,10">
+    <Canvas x:Name="Preview" Width="340" Height="140" ClipToBounds="True" ToolTip="Blue: new canvas · White: original canvas"/>
+   </Border>
+   <TextBlock Grid.Row="6" Text="Extension" VerticalAlignment="Center"/>
+   <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal">
+    <ComboBox x:Name="FillPicker" Width="160" SelectionChanged="FillChanged" AutomationProperties.Name="Canvas extension fill"/>
+    <Button x:Name="ColorButton" Click="PickColor" Style="{StaticResource CompactButton}" ToolTip="Choose extension color">
+     <StackPanel Orientation="Horizontal"><Border x:Name="ColorSwatch" Width="20" Height="20" Margin="0,0,6,0" BorderThickness="1" BorderBrush="#BBBBBB"/><TextBlock Text="Color…"/></StackPanel>
+    </Button>
+   </StackPanel>
+  </Grid>
+  <TextBlock x:Name="Summary" Foreground="{StaticResource MutedInk}" Margin="0,14,0,6" TextWrapping="Wrap"/>
+  <TextBlock Text="Artwork is not scaled. Content outside the canvas is preserved." Foreground="{StaticResource MutedInk}" TextWrapping="Wrap" FontSize="12"/>
+  <TextBlock x:Name="ErrorLabel" Foreground="#E8AD73" TextWrapping="Wrap" Margin="0,8"/>
+  <DockPanel Margin="0,10,0,0">
+   <Button x:Name="ApplyButton" DockPanel.Dock="Right" Content="Apply" Click="Apply" IsDefault="True" MinWidth="80" Style="{StaticResource CompactButton}"/>
+   <Button Content="Cancel" Click="Cancel" IsCancel="True" HorizontalAlignment="Left" MinWidth="80" Style="{StaticResource CompactButton}"/>
+  </DockPanel>
+ </StackPanel>
+</Window>
