@@ -44,7 +44,11 @@ public partial class MainWindow
             if (session.SelectedLayerIds.Contains(row.Id) && !Layers.SelectedItems.Contains(row)) Layers.SelectedItems.Add(row);
         var active = session.ActiveLayer;
         bool isGroup = active?.IsGroup == true;
-        LayerBlend.IsEnabled = TransformPanel.IsEnabled = !isGroup && active is not null;
+                bool multiple=session.SelectedLayerIds.Count>1;
+        LayerBlend.IsEnabled = TransformPanel.IsEnabled = !multiple && !isGroup && active is not null;
+        LayerOpacity.IsEnabled=LayerOpacitySlider.IsEnabled=LayerName.IsEnabled=LayerVisible.IsEnabled=!multiple&&active is not null;
+        ApplyLayerPropertiesButton.IsEnabled=active is not null;
+        ApplyLayerPropertiesButton.Content=multiple?"Edit selected layers…":"Apply properties";
         GroupHint.Visibility = isGroup ? Visibility.Visible : Visibility.Collapsed;
         WrapGroupButton.IsEnabled = active is not null; UngroupButton.IsEnabled = isGroup;
         var choices = new List<ParentOption> { new(null, "Document root") };

@@ -243,6 +243,7 @@ public partial class MainWindow : Window
     }
     private void ApplyLayer(object sender, RoutedEventArgs e) => Safe(() =>
     {
+        if(session.SelectedLayerIds.Count>1){new SelectedAppearanceWindow(session){Owner=this}.ShowDialog();Canvas.Focus();return;}
         if (session.ActiveLayer is not { } l) return;
         if (l.IsGroup)
         {

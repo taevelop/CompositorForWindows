@@ -40,6 +40,6 @@ public partial class MainWindow
         Check(session.Document.Layers.Single(l=>l.Id==a.Id).ParentId is null&&proposal.Roots.All(id=>session.Document.Layers.Single(l=>l.Id==id).ParentId==folder.Id),"Copy drop moved its originals.");
         session.Undo();Check(ReferenceEquals(d,session.Document),"Copy drop Undo failed.");session.Redo();Check(session.SelectedLayerIds.SetEquals(proposal.Roots),"Copy drop Redo lost selection.");
         Check(CopyLayerDrag(DragDropKeyStates.ControlKey)&&CopyLayerDrag(DragDropKeyStates.AltKey)&&!CopyLayerDrag(DragDropKeyStates.None),"Copy modifier mapping failed.");
-        layerCopyPreview=null;session.Load(d);LayerDragAssistSmokeTest();
+        layerCopyPreview=null;session.Load(d);LayerDragAssistSmokeTest();SelectedAppearanceSmokeTest(path+".appearance.png");
     }
 }

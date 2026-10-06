@@ -151,7 +151,7 @@
      <StackPanel Grid.Row="1">
       <DockPanel><TextBlock Text="Blend" Width="52" Foreground="{StaticResource MutedInk}"/><ComboBox x:Name="LayerBlend"/></DockPanel>
       <DockPanel><TextBlock Text="Opacity" Width="52" Foreground="{StaticResource MutedInk}"/><TextBox x:Name="LayerOpacity" DockPanel.Dock="Right" Text="100" Width="48" Padding="4,2"/><Slider x:Name="LayerOpacitySlider" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="100" Value="100" ToolTip="Layer opacity draft; use Apply properties" AutomationProperties.Name="Layer opacity slider"/></DockPanel>
-      <Button Content="Apply properties" Click="ApplyLayer" HorizontalAlignment="Right" Style="{StaticResource CompactButton}"/>
+      <Button x:Name="ApplyLayerPropertiesButton" Content="Apply properties" Click="ApplyLayer" HorizontalAlignment="Right" Style="{StaticResource CompactButton}"/>
      </StackPanel>
             <ListBox Grid.Row="2" x:Name="Layers" AllowDrop="True" PreviewMouseLeftButtonDown="LayerDragDown" PreviewMouseLeftButtonUp="LayerDragUp" PreviewMouseMove="LayerDragMove" DragOver="LayerDragOver" DragLeave="LayerDragLeave" QueryContinueDrag="LayerDragContinue" Drop="DropLayerRows" SelectionMode="Extended" Background="#191B20" Foreground="White" BorderThickness="0" MinHeight="100" SelectionChanged="LayerSelected" Margin="0,6,0,6">
               <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource LayerListItem}"/></ListBox.ItemContainerStyle><ListBox.ItemTemplate><DataTemplate>
