@@ -18,7 +18,11 @@ public partial class MainWindow
         Canvas.SizeChanged += (_, _) => InspectorScroll.MaxHeight = Math.Clamp(Canvas.ActualHeight - 310, 80, 300);
         BrushColor.TextChanged += (_, _) =>
         {
-            if (ColorPickerWindow.TryHex(BrushColor.Text, out var color)) ColorSwatch.Background = new SolidColorBrush(color);
+            if (ColorPickerWindow.TryHex(BrushColor.Text, out var color))
+            {
+                ColorSwatch.Background = ToolbarColorSwatch.Background = new SolidColorBrush(color);
+                ToolbarColorButton.ToolTip = $"Choose brush color · {ColorPickerWindow.Hex(color)}";
+            }
         };
         RefreshToolControls();
     }
@@ -52,7 +56,7 @@ public partial class MainWindow
         if (BrushOptions is null) return;
         bool painting = ToolPicker.SelectedIndex is 1 or 2;
         ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", _ => "Brush" };
-        ColorButton.IsEnabled = !session.EditMask;
+        ColorButton.IsEnabled = ToolbarColorButton.IsEnabled = !session.EditMask;
         ToolHint.Visibility = painting ? Visibility.Collapsed : Visibility.Visible;
         BrushOptions.Visibility = painting ? Visibility.Visible : Visibility.Collapsed;
         ColorOptions.Visibility = !session.EditMask && ToolPicker.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;

@@ -14,7 +14,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     private readonly ViewportRenderer renderer = new();
     public EditorSession Session { get; set; } = null!;
     public EditorTool Tool { get; set; } = EditorTool.Brush;
-    public Func<BrushSettings> ReadBrush { get; set; } = () => new(40, .7, 1, 98, 201, 181);
+    public Func<BrushSettings> ReadBrush { get; set; } = () => new(40, .7, 1, 32, 32, 32);
     public Action<string>? ReportError { get; set; }
     public Action? ViewportChanged { get; set; }
     public double Zoom { get; private set; } = 1;
@@ -196,7 +196,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
         { c.Save(); c.ResetMatrix(); c.DrawImage(frame, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest)); c.Restore(); }
         if (Session.ActiveLayer is { } layer && Tool == EditorTool.Move)
         {
-            using var outline = new SKPaint { Color = new(98, 201, 181), Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };
+            using var outline = new SKPaint { Color = new(108, 154, 224), Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };
             using var path = new SKPathBuilder();
             var outlineTransform = layer.IsGroup ? LayerHierarchy.Bounds(doc, layer.Id) : layer.Transform;
             PointD[] corners = [new(0, 0), new(layer.Pixels.Width, 0), new(layer.Pixels.Width, layer.Pixels.Height), new(0, layer.Pixels.Height)];

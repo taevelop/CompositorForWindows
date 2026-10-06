@@ -5,8 +5,8 @@
   <Border DockPanel.Dock="Bottom" Background="{StaticResource Panel}" BorderBrush="{StaticResource Divider}" BorderThickness="0,1,0,0" Padding="12,6"><TextBlock x:Name="Status" Text="Ready" Foreground="{StaticResource MutedInk}" FontSize="11"/></Border>
   <Grid x:Name="Editor">
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <Menu Background="{StaticResource Panel}" Foreground="{StaticResource Ink}">
-        <MenuItem Header="_File">
+      <Menu x:Name="MainMenu" Background="{StaticResource Panel}" Foreground="{StaticResource Ink}">
+        <MenuItem x:Name="FileMenu" Header="_File">
           <MenuItem Header="_New canvas…" InputGestureText="Ctrl+N" Click="NewDocument"/>
           <MenuItem Header="_Open project folder…" InputGestureText="Ctrl+O" Click="OpenProject"/>
           <MenuItem Header="Open _recovery copy…" Click="OpenRecovery"/>
@@ -24,16 +24,21 @@
     <Border Background="#2C3037" CornerRadius="5" HorizontalAlignment="Left" Padding="12,5"><StackPanel Orientation="Horizontal"><Ellipse Fill="{StaticResource Accent}" Width="6" Height="6" Margin="0,0,8,0"/><TextBlock x:Name="DocumentLabel" Text="Untitled" MaxWidth="400" TextTrimming="CharacterEllipsis"/></StackPanel></Border>
    </DockPanel></Border>
    <Border x:Name="ToolOptionsBar" Grid.Row="2" Background="{StaticResource Panel}" Padding="14,6" MinHeight="65" BorderBrush="{StaticResource Divider}" BorderThickness="0,0,0,1">
-    <WrapPanel><TextBlock x:Name="ToolTitle" Text="Brush" Width="78" FontWeight="SemiBold" Margin="0,0,8,0"/>
-     <WrapPanel x:Name="BrushOptions">
+    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="86"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock VerticalAlignment="Center" x:Name="ToolTitle" Text="Brush" Width="78" FontWeight="SemiBold" Margin="0,0,8,0"/>
+     <WrapPanel x:Name="BrushOptions" Grid.Column="1" VerticalAlignment="Center">
 <StackPanel Width="150" Margin="0,0,18,0"><DockPanel><TextBlock Text="Size" Foreground="{StaticResource MutedInk}"/><TextBox x:Name="BrushSize" Text="40" Width="54" Padding="4,2" HorizontalAlignment="Right" AutomationProperties.Name="Brush Size"/></DockPanel><Slider x:Name="SizeSlider" Style="{StaticResource EditorSlider}" Minimum="1" Maximum="2000" Value="40" SmallChange="1" LargeChange="10" AutomationProperties.Name="Brush Size slider"/></StackPanel>
 <StackPanel Width="155" Margin="0,0,18,0"><DockPanel><TextBlock Text="Hardness" Foreground="{StaticResource MutedInk}"/><TextBox x:Name="BrushHardness" Text="70" Width="54" Padding="4,2" HorizontalAlignment="Right" AutomationProperties.Name="Brush Hardness"/></DockPanel><Slider x:Name="HardnessSlider" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="100" Value="70" SmallChange="1" LargeChange="10" AutomationProperties.Name="Brush Hardness slider"/></StackPanel>
 <StackPanel Width="155" Margin="0,0,18,0"><DockPanel><TextBlock Text="Opacity" Foreground="{StaticResource MutedInk}"/><TextBox x:Name="BrushOpacity" Text="100" Width="54" Padding="4,2" HorizontalAlignment="Right" AutomationProperties.Name="Brush Opacity"/></DockPanel><Slider x:Name="OpacitySlider" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="100" Value="100" SmallChange="1" LargeChange="10" AutomationProperties.Name="Brush Opacity slider"/></StackPanel>
-      <StackPanel x:Name="ColorOptions" Width="125" Margin="0,0,12,0"><TextBlock Text="Color" Foreground="{StaticResource MutedInk}"/><TextBox x:Name="BrushColor" Text="#202020" Width="95" HorizontalAlignment="Left" Padding="4,2" ToolTip="Hex RGB; click the rail swatch for the color picker" AutomationProperties.Name="Foreground hex color"/></StackPanel>
+      <StackPanel x:Name="ColorOptions" Width="160" Margin="0,0,12,0"><TextBlock Text="Color" Foreground="{StaticResource MutedInk}"/>
+       <Button x:Name="ToolbarColorButton" Click="PickBrushColor" Style="{StaticResource CompactButton}" HorizontalAlignment="Left" ToolTip="Choose brush color from the color palette" AutomationProperties.Name="Choose brush color">
+        <StackPanel Orientation="Horizontal"><Border x:Name="ToolbarColorSwatch" Background="#202020" Width="20" Height="20" BorderBrush="#CCCCCC" BorderThickness="1" CornerRadius="3" Margin="0,0,8,0"/><TextBlock Text="Choose color…" Foreground="{StaticResource Ink}"/></StackPanel>
+       </Button>
+       <TextBox x:Name="BrushColor" Text="#202020" Visibility="Collapsed"/>
+      </StackPanel>
       <StackPanel x:Name="MaskOptions" Width="210" Visibility="Collapsed"><DockPanel><TextBlock Text="Mask gray"/><TextBox x:Name="MaskGray" Text="100" Width="45" Padding="4,2" IsEnabled="False" AutomationProperties.Name="Mask gray"/></DockPanel><DockPanel><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="Black" Click="MaskBlack" Style="{StaticResource CompactButton}"/><Button Content="White" Click="MaskWhite" Style="{StaticResource CompactButton}"/></StackPanel><Slider x:Name="MaskSlider" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="100" Value="100" AutomationProperties.Name="Mask gray slider"/></DockPanel></StackPanel>
      </WrapPanel>
-     <TextBlock x:Name="ToolHint" Foreground="{StaticResource MutedInk}" Margin="6,0" Text="Wheel: zoom · Middle drag: pan" FontSize="11"/>
-    </WrapPanel>
+     <TextBlock Grid.Column="1" VerticalAlignment="Center" x:Name="ToolHint" Foreground="{StaticResource MutedInk}" Margin="6,0" Text="Wheel: zoom · Middle drag: pan" FontSize="11"/>
+    </Grid>
    </Border>
    <Grid Grid.Row="3">
     <Grid.ColumnDefinitions><ColumnDefinition Width="56"/><ColumnDefinition Width="*"/><ColumnDefinition Width="5"/><ColumnDefinition Width="280" MinWidth="245" MaxWidth="420"/></Grid.ColumnDefinitions>

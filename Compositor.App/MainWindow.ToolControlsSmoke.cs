@@ -15,6 +15,71 @@ public partial class MainWindow
     private async Task ToolControlsSmokeTest(string reportPath)
     {
         void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
+
+        void Capture(FrameworkElement element, string suffix)
+        {
+            element.UpdateLayout();
+            var bitmap = new RenderTargetBitmap((int)Math.Ceiling(element.ActualWidth), (int)Math.Ceiling(element.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(element);
+            var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bitmap));
+            using var output = File.Create(Path.ChangeExtension(reportPath, suffix)); png.Save(output);
+        }
+        UpdateLayout();
+        var titleOrigin = ToolTitle.TranslatePoint(new Point(), this);
+        double canvasTop = Canvas.TranslatePoint(new Point(), this).Y;
+        foreach (int tool in new[] { 0, 1, 2, 3 })
+        {
+            ToolPicker.SelectedIndex = tool; UpdateLayout();
+            Check((ToolTitle.TranslatePoint(new Point(), this) - titleOrigin).Length < .1, "Tool title moves when switching tools.");
+            Check(Math.Abs(Canvas.TranslatePoint(new Point(), this).Y - canvasTop) < .1, "Canvas jumps when switching tools.");
+            Capture(this, $".tool-{tool}.png");
+        }
+        ToolPicker.SelectedIndex = 1;
+        foreach (var entry in new[] { ToolbarColorButton, ColorButton })
+        {
+            Exception? pickerFailure = null;
+            _ = Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() =>
+            {
+                var picker = Application.Current.Windows.OfType<ColorPickerWindow>().SingleOrDefault();
+                try
+                {
+                    Check(picker is not null, "Color button did not open the palette.");
+                    picker!.SetColor(Color.FromRgb(92, 132, 196));
+                    picker.ApplyButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                }
+                catch (Exception ex) { pickerFailure = ex; }
+                finally { if (picker?.IsVisible == true) picker.Close(); }
+            }));
+            entry.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            if (pickerFailure is not null) throw pickerFailure;
+            Check(BrushColor.Text == "#5C84C4" && ((SolidColorBrush)ToolbarColorSwatch.Background).Color == ((SolidColorBrush)ColorSwatch.Background).Color, "Palette result and swatches disagree.");
+        }
+        foreach (MenuItem menu in MainMenu.Items)
+        {
+            menu.IsSubmenuOpen = true;
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+            Check(menu.Template.FindName("PART_Popup", menu) is System.Windows.Controls.Primitives.Popup { IsOpen: true }, "Menu popup did not open.");
+            var popup = (System.Windows.Controls.Primitives.Popup)menu.Template.FindName("PART_Popup", menu);
+            Capture((FrameworkElement)popup.Child, $".menu-{MainMenu.Items.IndexOf(menu)}.png");
+            foreach (var item in menu.Items.OfType<MenuItem>())
+            {
+                item.ApplyTemplate();
+                Check(item.Template.FindName("MenuFrame", item) is Border, "Native menu item template leaked into dark menu.");
+                if (!item.IsEnabled) Check(((SolidColorBrush)item.Foreground).Color == Color.FromRgb(119, 126, 137), "Disabled menu text is not muted.");
+            }
+            var enabledItem = menu.Items.OfType<MenuItem>().FirstOrDefault(item => item.IsEnabled);
+            if (enabledItem is not null)
+            {
+                enabledItem.Focus();
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                Check(enabledItem.IsHighlighted, "Keyboard menu selection failed.");
+                var frame = (Border)enabledItem.Template.FindName("MenuFrame", enabledItem);
+                Check(((SolidColorBrush)frame.Background).Color == ((SolidColorBrush)FindResource("AccentMuted")).Color, "Highlighted menu uses native colors.");
+                Capture((FrameworkElement)popup.Child, $".menu-{MainMenu.Items.IndexOf(menu)}-highlight.png");
+            }
+            menu.IsSubmenuOpen = false;
+        }
+
         var document = session.Document; int undo = session.UndoCount, redo = session.RedoCount;
         for (int tool = 0; tool < 4; tool++)
         {
@@ -94,7 +159,7 @@ public partial class MainWindow
         Check(((SolidColorBrush)FindResource("Accent")).Color == Color.FromRgb(108, 154, 224), "Blue accent resource changed.");
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         File.WriteAllText(reportPath, JsonSerializer.Serialize(new { timeUtc = DateTimeOffset.UtcNow,
-            checks = new[] { "four direct tool selectors", "contextual options", "slider/number synchronization", "invalid draft and bounds", "settings preserve document/history", "picker cancel and apply", "hex validation", "hue and keyboard color field", "RGB/HSV round trip", "mask presets", "minimum width layout", "RGB validation", "vertical tool rail", "compact options", "visible layer list with expanded inspector", "dark blend popup", "layer opacity draft/apply/undo", "blue theme resource" },
+            checks = new[] { "stable title and canvas across four tools", "toolbar and rail open actual palette", "all five dark menu popups", "disabled menu contrast", "four direct tool selectors", "contextual options", "slider/number synchronization", "invalid draft and bounds", "settings preserve document/history", "picker cancel and apply", "hex validation", "hue and keyboard color field", "RGB/HSV round trip", "mask presets", "minimum width layout", "RGB validation", "vertical tool rail", "compact options", "visible layer list with expanded inspector", "dark blend popup", "layer opacity draft/apply/undo", "blue theme resource" },
             note = "Hidden WPF control checks; a changed toolbar still needs a user usability check." }, new JsonSerializerOptions { WriteIndented = true }));
     }
 }
