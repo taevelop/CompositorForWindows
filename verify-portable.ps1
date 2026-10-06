@@ -1,8 +1,8 @@
-param([ValidateRange(1, 20)][int]$Runs = 3)
+param([ValidateRange(1, 20)][int]$Runs = 3, [string]$PackageDirectory = (Join-Path $PSScriptRoot "artifacts/publish"))
 $ErrorActionPreference = 'Stop'
 $report = Join-Path $PSScriptRoot 'artifacts/portable-validation.json'
 if (Test-Path -LiteralPath $report) { Remove-Item -LiteralPath $report }
-$source = Join-Path $PSScriptRoot 'artifacts/publish'
+$source = $PackageDirectory
 if (!(Test-Path -LiteralPath (Join-Path $source 'Compositor.Windows.exe'))) { throw 'Run build.ps1 -Publish first.' }
 $root = Join-Path $PSScriptRoot ('artifacts/portable check ' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root | Out-Null

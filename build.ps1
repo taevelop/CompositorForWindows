@@ -1,4 +1,4 @@
-param([switch]$Test, [switch]$Benchmark, [switch]$Stability, [switch]$Publish)
+param([switch]$Test, [switch]$Benchmark, [switch]$Stability, [switch]$Publish, [string]$PublishDirectory = "artifacts/publish")
 $ErrorActionPreference = 'Stop'
 Push-Location $PSScriptRoot
 try {
@@ -22,15 +22,15 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Stability benchmark failed.' }
     }
     if ($Publish) {
-        & dotnet publish Compositor.App/Compositor.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/publish --nologo
+        & dotnet publish Compositor.App/Compositor.App.csproj -c Release -r win-x64 --self-contained true -o $PublishDirectory --nologo
         if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
-        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE') -Destination artifacts/publish/LICENSE.txt
-        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'THIRD-PARTY-NOTICES.md') -Destination artifacts/publish/THIRD-PARTY-NOTICES.md
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE') -Destination (Join-Path $PublishDirectory LICENSE.txt)
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'THIRD-PARTY-NOTICES.md') -Destination (Join-Path $PublishDirectory THIRD-PARTY-NOTICES.md)
 
         $assets = Get-Content -LiteralPath 'Compositor.App/obj/project.assets.json' -Raw | ConvertFrom-Json
         $packageRoots = @($assets.packageFolders.PSObject.Properties.Name)
         $packagePaths = @($assets.libraries.PSObject.Properties | Where-Object { $_.Value.type -eq 'package' } | ForEach-Object { $_.Value.path })
-        $runtime = Get-Content -LiteralPath 'artifacts/publish/Compositor.Windows.runtimeconfig.json' -Raw | ConvertFrom-Json
+        $runtime = Get-Content -LiteralPath (Join-Path $PublishDirectory Compositor.Windows.runtimeconfig.json) -Raw | ConvertFrom-Json
         foreach ($framework in $runtime.runtimeOptions.includedFrameworks) {
             $packagePaths += ($framework.name.ToLowerInvariant() + '.runtime.win-x64/' + $framework.version)
         }
@@ -40,7 +40,7 @@ try {
                 if (!(Test-Path -LiteralPath $packageDirectory)) { continue }
                 $notices = @(Get-ChildItem -LiteralPath $packageDirectory -File | Where-Object { $_.Name -match '^(LICENSE|LICENCE|COPYING|THIRD.PARTY.NOTICES)([.]|$)' })
                 if ($notices.Count -eq 0) { continue }
-                $licenseTarget = Join-Path 'artifacts/publish/licenses' ($packagePath -replace '[/\\\\]', '-')
+                $licenseTarget = Join-Path (Join-Path $PublishDirectory licenses) ($packagePath -replace '[/\\\\]', '-')
                 New-Item -ItemType Directory -Path $licenseTarget -Force | Out-Null
                 foreach ($notice in $notices) { Copy-Item -LiteralPath $notice.FullName -Destination $licenseTarget }
                 break
