@@ -6,6 +6,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using Compositor.Core;
+using Compositor.Imaging;
 namespace Compositor.App;
 public partial class MainWindow
 {
@@ -15,24 +16,28 @@ public partial class MainWindow
     private Point? layerDragStart;
     private Guid? layerDragPressed;
     private bool layerDragPreserved;
+    private Guid[]? layerDragPressSelection;
     private LayerDragPayload? layerDragPayload;
     private LayerDropAdorner? layerDropAdorner;
+    private (LayerDragPayload Payload,Guid? Parent,Guid? Above,bool Bottom,LayerCopyPlacement Plan)? layerCopyPreview;
     private void LayerDragDown(object sender,MouseButtonEventArgs e)
     {
-        layerDragStart=null;layerDragPressed=null;layerDragPreserved=false;
-        if(busy||session.InTransaction||Keyboard.Modifiers!=ModifierKeys.None)return;
+        layerDragStart=null;layerDragPressed=null;layerDragPreserved=false;layerDragPressSelection=null;
+        if(busy||session.InTransaction||Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))return;
         DependencyObject? hit=e.OriginalSource as DependencyObject;
         for(var p=hit;p is not null&&p!=Layers;p=p is Visual?VisualTreeHelper.GetParent(p):(p as FrameworkContentElement)?.Parent)
             if(p is ButtonBase||p is ScrollBar)return;
         if(hit is null)return;
         if(ItemsControl.ContainerFromElement(Layers,hit) is not ListBoxItem {DataContext:LayerRow row})return;
         layerDragStart=e.GetPosition(Layers);layerDragPressed=row.Id;
-        if(session.SelectedLayerIds.Contains(row.Id)){layerDragPreserved=true;e.Handled=true;Layers.Focus();}
+        layerDragPressSelection=session.SelectedLayerIds.Contains(row.Id)?session.SelectedLayerIds.ToArray():
+            Keyboard.Modifiers.HasFlag(ModifierKeys.Control)?session.SelectedLayerIds.Append(row.Id).ToArray():new[]{row.Id};
+        if(!Keyboard.Modifiers.HasFlag(ModifierKeys.Control)&&session.SelectedLayerIds.Contains(row.Id)){layerDragPreserved=true;e.Handled=true;Layers.Focus();}
     }
     private void LayerDragUp(object sender,MouseButtonEventArgs e)
     {
         var clicked=layerDragPressed;bool preserve=layerDragPreserved;
-        layerDragStart=null;layerDragPressed=null;layerDragPreserved=false;
+        layerDragStart=null;layerDragPressed=null;layerDragPreserved=false;layerDragPressSelection=null;
         if(preserve&&clicked is {} id&&!busy&&!session.InTransaction){session.SelectLayers(new[]{id},id);e.Handled=true;}
     }
     private void LayerDragMove(object sender,MouseEventArgs e)
@@ -40,11 +45,12 @@ public partial class MainWindow
         if(layerDragStart is not {} start||e.LeftButton!=MouseButtonState.Pressed||busy||session.InTransaction)return;
         var point=e.GetPosition(Layers);
         if(Math.Abs(point.X-start.X)<SystemParameters.MinimumHorizontalDragDistance&&Math.Abs(point.Y-start.Y)<SystemParameters.MinimumVerticalDragDistance)return;
-        layerDragStart=null;layerDragPressed=null;layerDragPreserved=false;
+        if(layerDragPressSelection is {} selected&&layerDragPressed is {} primary)session.SelectLayers(selected,primary);
+        layerDragStart=null;layerDragPressed=null;layerDragPreserved=false;layerDragPressSelection=null;
         if(session.SelectedLayerIds.Count==0)return;
         var payload=new LayerDragPayload(session.Document,session.SelectedLayerIds.ToArray());layerDragPayload=payload;
-        try{DragDrop.DoDragDrop(Layers,new DataObject(LayerDragFormat,payload),DragDropEffects.Move);}
-        finally{layerDragPayload=null;ClearLayerDropMark();}
+        try{DragDrop.DoDragDrop(Layers,new DataObject(LayerDragFormat,payload),DragDropEffects.Move|DragDropEffects.Copy);}
+        finally{layerDragPayload=null;layerCopyPreview=null;ClearLayerDropMark();}
         e.Handled=true;
     }
     private LayerDropSlot DropSlot(Point point)
@@ -72,6 +78,20 @@ public partial class MainWindow
         if(busy||session.InTransaction||!ReferenceEquals(payload.Source,session.Document))throw new InvalidOperationException("The layer drag is no longer current.");
         return LayerHierarchy.PlaceSelected(session.Document,payload.Ids,slot.Parent,slot.Above,slot.Bottom);
     }
+    private LayerCopyPlacement PrepareLayerCopyDrop(LayerDragPayload payload,LayerDropSlot slot)
+    {
+        if(busy||session.InTransaction||!ReferenceEquals(payload.Source,session.Document))throw new InvalidOperationException("The layer drag is no longer current.");
+        if(layerCopyPreview is {} cached&&ReferenceEquals(cached.Payload,payload)&&cached.Parent==slot.Parent&&cached.Above==slot.Above&&cached.Bottom==slot.Bottom)return cached.Plan;
+        var plan=LayerCopyPlacement.Create(session.Document,payload.Ids,slot.Parent,slot.Above,slot.Bottom);
+        layerCopyPreview=(payload,slot.Parent,slot.Above,slot.Bottom,plan);return plan;
+    }
+    private static bool CopyLayerDrag(DragDropKeyStates keys)=>(keys&(DragDropKeyStates.ControlKey|DragDropKeyStates.AltKey))!=0;
+    private void CommitLayerCopyDrop(LayerCopyPlacement copy,LayerDropSlot slot)
+    {
+        session.Apply(_=>copy.Document);session.SelectLayers(copy.Roots,copy.Roots[^1]);
+        foreach(var pair in copy.Mapping)if(collapsedGroups.Contains(pair.Key))collapsedGroups.Add(pair.Value);
+        if(slot.Parent is {} parent)collapsedGroups.Remove(parent);Refresh();
+    }
     private bool OwnLayerDrag(DragEventArgs e)=>layerDragPayload is not null&&e.Data.GetDataPresent(LayerDragFormat)&&ReferenceEquals(e.Data.GetData(LayerDragFormat),layerDragPayload);
     private void LayerDragOver(object sender,DragEventArgs e)
     {
@@ -79,8 +99,9 @@ public partial class MainWindow
         e.Handled=true;e.Effects=DragDropEffects.None;
         try
         {
-            var slot=DropSlot(e.GetPosition(Layers));PrepareLayerDrop(layerDragPayload!,slot);
-            ShowLayerDropMark(slot);e.Effects=DragDropEffects.Move;
+            var slot=DropSlot(e.GetPosition(Layers));bool copy=CopyLayerDrag(e.KeyStates);
+            if(copy)PrepareLayerCopyDrop(layerDragPayload!,slot);else PrepareLayerDrop(layerDragPayload!,slot);
+            ShowLayerDropMark(slot);e.Effects=copy?DragDropEffects.Copy:DragDropEffects.Move;
         }
         catch(InvalidOperationException){ClearLayerDropMark();}
         catch(InvalidDataException){ClearLayerDropMark();}
@@ -92,8 +113,10 @@ public partial class MainWindow
         e.Handled=true;e.Effects=DragDropEffects.None;ClearLayerDropMark();
         try
         {
-            var slot=DropSlot(e.GetPosition(Layers));var next=PrepareLayerDrop(layerDragPayload!,slot);
-            CommitLayerDrop(next,slot);e.Effects=DragDropEffects.Move;
+            var slot=DropSlot(e.GetPosition(Layers));bool copy=CopyLayerDrag(e.KeyStates);
+            if(copy)CommitLayerCopyDrop(PrepareLayerCopyDrop(layerDragPayload!,slot),slot);
+            else CommitLayerDrop(PrepareLayerDrop(layerDragPayload!,slot),slot);
+            e.Effects=copy?DragDropEffects.Copy:DragDropEffects.Move;
         }
         catch(Exception error){ShowError(error.Message);}
     }

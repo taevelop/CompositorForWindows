@@ -30,6 +30,16 @@ public partial class MainWindow
         slot=DropSlot(new Point(origin.X+50,origin.Y+1));Check(!slot.Into&&slot.Above==folder.Id&&slot.Parent is null,"Folder top edge did not reorder above it.");
         next=PrepareLayerDrop(payload,slot);CommitLayerDrop(next,slot);
         Check(session.Document.Layers.Where(l=>l.ParentId is null).Select(l=>l.Id).SequenceEqual(new[]{folder.Id,a.Id,b.Id}),"Row drop reversed selected order.");
-        session.Load(d);
+        session.Load(d);var copyPayload=new LayerDragPayload(d,new[]{a.Id,b.Id});
+        var copySlot=new LayerDropSlot(folder.Id,null,false,new Rect(),true);
+        var proposal=PrepareLayerCopyDrop(copyPayload,copySlot);
+        Check(ReferenceEquals(proposal,PrepareLayerCopyDrop(copyPayload,copySlot)),"Copy hover recreated the same proposal.");
+        Check(ReferenceEquals(d,session.Document)&&session.UndoCount==0,"Copy hover changed source.");
+        CommitLayerCopyDrop(proposal,copySlot);
+        Check(session.Document.Layers.Length==5&&session.SelectedLayerIds.SetEquals(proposal.Roots)&&Layers.SelectedItems.Count==2,"Copy drop lost copies or selection.");
+        Check(session.Document.Layers.Single(l=>l.Id==a.Id).ParentId is null&&proposal.Roots.All(id=>session.Document.Layers.Single(l=>l.Id==id).ParentId==folder.Id),"Copy drop moved its originals.");
+        session.Undo();Check(ReferenceEquals(d,session.Document),"Copy drop Undo failed.");session.Redo();Check(session.SelectedLayerIds.SetEquals(proposal.Roots),"Copy drop Redo lost selection.");
+        Check(CopyLayerDrag(DragDropKeyStates.ControlKey)&&CopyLayerDrag(DragDropKeyStates.AltKey)&&!CopyLayerDrag(DragDropKeyStates.None),"Copy modifier mapping failed.");
+        layerCopyPreview=null;session.Load(d);
     }
 }
