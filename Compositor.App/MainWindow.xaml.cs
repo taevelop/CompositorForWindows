@@ -266,6 +266,8 @@ public partial class MainWindow : Window
         {
             switch (e.Key)
             {
+                case Key.C: if (shift) CopyMergedPixels(null, e); else CopyPixels(null, e); break;
+                case Key.X: CutPixels(null, e); break; case Key.V: PastePixels(null, e); break;
                 case Key.N: NewDocument(null, e); break; case Key.O: OpenProject(null, e); break; case Key.I: ImportImages(null, e); break;
                 case Key.S: if (shift) SaveProjectAs(null, e); else SaveProject(null, e); break;
                 case Key.Z: if (shift) Redo(null, e); else Undo(null, e); break; case Key.Y: Redo(null, e); break;
@@ -331,6 +333,7 @@ public partial class MainWindow : Window
             GradientMapSmokeTest(Path.ChangeExtension(screenshot, ".gradient-map.json"));
             HueSaturationSmokeTest(Path.ChangeExtension(screenshot, ".hue-saturation.json"));
             PixelAdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".pixel-adjustments.json"));
+        ClipboardSmokeTest(Path.ChangeExtension(screenshot, ".clipboard.json"));
         await SelectionSmokeTest(Path.ChangeExtension(screenshot, ".selection.json"));
         await LevelsSmokeTest(Path.ChangeExtension(screenshot, ".levels.json"));
         await CurvesSmokeTest(Path.ChangeExtension(screenshot, ".curves.json"));
