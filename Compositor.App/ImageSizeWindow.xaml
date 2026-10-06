@@ -1,0 +1,30 @@
+﻿<Window x:Class="Compositor.App.ImageSizeWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="Image Size" Width="500" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Style="{StaticResource {x:Type Window}}">
+ <StackPanel Margin="22">
+  <TextBlock Text="Image Size" FontSize="20" FontWeight="SemiBold"/>
+  <TextBlock x:Name="CurrentLabel" Foreground="{StaticResource MutedInk}" Margin="0,8,0,16"/>
+  <StackPanel x:Name="OptionsPanel">
+   <Grid>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <TextBlock Text="Units" VerticalAlignment="Center"/><ComboBox x:Name="Units" Grid.Column="1" SelectionChanged="UnitsChanged" Margin="0,3"/>
+    <TextBlock Text="Width" Grid.Row="1" VerticalAlignment="Center"/><TextBox x:Name="WidthField" Grid.Row="1" Grid.Column="1" TextChanged="WidthChanged" Margin="0,3" AutomationProperties.Name="Image width"/>
+    <TextBlock Text="Height" Grid.Row="2" VerticalAlignment="Center"/><TextBox x:Name="HeightField" Grid.Row="2" Grid.Column="1" TextChanged="HeightChanged" Margin="0,3" AutomationProperties.Name="Image height"/>
+    <TextBlock Text="Pixels / inch" Grid.Row="3" VerticalAlignment="Center"/><TextBox x:Name="ResolutionField" Grid.Row="3" Grid.Column="1" TextChanged="ResolutionChanged" Margin="0,3" AutomationProperties.Name="Image resolution"/>
+   </Grid>
+   <CheckBox x:Name="Locked" Content="Lock aspect ratio" IsChecked="True" Click="LockChanged" Foreground="{StaticResource Ink}" Margin="0,12,0,8"/>
+   <CheckBox x:Name="Resample" Content="Resample image pixels" IsChecked="True" Click="ResampleChanged" Foreground="{StaticResource Ink}" Margin="0,4,0,12"/>
+   <Grid x:Name="SamplingPanel"><Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <TextBlock Text="Sampling" VerticalAlignment="Center"/><ComboBox x:Name="SamplingPicker" Grid.Column="1" SelectionChanged="SamplingChanged"/>
+   </Grid>
+  </StackPanel>
+  <TextBlock x:Name="Summary" Foreground="{StaticResource MutedInk}" Margin="0,14,0,8" TextWrapping="Wrap"/>
+  <TextBlock x:Name="Hint" TextWrapping="Wrap" Foreground="{StaticResource MutedInk}" FontSize="12"/>
+  <ProgressBar x:Name="Progress" IsIndeterminate="True" Height="4" Visibility="Collapsed" Margin="0,14,0,0" Foreground="{StaticResource Accent}"/>
+  <TextBlock x:Name="ErrorLabel" Foreground="#E8AD73" TextWrapping="Wrap" Margin="0,10"/>
+  <DockPanel Margin="0,8,0,0">
+   <Button x:Name="ApplyButton" DockPanel.Dock="Right" Content="Resize" Click="Apply" IsDefault="True" MinWidth="80" Style="{StaticResource CompactButton}"/>
+   <Button Content="Cancel" Click="Cancel" IsCancel="True" HorizontalAlignment="Left" MinWidth="80" Style="{StaticResource CompactButton}"/>
+  </DockPanel>
+ </StackPanel>
+</Window>

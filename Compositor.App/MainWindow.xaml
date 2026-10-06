@@ -23,6 +23,7 @@
           <Separator/><MenuItem Header="Clear selected pixels" InputGestureText="Delete" Click="ClearSelectionPixels"/>
         </MenuItem>
         <MenuItem Header="_Image">
+          <MenuItem Header="Image size…" Click="ChangeImageSize"/>
           <MenuItem Header="Canvas size…" Click="ChangeCanvasSize"/><Separator/>
           <MenuItem x:Name="NewAdjustmentMenu" Header="New adjustment layer">
             <MenuItem Header="Hue / Saturation…" Click="AddHueSaturation"/>
