@@ -17,7 +17,8 @@ $sources += "$PSScriptRoot\bridge.c"
 $headers = @(Get-ChildItem -LiteralPath $kernelDirectory -Filter '*.h' | ForEach-Object FullName)
 $output = Join-Path $OutputDirectory 'Compositor.Native.dll'
 $inputs = @($sources) + @($headers) + @($PSCommandPath)
-if ((Test-Path -LiteralPath $output) -and !(Get-Item -LiteralPath $inputs | Where-Object LastWriteTimeUtc -gt (Get-Item -LiteralPath $output).LastWriteTimeUtc)) { exit 0 }
+$stamp = Join-Path $OutputDirectory 'build-success.stamp'
+if ((Test-Path -LiteralPath $output) -and (Test-Path -LiteralPath $stamp) -and !(Get-Item -LiteralPath $inputs | Where-Object LastWriteTimeUtc -gt (Get-Item -LiteralPath $stamp).LastWriteTimeUtc)) { exit 0 }
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $arguments = @('/nologo','/LD','/O2','/MT','/TC','/std:c17','/utf-8','/D_USE_MATH_DEFINES',
     "/I$vc\include", "/I$sdk\Include\$($sdkVersion.Name)\ucrt", "/I$kernelDirectory",
@@ -26,3 +27,4 @@ $arguments = @('/nologo','/LD','/O2','/MT','/TC','/std:c17','/utf-8','/D_USE_MAT
     "/LIBPATH:$sdk\Lib\$($sdkVersion.Name)\um\x64", "/IMPLIB:$OutputDirectory\Compositor.Native.lib")
 & "$vc\bin\Hostx64\x64\cl.exe" @arguments
 if ($LASTEXITCODE -ne 0) { throw "Native compilation failed ($LASTEXITCODE)." }
+[IO.File]::WriteAllText($stamp, [DateTime]::UtcNow.ToString("O"))
