@@ -100,6 +100,17 @@
       <CheckBox x:Name="SelectionCenter" Content="From center" Foreground="{StaticResource Ink}" VerticalAlignment="Center" Click="SelectionCenterChanged" Margin="0,0,18,0"/>
       <TextBlock x:Name="SelectionHint" Text="Shift: square · Inside: move · Esc: cancel" Foreground="{StaticResource MutedInk}" FontSize="11" VerticalAlignment="Center"/>
      </StackPanel>
+     <StackPanel x:Name="CropOptions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+      <TextBlock Text="Ratio" VerticalAlignment="Center" Foreground="{StaticResource MutedInk}" Margin="0,0,8,0"/>
+      <ComboBox x:Name="CropRatioPicker" Width="100" SelectedIndex="0" SelectionChanged="CropRatioChanged" AutomationProperties.Name="Crop aspect ratio">
+       <ComboBoxItem Content="Free"/><ComboBoxItem Content="Original"/><ComboBoxItem Content="1:1"/><ComboBoxItem Content="4:3"/><ComboBoxItem Content="16:9"/>
+      </ComboBox>
+      <CheckBox x:Name="CropSnap" Content="Snap edges" IsChecked="True" Click="CropSnapChanged" Foreground="{StaticResource Ink}" VerticalAlignment="Center" Margin="14,0"/>
+      <Button x:Name="CropApplyButton" Content="Apply" Click="ApplyCrop" Style="{StaticResource CompactButton}"/>
+      <Button Content="Cancel" Click="CancelCrop" Style="{StaticResource CompactButton}"/>
+      <TextBlock x:Name="CropSizeLabel" VerticalAlignment="Center" Margin="10,0" Foreground="{StaticResource MutedInk}"/>
+      <TextBlock Text="Alt: center · Enter: apply · Esc: cancel" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource MutedInk}"/>
+     </StackPanel>
      <TextBlock Grid.Column="1" VerticalAlignment="Center" x:Name="ToolHint" Foreground="{StaticResource MutedInk}" Margin="6,0" Text="Wheel: zoom · Middle drag: pan" FontSize="11"/>
     </Grid>
    </Border>
@@ -116,7 +127,8 @@
 <ListBoxItem ToolTip="Ellipse selection (Shift+M)" AutomationProperties.Name="Ellipse selection (Shift+M)"><Ellipse Width="21" Height="17" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeDashArray="2,2"/></ListBoxItem>
 <ListBoxItem ToolTip="Freehand lasso (L)" AutomationProperties.Name="Freehand lasso (L)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" Data="M8,17 C-3,17 0,2 12,2 C25,0 25,18 10,18 C3,17 5,12 9,14 C13,16 9,22 4,22"/></ListBoxItem>
 <ListBoxItem ToolTip="Polygonal lasso (Shift+L)" AutomationProperties.Name="Polygonal lasso (Shift+L)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" Data="M2,5 L19,2 22,17 6,20 2,5 M6,20 L3,24"/></ListBoxItem>
-     </ListBox>
+     <ListBoxItem ToolTip="Crop (C)" AutomationProperties.Name="Crop (C)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M6,1 L6,18 23,18 M1,6 L18,6 18,23 M6,6 L18,18"/></ListBoxItem>
+</ListBox>
      <Border Height="1" Background="{StaticResource Divider}" Margin="10,10"/>
      <Button x:Name="ColorButton" Click="PickBrushColor" Width="38" Height="38" Padding="5" ToolTip="Foreground color" AutomationProperties.Name="Choose foreground color" Style="{StaticResource CompactButton}"><Border x:Name="ColorSwatch" Background="#202020" Width="24" Height="24" BorderBrush="#CCCCCC" BorderThickness="1" CornerRadius="3"/></Button>
     </StackPanel></ScrollViewer></Border>
@@ -137,7 +149,8 @@
                   <StackPanel Grid.Column="1"><TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Label}"/><TextBlock Text="{Binding Kind}" Foreground="{StaticResource MutedInk}" FontSize="10" Margin="0,3,0,0"/></StackPanel>
                 </Grid>
               </DataTemplate></ListBox.ItemTemplate>
-            </ListBox>
+
+</ListBox>
 
      <WrapPanel Grid.Row="3"><Button Content="+" ToolTip="New layer" Click="AddLayer" Style="{StaticResource CompactButton}"/><Button Content="−" ToolTip="Delete layer" Click="DeleteLayer" Style="{StaticResource CompactButton}"/><Button Content="↑" Click="LayerUp" Style="{StaticResource CompactButton}"/><Button Content="↓" Click="LayerDown" Style="{StaticResource CompactButton}"/></WrapPanel>
      <Expander x:Name="LayerInspector" Grid.Row="4" Header="Selected layer" Foreground="{StaticResource Ink}" Margin="0,6,0,0"><ScrollViewer x:Name="InspectorScroll" MaxHeight="300" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel>

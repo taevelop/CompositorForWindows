@@ -8,8 +8,8 @@ using SkiaSharp.Views.WPF;
 
 namespace Compositor.App;
 
-public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection }
-public sealed class EditorCanvas : SKElement, IDisposable
+public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection, Crop }
+public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
     public EditorSession Session { get; set; } = null!;
@@ -18,7 +18,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     public Action<string>? ReportError { get; set; }
     public Action? ViewportChanged { get; set; }
     public double Zoom { get; private set; } = 1;
-    public bool HasInteraction => pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
+    public bool HasInteraction => cropDrag is not null || pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
     private double panX = 30, panY = 30;
     private Point? panStart;
     private Point panOrigin;
@@ -87,7 +87,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        try { MoveInteraction(e.GetPosition(this)); }
+        try { MoveInteraction(e.GetPosition(this)); UpdateCropCursor(DocumentPoint(e.GetPosition(this))); }
         catch (Exception error) { CancelInteraction(); ReportError?.Invoke(error.Message); }
     }
     protected override void OnMouseUp(MouseButtonEventArgs e)
@@ -118,7 +118,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
         }
         if (button != MouseButton.Left) return false;
         BeginPointer(DocumentPoint(point), modifiers);
-        if (!Session.InTransaction) return false;
+        if (!Session.InTransaction && cropDrag is null) return false;
         gestureButton = button; return true;
     }
     internal void MoveInteraction(Point point)
@@ -127,7 +127,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
         {
             panX += point.X - previous.X; panY += point.Y - previous.Y; panStart = point; InvalidateVisual(); return;
         }
-        if (pixelMove is not null || originalLayer is not null || selectionStart is not null) MovePointer(DocumentPoint(point));
+        if (cropDrag is not null || pixelMove is not null || originalLayer is not null || selectionStart is not null) MovePointer(DocumentPoint(point));
     }
     internal bool FinishInteraction(MouseButton button, Point point)
     {
@@ -171,6 +171,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     }
     public void CancelInteraction()
     {
+        CancelCropDrag();
         bool editing = originalLayer is not null || selectionStart is not null;
         pixelMove?.Dispose(); pixelMove = null;
         selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear(); polygonCursor = null;
@@ -184,6 +185,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     {
         if (Session.InTransaction) return;
         var keys = modifiers ?? Keyboard.Modifiers;
+        if (Tool == EditorTool.Crop) { BeginCrop(point); return; }
         if (IsSelectionTool && keys.HasFlag(ModifierKeys.Control) && Session.Document.Selection is { IsEmpty: false } selectedPixels && SelectionGeometry.Contains(selectedPixels, point))
         {
             pixelMove = SelectionPixelMoveEdit.Begin(Session, keys.HasFlag(ModifierKeys.Alt));
@@ -218,8 +220,9 @@ public sealed class EditorCanvas : SKElement, IDisposable
         }
         Session.Begin(); MovePointer(point);
     }
-    public void MovePointer(PointD point)
+    public void MovePointer(PointD point, ModifierKeys? modifiers = null)
     {
+        if (cropDrag is not null) { MoveCrop(point, modifiers ?? Keyboard.Modifiers); return; }
         if (!Session.InTransaction) return;
         if (pixelMove is not null)
         {
@@ -273,6 +276,12 @@ public sealed class EditorCanvas : SKElement, IDisposable
     }
     public void EndPointer(bool commit)
     {
+        if (cropDrag is not null)
+        {
+            if (!commit) CancelCropDrag();
+            cropDrag = null; cropBeforeDrag = null; gestureButton = null;
+            InvalidateVisual(); CropChanged?.Invoke(); return;
+        }
         if (pixelMove is { } move)
         {
             pixelMove = null; gestureButton = null;
@@ -340,6 +349,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
             using var line = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };
             c.DrawPath(path, under); c.DrawPath(path, line);
         }
+        DrawCrop(c);
         c.Restore();
     }
     public void Dispose() => renderer.Dispose();

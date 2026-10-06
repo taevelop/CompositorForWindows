@@ -29,6 +29,7 @@ public partial class MainWindow : Window
         Canvas.Session = session; Canvas.ReadBrush = ReadBrush;
         Canvas.ReportError = ShowError;
         Canvas.ViewportChanged = UpdateStatus;
+        Canvas.CropChanged = RefreshCropControls;
         Deactivated += (_, _) => Canvas.CancelInteraction();
         LayerBlend.ItemsSource = Enum.GetValues<BlendMode>();
         LayerSampling.ItemsSource = Enum.GetValues<Sampling>();
@@ -38,6 +39,7 @@ public partial class MainWindow : Window
 
     private void Refresh()
     {
+        Canvas.ReconcileCrop(); RefreshCropControls();
         Canvas.InvalidateVisual();
         Title = $"{(projectPath is null ? "Untitled" : Path.GetFileName(projectPath))}{(session.IsModified ? " *" : "")} — Compositor for Windows";
         DocumentLabel.Text = $"{(projectPath is null ? "Untitled" : Path.GetFileName(projectPath))}{(session.IsModified ? " *" : "")}";
@@ -242,7 +244,8 @@ public partial class MainWindow : Window
     {
         if (Canvas is null) return;
         Canvas.CancelInteraction();
-        Canvas.Tool = (EditorTool)ToolPicker.SelectedIndex; RefreshToolControls(); Canvas.InvalidateVisual(); Canvas.Focus();
+        Canvas.CancelCrop();
+        Canvas.Cursor = null; Canvas.Tool = (EditorTool)ToolPicker.SelectedIndex; RefreshToolControls(); Canvas.InvalidateVisual(); Canvas.Focus();
         UpdateStatus();
     }
     private void Undo(object? sender, RoutedEventArgs e) => Safe(session.Undo);
@@ -252,9 +255,11 @@ public partial class MainWindow : Window
     private void WindowKeyDown(object sender, KeyEventArgs e)
     {
         if (busy) return;
+        if (Canvas.Tool == EditorTool.Crop && e.Key == Key.Escape) { CancelCrop(null, e); e.Handled = true; return; }
         if (e.Key == Key.Escape && Canvas.HasInteraction) { Canvas.CancelInteraction(); e.Handled = true; return; }
         // Text editing owns its own shortcuts, including Undo and Delete.
         if (Keyboard.FocusedElement is TextBox) return;
+        if (Canvas.Tool == EditorTool.Crop && e.Key == Key.Enter) { ApplyCrop(null, e); e.Handled = true; return; }
         if (Canvas.HandleSelectionKey(e.Key)) { e.Handled = true; return; }
         bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control), shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
         if (session.InTransaction) return;
@@ -283,6 +288,7 @@ public partial class MainWindow : Window
                 case Key.E: ToolPicker.SelectedIndex = 2; break; case Key.H: ToolPicker.SelectedIndex = 3; break;
                 case Key.M: ToolPicker.SelectedIndex = shift ? 5 : 4; break;
                 case Key.L: ToolPicker.SelectedIndex = shift ? 7 : 6; break;
+                case Key.C: ToolPicker.SelectedIndex = 8; break;
                 case Key.Delete: if (session.Document.Selection is not null) ClearSelectionPixels(null, e); else DeleteLayer(null, e); break; default: return;
             }
         }
@@ -333,6 +339,7 @@ public partial class MainWindow : Window
             GradientMapSmokeTest(Path.ChangeExtension(screenshot, ".gradient-map.json"));
             HueSaturationSmokeTest(Path.ChangeExtension(screenshot, ".hue-saturation.json"));
             PixelAdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".pixel-adjustments.json"));
+        CropSmokeTest(Path.ChangeExtension(screenshot, ".crop.png"));
         ClipboardSmokeTest(Path.ChangeExtension(screenshot, ".clipboard.json"));
         await SelectionSmokeTest(Path.ChangeExtension(screenshot, ".selection.json"));
         await LevelsSmokeTest(Path.ChangeExtension(screenshot, ".levels.json"));
