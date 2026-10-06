@@ -40,14 +40,14 @@
 
 1. 캔버스 밖 선택 드래그의 자동 스크롤.
 2. 색 채우기와 픽셀 변형, 레이어 복제. 선택 복사·합성 복사·잘라내기·붙여넣기는 연결했으며 실제 외부 프로그램 상호 운용 검증은 [별도 잔여](selection-clipboard.md)다. 선택 도구에서 Ctrl 이동·Ctrl+Alt 복제는 구현했다. Move 도구는 기존처럼 레이어를 이동한다. [사용법](selected-pixel-move.md).
-3. 크롭 프레임·8개 핸들·비율·스냅·확정/취소·레이어/마스크 좌표 및 크기 변경.
+3. 크롭 도구 연결 완료. 별도 Image/Canvas Size 대화상자, 가이드/전역 Snap To 설정은 후속 범위.
 4. 마스크에 대한 픽셀 색상 조정 경로 및 조정 레이어 추가 시 선택의 마스크 변환.
 5. 4K/800px 선택 브러시 및 큰 페더의 지연·메모리 측정. 현재 CPU 경로이며 전용 선택 성능 통과를 주장하지 않는다.
 6. 선택 윤곽 애니메이션 및 원본과의 실기 비교. 사용자 지시로 보류한 실제 Mac 및 별도 Windows PC 검증은 그대로 보류한다.
 
 ## 실행 패키지
 
-artifacts/publish-clipboard/Compositor.Windows.exe. 기존 패키지를 덮어쓰지 않았다.
+artifacts/publish-crop/Compositor.Windows.exe. 기존 패키지를 덮어쓰지 않았다.
 verify-portable.ps1 -Runs 1 격리 실행이 통과했다. 공백 경로·제한 PATH·공유 런타임 미사용 조건의 현재 개발 PC 검사이며, 별도 Windows PC 실기 검증을 대체하지 않는다.
 
 
@@ -72,4 +72,4 @@ verify-portable.ps1 -Runs 1 격리 실행이 통과했다. 공백 경로·제한
 SelectionEdits.swift의 PixelMove는 윤곽 이동과 별개다. 선택한 이미지 픽셀만 이동/복제하며 마스크 대상은 허용하지 않는다. 원본에는 Cmd-drag, Cmd+Option-drag 복제, Cmd-arrow가 있다. Windows에서는 Ctrl 대응을 구현할 예정이다. 빈 픽셀 범위와 0 오프셋은 변경하지 않으며 픽셀과 이동한 윤곽을 함께 한 Undo로 확정한다. BrushStroke.swift의 liftSelection/moveLifted, EditorSession+Brush.swift의 makeRasterEdit/commitRasterEdit를 대조해 변환된 레이어의 샘플링과 확장 경계를 보존해야 한다.
 ## 크롭 연산 기반
 
-비파괴 캔버스 크롭, 8개 핸들 기하 연산, 비율·중심 기준 변경과 저장/Undo 회귀 검사를 추가했다. 아직 크롭 UI·가장자리 스냅은 연결 전이다. [구현과 남은 연결](canvas-crop.md).
+비파괴 캔버스 크롭, 8개 핸들 기하 연산, 비율·중심 기준 변경과 저장/Undo 회귀 검사를 추가했다. 크롭 UI·가장자리 스냅과 확정/취소를 연결했고, 코어 429개 및 실제 WPF 검사가 통과했다. [구현과 잔여](canvas-crop.md).
