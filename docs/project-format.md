@@ -40,10 +40,10 @@ manifest의 `format`은 `com.compositor.project`, `colorSpace`는 `sRGB`입니�
 Windows는 보존할 수 없는 기능을 버리고 열지 않습니다. 다음 항목이 있으면 프로젝트 전체 열기를 거부합니다.
 
 - 그룹 마스크 및 Normal 외 그룹 합성 모드, 참조 마스크(`maskSourceID`), 독립 배치(`maskPlacement`), 연결 해제(`maskLinked: false`).
-- Exposure·Levels·Curves 외의 조정 레이어 또는 보존할 수 없는 비활성 조정 설정, 도형, 효과, 텍스트 메타데이터와 비어 있지 않은 가이드 목록.
+- Exposure·Levels·Curves 외의 조정 레이어 또는 보존할 수 없는 비활성 조정 설정, 도형, 색상 오버레이 외 효과 또는 그룹·조정 레이어의 효과, 텍스트 메타데이터와 비어 있지 않은 가이드 목록.
 - 미지원 합성·샘플링 모드, 알 수 없는 manifest·레이어·변환 필드, 중복 JSON 필드.
 
-미지원 레이어 필드는 null이 아닌 값이면 거부합니다. 예를 들어 비어 있는 `effects` 객체도 열리지 않습니다. `maskEnabled: false`는 유효한 `maskFile`이 있을 때 지원하며, 비활성 마스크 데이터도 보존합니다. 위 미지원 레이어 필드의 null 값, `isGroup: false`, 빈 가이드 목록은 허용합니다. 버전 번호가 8이라는 이유만으로 그룹 마스크·독립 배치 마스크 등 macOS 기능 전체를 읽을 수 있는 것은 아닙니다.
+미지원 레이어 필드는 null이 아닌 값이면 거부합니다. `effects`는 아래 지원 범위를 따르며, 일반 픽셀 레이어의 빈 객체는 허용합니다. `maskEnabled: false`는 유효한 `maskFile`이 있을 때 지원하며, 비활성 마스크 데이터도 보존합니다. 위 미지원 레이어 필드의 null 값, `isGroup: false`, 빈 가이드 목록은 허용합니다. 버전 번호가 8이라는 이유만으로 그룹 마스크·독립 배치 마스크 등 macOS 기능 전체를 읽을 수 있는 것은 아닙니다.
 
 ## 그룹과 계층
 
@@ -100,3 +100,11 @@ Undo/Redo 히스토리와 화면 확대·이동 상태는 저장하지 않습니
 버전 7–8의 `adjustment.kind: "Curves"`를 읽고 버전 8로 저장한다. `curves.channel`은 RGB/Red/Green/Blue, `curves.channels`는 해당 순서의 정확히 네 배열이다. 각 배열은 2~32개의 `{x,y}` 객체이며 x/y는 0~255의 유한 수, x는 엄격한 오름차순, 처음/마지막 x는 0/255다. 보간 기울기가 비유한 수가 되는 극단적 간격도 거부한다.
 
 비활성 조정 설정은 기존과 같이 기본값만 보존한다. imageFile 없이 저장하고 선택 채널·점 목록·연결 마스크를 복원한다. 지원하지 않는 필드/중복 필드와 잘못된 점은 열기와 덮어쓰기를 거부한다. [Curves 검증 문서](curves-adjustment.md)에 보간과 실제 검증 범위를 설명한다.
+
+## 색상 오버레이 효과
+
+일반 픽셀 레이어의 `effects.colorOverlay`를 지원한다. 필수 필드는 `red`, `green`, `blue`, `opacity`(0~1 유한 수)이며 선택적인 `enabled`는 없음/null이면 true다. 효과의 색·불투명도와 비활성 상태를 원본 PNG와 별도로 보존한다. effects 없음/null/빈 객체도 허용한다.
+
+다른 알려진 효과(stroke/shadow/innerShadow/outerGlow)의 null은 허용하지만 객체는 비활성 상태여도 거부한다. 그룹·조정 레이어의 effects와 알 수 없는/중복된 필드도 거부한다. 입력은 기존 버전 1~8, 출력은 버전 8이다. 효과 자체의 최소 버전 제한은 Mac 코드와 같이 별도로 두지 않는다.
+
+마스크를 적용한 원본 위에 source-over 방식으로 덧입히므로 반투명 픽셀의 알파가 증가할 수 있다. 저장하는 원본 PNG에는 효과가 적용되지 않는다. 수식과 검증은 [색상 오버레이 문서](color-overlay.md)를 참고한다.

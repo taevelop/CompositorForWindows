@@ -44,4 +44,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Publish
 
 검증 출력은 `artifacts/ui-smoke.curves.json`, 창 캡처는 `artifacts/ui-smoke.curves.dialog.png`, 배포본 검증은 `artifacts/published-curves-smoke.curves.json`이다.
 
-다음 단계는 **레이어 효과의 색상 오버레이**다. Mac LayerEffects의 저장·적용 순서를 기준으로 효과 모델을 도입한 후 그림자·외곽선 등으로 확대한다.
+2026-10-06에 [색상 오버레이 효과](color-overlay.md)를 추가했다. 다음 단계는 그림자 효과이며, 이후 외곽선 등으로 확대한다.

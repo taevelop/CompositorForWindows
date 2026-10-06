@@ -38,6 +38,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Publish
 - 이동 도구, 숫자 기반 크기·회전·위치 조정, 가로·세로 뒤집기
 - 크기·경도·불투명도·RGB 색상을 지정하는 브러시와 지우개
 - 256×256 불변 타일 기반 Undo/Redo; 드래그·스트로크당 한 번의 히스토리. 변화 없는 이동·속성 적용은 이력을 만들지 않으며 Redo를 유지합니다. 이력은 최대 100단계 및 현재 문서 외 고유 타일 256MiB로 제한합니다.
+- 픽셀 레이어 색상 오버레이 효과: RGB·효과 불투명도·활성화, 미리보기·제거·Undo/Redo, 마스크 적용 후 합성, 원본과 별도 저장
 - 비파괴 Exposure·Levels·Curves 조정 레이어: 노출·오프셋·감마 및 RGB/개별 채널 Levels·곡선, 미리보기·재편집·Undo/Redo, 합성 모드·그룹 불투명도·연결 마스크, 저장 후 설정 복원
 - 이미지 밝기·대비·채도 조정: 미리보기, 원본 비교, 초기화, 적용·취소 및 Undo/Redo. 조정된 픽셀을 저장하며 독립 조정 레이어는 아닙니다.
 - 레이어에 연결된 회색조 마스크: 전체 표시/숨김 추가, 활성화·삭제, 마스크 브러시·지우개, Undo/Redo
@@ -57,6 +58,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Publish
 
 **Image → New Levels adjustment layer…**에서 RGB·Red·Green·Blue의 입력 검정/흰색, 감마, 출력 검정/흰색을 조절합니다. **Edit Levels…**에서 재편집하며, 개별 색 채널 계산 후 RGB 계산을 적용합니다. 채널별 값은 전환 중에도 유지됩니다. Reset channel은 현재 채널, Reset all은 전체를 초기화합니다. 히스토그램·자동 레벨·스포이트는 아직 제공하지 않습니다.
 
+**Effects → Color overlay…**에서 선택한 픽셀 레이어에 색을 덧입힙니다. RGB와 효과 불투명도는 0~1로 입력하며, 활성화·원본 비교·제거·Undo/Redo를 지원합니다. 원본과 마스크를 보존하고 저장 후 재편집할 수 있습니다. Mac과 같은 source-over 합성이므로 반투명 경계는 더 불투명해질 수 있습니다.
+
 **Image → New Curves adjustment layer…**에서 RGB·개별 채널 곡선을 편집합니다. 그래프를 클릭해 점을 추가·선택하고 끌어서 이동하거나 Input/Output 숫자를 입력합니다. 채널당 2~32점, 내부 점 삭제, 채널/전체 초기화, 미리보기 비교를 지원합니다. **Edit Curves…**로 저장 후에도 다시 편집할 수 있습니다.
 
 ## 프로젝트 호환성과 저장 보호
@@ -64,7 +67,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test -Publish
 `.comp`는 `manifest.json`과 `images/<UUID>.png`를 담은 **폴더**입니다. Open project folder에서 `.comp` 폴더 자체를 선택합니다. Save as는 상위 폴더와 새 프로젝트 이름을 차례로 지정합니다.
 
 - 버전 1–8을 읽고 버전 8로 저장합니다. CGPoint/CGSize는 Swift Codable과 같은 2원소 숫자 배열이며, 좌표는 왼쪽 위 원점·시계 방향 회전입니다.
-- 기본 픽셀 레이어, 통과 방식 그룹, 연결된 회색조 마스크와 지원 범위의 Exposure·Levels·Curves 조정 레이어를 지원합니다. 그룹 마스크, 분리 이동·독립 배치·다른 레이어 참조 마스크, Exposure·Levels·Curves 외 조정 또는 보존할 수 없는 비활성 조정 설정, 효과, 도형, 텍스트, 가이드, 미지원 합성 모드 및 알 수 없는 필드는 **프로젝트 전체 열기를 거부**합니다. 기능을 조용히 버리고 덮어쓰지 않습니다.
+- 기본 픽셀 레이어, 통과 방식 그룹, 연결된 회색조 마스크와 지원 범위의 Exposure·Levels·Curves 조정 레이어, 일반 픽셀 레이어의 색상 오버레이를 지원합니다. 그룹 마스크, 분리 이동·독립 배치·다른 레이어 참조 마스크, Exposure·Levels·Curves 외 조정 또는 보존할 수 없는 비활성 조정 설정, 색상 오버레이 외 효과와 그룹·조정 레이어의 효과, 도형, 텍스트, 가이드, 미지원 합성 모드 및 알 수 없는 필드는 **프로젝트 전체 열기를 거부**합니다. 기능을 조용히 버리고 덮어쓰지 않습니다.
 - 자산 경로·중복 ID·형식 버전·크기·심볼릭 링크와 junction을 검사합니다. 디스크 자산은 외부 원본 이미지에 의존하지 않습니다.
 - 완전한 임시 패키지를 쓰고 다시 읽어 검증한 다음 기존 폴더를 `.comp.recovery`로 이동하고 새 폴더를 게시합니다. 게시 실패 시 기존 폴더를 복구합니다. 같은 경로의 동시 저장은 `.write-lock`으로 차단합니다.
 - **폴더 두 번의 이름 변경 전체가 하나의 원자적 연산은 아닙니다.** 전원 중단 시 `.comp.recovery`가 남을 수 있습니다. File → **Open recovery copy…**에서 `.comp.recovery` 폴더를 선택하면 수정된 새 문서로 열립니다. Save에서 새 `.comp` 이름으로 저장하십시오. 원본과 복구 폴더는 자동으로 덮어쓰거나 삭제하지 않습니다. 복구 사본이 있으면 다음 저장은 차단됩니다. 잠금 파일은 빈 파일로 남으며, 실제 잠금은 프로세스의 파일 핸들입니다.
@@ -109,7 +112,7 @@ dotnet run --project Compositor.Benchmarks/Compositor.Benchmarks.csproj -c Relea
 - Nearest 외 Smooth/High는 현재 bilinear 샘플링입니다. Mac의 고품질 축소와 동일한 필터는 아닙니다.
 - 연결된 마스크는 원본과 같은 픽셀 크기 또는 균일한 1×1만 지원합니다. 내부 회색조 값은 RGBA 타일에 담고 파일은 8비트 회색조 PNG로 저장합니다. Mac 앱에서의 실제 양방향 열기와 동일 필터 결과는 아직 검증하지 않았습니다.
 - 그룹은 자식별로 배경과 합성하고 그룹 불투명도를 곱합니다. 그룹을 하나의 이미지로 합성하는 모드, 그룹 마스크·단위 회전/크기 변경, 다중 선택·드래그로 계층 이동은 미지원입니다. 그룹 전체 이동은 Move 도구, 계층 이동은 부모 선택을 사용합니다.
-- Exposure·Levels·Curves를 지원하며, 다른 종류의 비파괴 조정은 아직 지원하지 않습니다. 조정 레이어가 있는 문서의 편집은 전체 문서 해상도 합성 비용이 발생합니다. 선택·크롭·다중 문서 탭, 효과·PSD는 후속 구현 대상입니다. RAW·AI·편집 가능한 텍스트·자동 업데이트도 이번 MVP에 포함하지 않습니다.
+- Exposure·Levels·Curves를 지원하며, 다른 종류의 비파괴 조정은 아직 지원하지 않습니다. 조정 레이어가 있는 문서의 편집은 전체 문서 해상도 합성 비용이 발생합니다. 색상 오버레이 외 효과와 선택·크롭·다중 문서 탭·PSD는 후속 구현 대상입니다. RAW·AI·편집 가능한 텍스트·자동 업데이트도 이번 MVP에 포함하지 않습니다.
 - GPU, 설치/서명, 전체 Mac 기능 동등성은 아직 구현하지 않았습니다.
 
 마스크 구현·성능 결과와 사용법은 [마스크 검증 문서](docs/layer-masks.md)에 있습니다. 마스크 성능 측정은 `dotnet run --project Compositor.Benchmarks/Compositor.Benchmarks.csproj -c Release -- --masks artifacts/mask-benchmark.json`으로 실행합니다.
@@ -122,4 +125,6 @@ Exposure 구현·파일 호환 범위·성능은 [Exposure 검증 문서](docs/e
 
 [Curves 검증 문서](docs/curves-adjustment.md)에 보간·그래프 편집·호환 범위·성능을 정리했습니다. `build.ps1 -Test`는 `artifacts/ui-smoke.curves.json`도 생성합니다.
 
-후속 순서는 레이어 효과(색상 오버레이부터) → 제한적 PSD 가져오기입니다. 각 단계는 저장 규격과 회귀 테스트를 함께 확장해야 합니다.
+[색상 오버레이 검증 문서](docs/color-overlay.md)에 적용 순서·캐시·호환 범위·4K/브러시 성능을 정리했습니다. `build.ps1 -Test`는 `artifacts/ui-smoke.overlay.json`도 생성합니다.
+
+후속 순서는 레이어 효과 확대(그림자부터) → 제한적 PSD 가져오기입니다. 각 단계는 저장 규격과 회귀 테스트를 함께 확장해야 합니다.
