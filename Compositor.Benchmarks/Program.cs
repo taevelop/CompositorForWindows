@@ -5,6 +5,18 @@ using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 
+if (args.Length > 0 && args[0].StartsWith("--save-crash", StringComparison.Ordinal))
+{
+    SaveCrashValidation.Run(args);
+    return;
+}
+if (args.Length > 0 && args[0] == "--soak")
+{
+    MvpSoakValidation.Run(args.Length > 1 ? args[1] : "soak-validation.json",
+        args.Length > 2 ? int.Parse(args[2]) : 1200);
+    return;
+}
+
 if (args.Length > 0 && args[0] == "--overlay")
 {
     ColorOverlayBenchmark.Run(args.Length > 1 ? args[1] : "overlay-benchmark.json");

@@ -137,7 +137,8 @@ public static class ProjectStore
 
     public static void Save(Document document, Guid? active, string path) => SaveInternal(document, active, path, null);
 
-    internal static void SaveInternal(Document document, Guid? active, string path, Action? beforePublish)
+    internal static void SaveInternal(Document document, Guid? active, string path, Action? beforePublish,
+        Action<SaveCheckpoint>? checkpoint = null)
     {
         document.Validate();
         if (active is not null && !document.Layers.Any(l => l.Id == active)) throw new InvalidDataException("Invalid active layer.");
@@ -177,6 +178,7 @@ public static class ProjectStore
                         ["sampling"] = t.Sampling == Sampling.High ? "High quality" : t.Sampling.ToString()
                     }
                 });
+                checkpoint?.Invoke(SaveCheckpoint.AssetWritten);
                 if (l.Effects is not null) records[^1]!["effects"] = EffectsJson.Write(l.Effects);
                 if (l.Exposure is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.Exposure);
                 else if (l.Levels is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.Levels);
@@ -192,9 +194,12 @@ public static class ProjectStore
             if (metadata.Length > ManifestLimit) throw new InvalidDataException("Manifest exceeds 4 MiB.");
             using (var file = File.Create(Path.Combine(staging, "manifest.json"))) { file.Write(metadata); file.Flush(true); }
             _ = Load(staging); // Verify the complete package before touching the original.
+            checkpoint?.Invoke(SaveCheckpoint.StagingValidated);
             if (Directory.Exists(destination)) { Directory.Move(destination, backup); movedOriginal = true; }
             beforePublish?.Invoke();
+            checkpoint?.Invoke(SaveCheckpoint.BeforePublish);
             Directory.Move(staging, destination);
+            checkpoint?.Invoke(SaveCheckpoint.Published);
         }
         catch
         {
