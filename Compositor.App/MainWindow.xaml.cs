@@ -345,6 +345,7 @@ public partial class MainWindow : Window
         CropSmokeTest(Path.ChangeExtension(screenshot, ".crop.png"));
         LayerCopySmokeTest();
         ClipboardSmokeTest(Path.ChangeExtension(screenshot, ".clipboard.json"));
+        await SelectionAutoScrollSmokeTest();
         await SelectionSmokeTest(Path.ChangeExtension(screenshot, ".selection.json"));
         await LevelsSmokeTest(Path.ChangeExtension(screenshot, ".levels.json"));
         await CurvesSmokeTest(Path.ChangeExtension(screenshot, ".curves.json"));

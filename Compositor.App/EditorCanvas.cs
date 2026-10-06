@@ -45,6 +45,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     private PointD anchor;
     public EditorCanvas()
     {
+        InitializeSelectionAutoScroll();
         PaintSurface += Paint;
         Loaded += (_, _) => Fit();
         LostMouseCapture += (_, _) => { if (!releasingGestureCapture) CancelInteraction(); };
@@ -128,6 +129,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             panX += point.X - previous.X; panY += point.Y - previous.Y; panStart = point; InvalidateVisual(); return;
         }
         if (cropDrag is not null || pixelMove is not null || originalLayer is not null || selectionStart is not null) MovePointer(DocumentPoint(point));
+        UpdateSelectionAutoScroll(point);
     }
     internal bool FinishInteraction(MouseButton button, Point point)
     {
@@ -140,6 +142,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     internal void ReleaseGestureCapture()
     {
+        StopSelectionAutoScroll();
         releasingGestureCapture = true;
         try { if (IsMouseCaptured) ReleaseMouseCapture(); }
         finally { releasingGestureCapture = false; }
@@ -171,6 +174,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void CancelInteraction()
     {
+        StopSelectionAutoScroll();
         CancelCropDrag();
         bool editing = originalLayer is not null || selectionStart is not null;
         pixelMove?.Dispose(); pixelMove = null;
@@ -276,6 +280,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void EndPointer(bool commit)
     {
+        StopSelectionAutoScroll();
         if (cropDrag is not null)
         {
             if (!commit) CancelCropDrag();
@@ -352,5 +357,5 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         DrawCrop(c);
         c.Restore();
     }
-    public void Dispose() => renderer.Dispose();
+    public void Dispose() { StopSelectionAutoScroll(); renderer.Dispose(); }
 }
