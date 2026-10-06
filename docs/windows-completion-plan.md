@@ -26,3 +26,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - 착수: Drop Shadow 모델·원본 저장 필드·확장 합성 영역·오버레이 공존 검토.
 
 - Drop Shadow 기능 구현: 색상표/슬라이더, 미리보기/취소/이력, 마스크/오버레이 공존, 저장 왕복. 4K 브러시 지연은 성능 잔여 항목이며 외부 Mac 검증은 보류. 상세는 [Drop Shadow](drop-shadow.md). 효과 영역 전체가 완료된 것은 아니므로 5점 일괄 차감은 하지 않는다.
+
+- Stroke 구현: 안쪽/바깥쪽, 색상표·슬라이더, 마스크·그림자·오버레이 공존, 저장·이력·회귀. 4K 최초 합성 0.45–0.61초는 성능 잔여로 유지. 상세는 [Stroke](stroke-effect.md). 다음은 Inner Shadow/Outer Glow.
