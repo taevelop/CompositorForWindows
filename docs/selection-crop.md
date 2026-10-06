@@ -70,3 +70,6 @@ verify-portable.ps1 -Runs 1 격리 실행이 통과했다. 공백 경로·제한
 ## 다음 픽셀 이동의 원본 기준
 
 SelectionEdits.swift의 PixelMove는 윤곽 이동과 별개다. 선택한 이미지 픽셀만 이동/복제하며 마스크 대상은 허용하지 않는다. 원본에는 Cmd-drag, Cmd+Option-drag 복제, Cmd-arrow가 있다. Windows에서는 Ctrl 대응을 구현할 예정이다. 빈 픽셀 범위와 0 오프셋은 변경하지 않으며 픽셀과 이동한 윤곽을 함께 한 Undo로 확정한다. BrushStroke.swift의 liftSelection/moveLifted, EditorSession+Brush.swift의 makeRasterEdit/commitRasterEdit를 대조해 변환된 레이어의 샘플링과 확장 경계를 보존해야 한다.
+## 크롭 연산 기반
+
+비파괴 캔버스 크롭, 8개 핸들 기하 연산, 비율·중심 기준 변경과 저장/Undo 회귀 검사를 추가했다. 아직 크롭 UI·가장자리 스냅은 연결 전이다. [구현과 남은 연결](canvas-crop.md).
