@@ -18,5 +18,13 @@ public partial class MainWindow
         Check(session.ActiveLayer!.IsGroup&&LayerHierarchy.Subtree(session.Document,session.ActiveLayerId!.Value).Count==2,"Group duplicate handler failed.");
         Check(collapsedGroups.Contains(session.ActiveLayerId!.Value),"Group copy lost collapsed state.");
         session.Undo();Check(ReferenceEquals(grouped,session.Document)&&session.ActiveLayerId==group.Id,"Group duplication Undo failed.");
+        var other=Layer.Blank("Other",12,12);var multiple=grouped with{Layers=grouped.Layers.Add(other)};
+        session.Load(multiple,group.Id);collapsedGroups.Add(group.Id);Refresh();
+        Layers.SelectedItems.Add(Layers.Items.Cast<LayerRow>().Single(r=>r.Id==other.Id));
+        DuplicateLayer(null,new());
+        Check(session.Document.Layers.Length==6&&session.SelectedLayerIds.Count==2&&Layers.SelectedItems.Count==2,"Multiple duplicate panel selection failed.");
+        var copiedGroup=session.Document.Layers.Single(l=>l.IsGroup&&l.Id!=group.Id);
+        Check(collapsedGroups.Contains(copiedGroup.Id),"Multiple duplicate lost collapsed group state.");
+        session.Undo();Check(ReferenceEquals(multiple,session.Document)&&session.SelectedLayerIds.SetEquals(new[]{group.Id,other.Id}),"Multiple duplicate Undo selection failed.");
     }
 }
