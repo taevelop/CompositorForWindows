@@ -255,6 +255,7 @@ public partial class MainWindow : Window
         if (e.Key == Key.Escape && Canvas.HasInteraction) { Canvas.CancelInteraction(); e.Handled = true; return; }
         // Text editing owns its own shortcuts, including Undo and Delete.
         if (Keyboard.FocusedElement is TextBox) return;
+        if (Canvas.HandleSelectionKey(e.Key)) { e.Handled = true; return; }
         bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control), shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
         if (session.InTransaction) return;
         if (!ctrl && Canvas.IsSelectionTool && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
@@ -277,7 +278,7 @@ public partial class MainWindow : Window
                 case Key.V: ToolPicker.SelectedIndex = 0; break; case Key.B: ToolPicker.SelectedIndex = 1; break;
                 case Key.E: ToolPicker.SelectedIndex = 2; break; case Key.H: ToolPicker.SelectedIndex = 3; break;
                 case Key.M: ToolPicker.SelectedIndex = shift ? 5 : 4; break;
-                case Key.L: ToolPicker.SelectedIndex = 6; break;
+                case Key.L: ToolPicker.SelectedIndex = shift ? 7 : 6; break;
                 case Key.Delete: if (session.Document.Selection is not null) ClearSelectionPixels(null, e); else DeleteLayer(null, e); break; default: return;
             }
         }

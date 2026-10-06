@@ -8,7 +8,7 @@ using SkiaSharp.Views.WPF;
 
 namespace Compositor.App;
 
-public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection }
+public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection }
 public sealed class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
@@ -32,8 +32,12 @@ public sealed class EditorCanvas : SKElement, IDisposable
     private bool movingSelection, constrainArmed;
     private DocumentSelection? drawnSelection;
     private readonly List<PointD> lassoPoints = [];
+    private PointD? polygonCursor;
+    private bool releasingGestureCapture;
+    private bool IsLassoTool => Tool is EditorTool.FreehandSelection or EditorTool.PolygonSelection;
+    internal bool PolygonActive => Tool == EditorTool.PolygonSelection && selectionStart is not null && !movingSelection;
     public bool SelectionFromCenter { get; set; }
-    public bool IsSelectionTool => Tool is EditorTool.RectangleSelection or EditorTool.EllipseSelection or EditorTool.FreehandSelection;
+    public bool IsSelectionTool => Tool is EditorTool.RectangleSelection or EditorTool.EllipseSelection or EditorTool.FreehandSelection or EditorTool.PolygonSelection;
     private static double Whole(double n) => Math.Round(n, MidpointRounding.AwayFromZero);
     public SelectionMode SelectionMode { get; set; }
     public bool SelectionAntialiased { get; set; } = true;
@@ -42,7 +46,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     {
         PaintSurface += Paint;
         Loaded += (_, _) => Fit();
-        LostMouseCapture += (_, _) => CancelInteraction();
+        LostMouseCapture += (_, _) => { if (!releasingGestureCapture) CancelInteraction(); };
         Unloaded += (_, _) => { CancelInteraction(); Dispose(); };
     }
     public void Fit()
@@ -73,8 +77,8 @@ public sealed class EditorCanvas : SKElement, IDisposable
         base.OnMouseDown(e); Focus();
         try
         {
-            if (!BeginInteraction(e.ChangedButton, e.GetPosition(this))) return;
-            if (!CaptureMouse()) CancelInteraction();
+            if (!BeginInteraction(e.ChangedButton, e.GetPosition(this), e.ClickCount)) return;
+            if (HasInteraction && !CaptureMouse()) CancelInteraction();
             e.Handled = true;
         }
         catch (Exception error) { CancelInteraction(); ReportError?.Invoke(error.Message); }
@@ -91,13 +95,21 @@ public sealed class EditorCanvas : SKElement, IDisposable
         try
         {
             if (!FinishInteraction(e.ChangedButton, e.GetPosition(this))) return;
-            ReleaseMouseCapture(); e.Handled = true;
+            ReleaseGestureCapture(); e.Handled = true;
         }
         catch (Exception error) { CancelInteraction(); ReportError?.Invoke(error.Message); }
     }
     // These routes are also exercised by the hidden WPF integration check.
-    internal bool BeginInteraction(MouseButton button, Point point)
+    internal bool BeginInteraction(MouseButton button, Point point, int clickCount = 1)
     {
+        if (PolygonActive)
+        {
+            if (button != MouseButton.Left || gestureButton is not null) return false;
+            var p = DocumentPoint(point);
+            if (clickCount >= 2 || (lassoPoints.Count >= 3 && double.Hypot(p.X - lassoPoints[0].X, p.Y - lassoPoints[0].Y) * Zoom <= 8))
+            { EndPointer(true); ReleaseGestureCapture(); return true; }
+            AppendLassoPoint(p); polygonCursor = p; gestureButton = button; InvalidateVisual(); return true;
+        }
         if (Session is null || HasInteraction || Session.InTransaction) return false;
         if (button == MouseButton.Middle || (button == MouseButton.Left && Tool == EditorTool.Hand))
         {
@@ -121,13 +133,45 @@ public sealed class EditorCanvas : SKElement, IDisposable
         if (gestureButton != button) return false;
         MoveInteraction(point);
         if (panStart is not null) { panStart = null; gestureButton = null; }
+        else if (PolygonActive) gestureButton = null;
         else EndPointer(true);
         return true;
+    }
+    internal void ReleaseGestureCapture()
+    {
+        releasingGestureCapture = true;
+        try { if (IsMouseCaptured) ReleaseMouseCapture(); }
+        finally { releasingGestureCapture = false; }
+    }
+    private void AppendLassoPoint(PointD point)
+    {
+        if (!double.IsFinite(point.X) || !double.IsFinite(point.Y)) throw new ArgumentException("Invalid lasso point.");
+        if (lassoPoints.Count > 0 && double.Hypot(point.X - lassoPoints[^1].X, point.Y - lassoPoints[^1].Y) < .25) return;
+        if (lassoPoints.Count >= 100_000) throw new InvalidOperationException("The selection outline is too complex.");
+        lassoPoints.Add(point); drawnSelection = SelectionGeometry.Polygon(lassoPoints, SelectionAntialiased);
+    }
+    internal bool HandleSelectionKey(Key key)
+    {
+        if (!PolygonActive || key is not (Key.Enter or Key.Back or Key.Delete or Key.Escape)) return false;
+        try
+        {
+            if (key == Key.Escape) CancelInteraction();
+            else if (key == Key.Enter) EndPointer(true);
+            else
+            {
+                lassoPoints.RemoveAt(lassoPoints.Count - 1);
+                if (lassoPoints.Count == 0) CancelInteraction();
+                else { drawnSelection = SelectionGeometry.Polygon(lassoPoints, SelectionAntialiased); InvalidateVisual(); }
+            }
+            if (PolygonActive) gestureButton = null;
+            ReleaseGestureCapture(); return true;
+        }
+        catch (Exception error) { CancelInteraction(); ReportError?.Invoke(error.Message); return true; }
     }
     public void CancelInteraction()
     {
         bool editing = originalLayer is not null || selectionStart is not null;
-        selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear();
+        selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear(); polygonCursor = null;
         originalLayer = null; groupMoveDocument = null; stroke = null; maskStroke = null; gestureButton = null;
         if (panStart is not null) { panX = panOrigin.X; panY = panOrigin.Y; panStart = null; }
         if (editing && Session?.InTransaction == true) Session.Cancel();
@@ -143,8 +187,9 @@ public sealed class EditorCanvas : SKElement, IDisposable
             constrainArmed = !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
             gestureSelectionMode = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) ? SelectionMode.Subtract : Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? SelectionMode.Add : SelectionMode;
             movingSelection = gestureSelectionMode == SelectionMode.Replace && selectionStart.Selection is { IsEmpty: false } selected && SelectionGeometry.Contains(selected, point);
-            anchor = movingSelection || Tool == EditorTool.FreehandSelection ? point : new(Whole(point.X), Whole(point.Y));
-            lassoPoints.Clear(); drawnSelection = null;
+            anchor = movingSelection || IsLassoTool ? point : new(Whole(point.X), Whole(point.Y));
+            lassoPoints.Clear(); drawnSelection = null; polygonCursor = null;
+            if (Tool == EditorTool.PolygonSelection && !movingSelection) AppendLassoPoint(point);
             Session.Begin(); MovePointer(point); return;
         }
         if (Session.ActiveLayer is not { } layer || Tool == EditorTool.Hand) return;
@@ -177,12 +222,8 @@ public sealed class EditorCanvas : SKElement, IDisposable
                 Session.Preview(dx == 0 && dy == 0 ? start : start with { Selection = SelectionGeometry.Move(start.Selection!, dx, dy) });
                 return;
             }
-            if (Tool == EditorTool.FreehandSelection)
-            {
-                if (lassoPoints.Count > 0 && double.Hypot(point.X - lassoPoints[^1].X, point.Y - lassoPoints[^1].Y) < .25) return;
-                if (lassoPoints.Count >= 100_000) throw new InvalidOperationException("The selection outline is too complex.");
-                lassoPoints.Add(point); drawnSelection = SelectionGeometry.Polygon(lassoPoints, SelectionAntialiased);
-            }
+            if (PolygonActive) { polygonCursor = point; InvalidateVisual(); return; }
+            if (Tool == EditorTool.FreehandSelection) AppendLassoPoint(point);
             else
             {
                 double width = Whole(point.X) - anchor.X, height = Whole(point.Y) - anchor.Y;
@@ -193,7 +234,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
                     SelectionFromCenter ? width * 2 : width, SelectionFromCenter ? height * 2 : height, Tool == EditorTool.EllipseSelection, SelectionAntialiased);
             }
             if (Tool == EditorTool.FreehandSelection) { InvalidateVisual(); return; }
-            Session.Preview(drawnSelection.IsEmpty ? start : start with { Selection = SelectionGeometry.Combine(start.Selection, drawnSelection, gestureSelectionMode, start.Width, start.Height) });
+            Session.Preview(drawnSelection is null || drawnSelection.IsEmpty ? start : start with { Selection = SelectionGeometry.Combine(start.Selection, drawnSelection, gestureSelectionMode, start.Width, start.Height) });
             return;
         }
         if (originalLayer is null) return;
@@ -218,13 +259,13 @@ public sealed class EditorCanvas : SKElement, IDisposable
     }
     public void EndPointer(bool commit)
     {
-        if (commit && selectionStart is { } lassoStart && !movingSelection && Tool == EditorTool.FreehandSelection && drawnSelection is { IsEmpty: false } shape)
+        if (commit && selectionStart is { } lassoStart && !movingSelection && IsLassoTool && drawnSelection is { IsEmpty: false } shape)
             Session.Preview(lassoStart with { Selection = SelectionGeometry.Combine(lassoStart.Selection, shape, gestureSelectionMode, lassoStart.Width, lassoStart.Height) });
         if (commit && selectionStart is { } start && gestureSelectionMode == SelectionMode.Replace &&
             (movingSelection ? ReferenceEquals(start, Session.Document) : drawnSelection?.IsEmpty != false))
             Session.Preview(start with { Selection = null });
         bool editing = originalLayer is not null || selectionStart is not null;
-        selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear();
+        selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear(); polygonCursor = null;
         stroke = null; maskStroke = null; originalLayer = null; groupMoveDocument = null; gestureButton = null;
         if (editing) { if (commit) Session.Commit(); else Session.Cancel(); }
         InvalidateVisual();
@@ -269,9 +310,10 @@ public sealed class EditorCanvas : SKElement, IDisposable
             using var black = new SKPaint { Color = SKColors.Black, Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true, PathEffect = dash };
             c.Save(); c.ClipRect(new(0, 0, doc.Width, doc.Height)); c.DrawPath(path, white); c.DrawPath(path, black); c.Restore();
         }
-        if (selectionStart is not null && !movingSelection && Tool == EditorTool.FreehandSelection && lassoPoints.Count > 1)
+        if (selectionStart is not null && !movingSelection && IsLassoTool && lassoPoints.Count > 0)
         {
             using var builder = new SKPathBuilder(); builder.AddPoly(lassoPoints.Select(p => new SKPoint((float)p.X, (float)p.Y)).ToArray(), false);
+            if (PolygonActive && polygonCursor is { } cursor) builder.LineTo((float)cursor.X, (float)cursor.Y);
             using var path = builder.Detach();
             using var under = new SKPaint { Color = SKColors.Black, Style = SKPaintStyle.Stroke, StrokeWidth = (float)(2 / Zoom), IsAntialias = true };
             using var line = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };

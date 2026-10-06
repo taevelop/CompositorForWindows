@@ -113,10 +113,49 @@ public partial class MainWindow
         var racingEditor=new SelectionModifyWindow(session,SelectionModification.Feather);
         racingEditor.SetAmount(100);racingEditor.SetAmount(2);var lastPreview=racingEditor.PendingPreview;
         racingEditor.CancelEdit();racingEditor.Close();await lastPreview;
-        Check(ReferenceEquals(identitySource,session.Document)&&!session.InTransaction,"Late preview restored a cancelled edit.");        session.Load(painted);ToolPicker.SelectedIndex=4;Canvas.Fit();UpdateLayout();
+        Check(ReferenceEquals(identitySource,session.Document)&&!session.InTransaction,"Late preview restored a cancelled edit.");        session.Load(original);Canvas.ActualPixels();ToolPicker.SelectedIndex=7;Canvas.Focus();
+        void PolygonClick(double x,double y)
+        {
+            var p=new Point(x+30,y+30);
+            Check(Canvas.BeginInteraction(MouseButton.Left,p),"Polygon click rejected.");
+            Check(Canvas.CaptureMouse(),"Polygon mouse capture failed.");
+            Check(Canvas.FinishInteraction(MouseButton.Left,p),"Polygon mouse release failed.");
+            Canvas.ReleaseGestureCapture();
+            Check(Canvas.PolygonActive&&session.InTransaction&&!Canvas.IsMouseCaptured,"Mouse release ended polygon draft or retained capture.");
+        }
+        PolygonClick(5,5);PolygonClick(45,5);PolygonClick(5,45);
+        Canvas.MoveInteraction(new Point(90,90));
+        Check(ReferenceEquals(original,session.Document)&&session.UndoCount==0,"Polygon draft edited committed selection.");
+        Check(!Canvas.BeginInteraction(MouseButton.Right,new Point(80,80)),"Foreign mouse button added a vertex.");
+        Check(Canvas.HandleSelectionKey(Key.Back),"Backspace did not remove a vertex.");
+        PolygonClick(45,45);Check(Canvas.HandleSelectionKey(Key.Enter),"Enter did not close polygon.");
+        Check(!Canvas.HasInteraction&&!session.InTransaction&&session.UndoCount==1,"Polygon left interaction open.");
+        Check(SelectionGeometry.Contains(session.Document.Selection!,new(35,15))&&!SelectionGeometry.Contains(session.Document.Selection!,new(10,40)),"Polygon corners or Backspace incorrect.");
+        var polygon=session.Document;session.Undo();Check(ReferenceEquals(original,session.Document),"Polygon Undo failed.");
+        session.Redo();Check(ReferenceEquals(polygon,session.Document),"Polygon Redo failed.");
+        session.Load(original);PolygonClick(5,5);PolygonClick(45,5);PolygonClick(5,45);
+        Check(Canvas.BeginInteraction(MouseButton.Left,new Point(35.5,35.5))&&!Canvas.HasInteraction,"Click near first vertex did not close.");
+        Check(SelectionGeometry.Contains(session.Document.Selection!,new(10,10)),"Near-origin closure lost shape.");
+        session.Load(original);PolygonClick(5,5);PolygonClick(45,5);PolygonClick(5,45);
+        Check(Canvas.BeginInteraction(MouseButton.Left,new Point(90,90),2)&&!Canvas.HasInteraction,"Double-click did not close.");
+        Check(!SelectionGeometry.Contains(session.Document.Selection!,new(40,40)),"Double-click added an unwanted final vertex.");
+        session.Load(original);PolygonClick(5,5);Canvas.HandleSelectionKey(Key.Delete);
+        Check(!Canvas.HasInteraction&&!session.InTransaction&&ReferenceEquals(original,session.Document),"Deleting final vertex did not cancel.");
+        PolygonClick(5,5);PolygonClick(45,5);Canvas.HandleSelectionKey(Key.Escape);
+        Check(!Canvas.HasInteraction&&session.UndoCount==0,"Esc added history.");
+        PolygonClick(5,5);Check(Canvas.CaptureMouse(),"Capture-loss setup failed.");Canvas.ReleaseMouseCapture();
+        Check(!Canvas.HasInteraction&&!session.InTransaction,"External capture loss did not cancel polygon.");
+        PolygonClick(5,5);
+        Check(Canvas.BeginInteraction(MouseButton.Left,new Point(75,35)),"Held-click setup failed.");
+        Check(Canvas.CaptureMouse(),"Held-click capture failed.");
+        Canvas.HandleSelectionKey(Key.Back);
+        Check(!Canvas.IsMouseCaptured&&Canvas.PolygonActive,"Backspace during press retained capture.");
+        PolygonClick(45,5);Canvas.HandleSelectionKey(Key.Escape);
+        PolygonClick(5,5);ToolPicker.SelectedIndex=1;
+        Check(!Canvas.HasInteraction&&!session.InTransaction,"Tool switch did not cancel polygon.");        session.Load(painted);ToolPicker.SelectedIndex=4;Canvas.Fit();UpdateLayout();
         var bitmap=new RenderTargetBitmap((int)ActualWidth,(int)ActualHeight,96,96,PixelFormats.Pbgra32);bitmap.Render(this);
         var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(bitmap));using(var file=File.Create(Path.ChangeExtension(path,".png")))png.Save(file);
         ToolPicker.SelectedIndex=1;
-        File.WriteAllText(path,JsonSerializer.Serialize(new{passed=true,checks=new[]{"rectangle/ellipse/center/snap","freehand lasso","outline move/nudge/click deselect","feather/expand/contract preview/compare/apply/cancel","hole subtraction","button ownership/cancel","single Undo/Redo","brush clipping","clear/Undo","basic adjustment","explicit empty","select all/invert/deselect"}}));
+        File.WriteAllText(path,JsonSerializer.Serialize(new{passed=true,checks=new[]{"rectangle/ellipse/center/snap","freehand/polygonal lasso","polygon capture/Enter/Backspace/Esc/double-click/near-origin/tool-switch","outline move/nudge/click deselect","feather/expand/contract preview/compare/apply/cancel","hole subtraction","button ownership/cancel","single Undo/Redo","brush clipping","clear/Undo","basic adjustment","explicit empty","select all/invert/deselect"}}));
     }
 }
