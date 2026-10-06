@@ -20,6 +20,9 @@ public partial class MainWindow
     });
     private void AddColorBalance(object sender,RoutedEventArgs e)=>OpenExtended(false,true);
     private void EditColorBalance(object sender,RoutedEventArgs e)=>OpenExtended(false,false);
+    private void AddHueSaturation(object sender,RoutedEventArgs e)=>OpenHueSaturation(true);
+    private void EditHueSaturation(object sender,RoutedEventArgs e)=>OpenHueSaturation(false);
+    private void OpenHueSaturation(bool create)=>Safe(()=>{var dialog=new HueSaturationWindow(session,create){Owner=this};try{dialog.ShowDialog();}finally{dialog.CancelEdit();Refresh();Canvas.Focus();}});
     private void AddGradientMap(object sender,RoutedEventArgs e)=>OpenGradientMap(true);
     private void EditGradientMap(object sender,RoutedEventArgs e)=>OpenGradientMap(false);
     private void OpenGradientMap(bool create)=>Safe(()=>{var dialog=new GradientMapWindow(session,create){Owner=this};try{dialog.ShowDialog();}finally{dialog.CancelEdit();Refresh();Canvas.Focus();}});

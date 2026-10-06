@@ -6,7 +6,7 @@ namespace Compositor.Imaging;
 
 internal static class AdjustmentJson
 {
-    internal sealed record Parsed(ExposureAdjustment? Exposure, LevelsAdjustment? Levels, CurvesAdjustment? Curves = null, bool Invert = false, BlackWhiteAdjustment? BlackWhite = null, ColorBalanceAdjustment? ColorBalance = null, GrainAdjustment? Grain = null, GradientMapAdjustment? GradientMap = null);
+    internal sealed record Parsed(ExposureAdjustment? Exposure, LevelsAdjustment? Levels, CurvesAdjustment? Curves = null, bool Invert = false, BlackWhiteAdjustment? BlackWhite = null, ColorBalanceAdjustment? ColorBalance = null, GrainAdjustment? Grain = null, GradientMapAdjustment? GradientMap = null, HueSaturationLayerAdjustment? HueSaturation = null);
     // Swift synthesized Codable requires these nonoptional fields even for Exposure.
     private const string Defaults = """
         {"kind":"Exposure","hue":0,"saturation":0,"lightness":0,"colorize":false,
@@ -25,13 +25,14 @@ internal static class AdjustmentJson
         CheckDuplicates(node);
         if (node.ValueKind != JsonValueKind.Object) throw new InvalidDataException("Invalid adjustment object.");
         string? kind = node.TryGetProperty("kind", out var kindNode) ? kindNode.GetString() : null;
-        if (kind is not ("Exposure" or "Levels" or "Curves" or "Invert" or "Black & White" or "Color Balance" or "Grain" or "Gradient Map"))
+        if (kind is not ("Exposure" or "Levels" or "Curves" or "Invert" or "Black & White" or "Color Balance" or "Grain" or "Gradient Map" or "Hue/Saturation"))
             throw new NotSupportedException("This adjustment kind is not supported. Nothing was opened or changed.");
         bool exposure = kind == "Exposure";
         var defaults = JsonNode.Parse(Defaults)!.AsObject(); var seen = new HashSet<string>();
         foreach (var field in node.EnumerateObject())
         {
             if (!seen.Add(field.Name)) throw new InvalidDataException("Duplicate adjustment field.");
+            if (kind == "Hue/Saturation" && field.Name is "hue" or "saturation" or "lightness" or "colorize" or "hsvSettings") continue;
             if (field.Name == "kind" || (exposure && field.Name == "exposureSettings") || (kind == "Levels" && field.Name == "levels") || (kind == "Curves" && field.Name == "curves") || (kind == "Black & White" && field.Name == "blackWhiteSettings") || (kind == "Color Balance" && field.Name == "colorBalanceSettings") || (kind == "Grain" && field.Name == "grainSettings") || (kind == "Gradient Map" && field.Name == "gradientMapSettings")) continue;
             if (field.Name == "exposureSettings")
             {
@@ -50,6 +51,7 @@ internal static class AdjustmentJson
             }
             else throw new NotSupportedException($"Unknown adjustment field: {field.Name}.");
         }
+        if (kind == "Hue/Saturation") return new(null,null,HueSaturation:HueSaturationJson.Read(node));
         if (kind == "Gradient Map") return new(null,null,GradientMap:node.TryGetProperty("gradientMapSettings",out var gm)&&gm.ValueKind!=JsonValueKind.Null?ReadGradientMap(gm):new());
         if (kind == "Color Balance") return new(null,null,ColorBalance:node.TryGetProperty("colorBalanceSettings",out var cb)&&cb.ValueKind!=JsonValueKind.Null?ReadColorBalance(cb):new());
         if (kind == "Grain") return new(null,null,Grain:node.TryGetProperty("grainSettings",out var gr)&&gr.ValueKind!=JsonValueKind.Null?ReadGrain(gr):new());
@@ -58,6 +60,10 @@ internal static class AdjustmentJson
         if (kind == "Levels") return new(null, LevelsJson.Read(node.GetProperty("levels")));
         if (kind == "Curves") return new(null, null, CurvesJson.Read(node.GetProperty("curves")));
         return new(node.TryGetProperty("exposureSettings", out var settings) && settings.ValueKind != JsonValueKind.Null ? ReadExposure(settings) : new(), null);
+    }
+    public static JsonObject Write(HueSaturationLayerAdjustment s)
+    {
+        var result=JsonNode.Parse(Defaults)!.AsObject(); HueSaturationJson.WriteTo(result,s); return result;
     }
     private static GradientMapAdjustment ReadGradientMap(JsonElement s)
     {

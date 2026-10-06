@@ -14,6 +14,7 @@ public partial class MainWindow
     {
         RefreshEffectsControls();
         EditColorBalanceMenu.IsEnabled=session.ActiveLayer?.ColorBalance is not null; EditColorBalanceButton.Visibility=EditColorBalanceMenu.IsEnabled?Visibility.Visible:Visibility.Collapsed;
+        EditHueSaturationMenu.IsEnabled=session.ActiveLayer?.HueSaturation is not null; EditHueSaturationButton.Visibility=EditHueSaturationMenu.IsEnabled?Visibility.Visible:Visibility.Collapsed;
         EditGradientMapMenu.IsEnabled=session.ActiveLayer?.GradientMap is not null; EditGradientMapButton.Visibility=EditGradientMapMenu.IsEnabled?Visibility.Visible:Visibility.Collapsed;
         EditGrainMenu.IsEnabled=session.ActiveLayer?.Grain is not null; EditGrainButton.Visibility=EditGrainMenu.IsEnabled?Visibility.Visible:Visibility.Collapsed;
         AdjustColorsMenu.IsEnabled = AdjustColorsButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false } && !session.EditMask;
