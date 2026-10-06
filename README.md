@@ -127,4 +127,4 @@ Exposure 구현·파일 호환 범위·성능은 [Exposure 검증 문서](docs/e
 
 [색상 오버레이 검증 문서](docs/color-overlay.md)에 적용 순서·캐시·호환 범위·4K/브러시 성능을 정리했습니다. `build.ps1 -Test`는 `artifacts/ui-smoke.overlay.json`도 생성합니다.
 
-후속 순서는 레이어 효과 확대(그림자부터) → 제한적 PSD 가져오기입니다. 각 단계는 저장 규격과 회귀 테스트를 함께 확장해야 합니다.
+현재 우선순위는 **핵심 MVP 완료 검증**입니다. `powershell -NoProfile -ExecutionPolicy Bypass -File verify-mvp.ps1`로 회귀·실제 저장 프로세스 중단·1,200회 반복 편집·4K 성능·복사한 배포본 WPF 검사를 실행합니다. 최신 결과와 실제 Mac·마우스·다중 DPI·별도 Windows PC의 잔여 절차는 [MVP 완료 판정](docs/mvp-acceptance.md)에 있습니다. 이 실기 검증을 완료한 뒤 그림자 등 효과 확대와 제한적 PSD 가져오기를 진행합니다.
