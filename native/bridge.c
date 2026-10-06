@@ -66,3 +66,24 @@ __declspec(dllexport) void compositor_grain(uint8_t *p,int32_t w,int32_t h,doubl
 __declspec(dllexport) void compositor_gradient_map(uint8_t *p, int32_t count, const uint8_t *table) {
     adjust_gradient_map(p,(size_t)count,1,(size_t)count*4,table);
 }
+// 33x33x33 straight RGBA cube, red fastest, matching HueSaturation.swift.
+// Sampling is explicitly trilinear on CPU; alpha is preserved and applied once.
+__declspec(dllexport) void compositor_hue_cube(uint8_t *p, int32_t count, const float *cube) {
+    for (int32_t n=0;n<count;++n,p+=4) {
+        unsigned a=p[3]; if (!a) continue;
+        int lo[3], hi[3]; double t[3];
+        for (int c=0;c<3;++c) {
+            double x=fmin(32.0,(double)p[c]*32.0/a);
+            lo[c]=(int)x; hi[c]=lo[c]<32?lo[c]+1:32; t[c]=x-lo[c];
+        }
+        for (int c=0;c<3;++c) {
+            double sum=0;
+            for (int z=0;z<2;++z) for (int y=0;y<2;++y) for (int x=0;x<2;++x) {
+                int r=x?hi[0]:lo[0], g=y?hi[1]:lo[1], b=z?hi[2]:lo[2];
+                double weight=(x?t[0]:1-t[0])*(y?t[1]:1-t[1])*(z?t[2]:1-t[2]);
+                sum+=cube[((b*33+g)*33+r)*4+c]*weight;
+            }
+            p[c]=(uint8_t)fmin((double)a,fmax(0,floor(sum*a+0.5)));
+        }
+    }
+}
