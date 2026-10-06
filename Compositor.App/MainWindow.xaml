@@ -15,6 +15,12 @@
           <Separator/><MenuItem Header="Export _PNG…" Click="ExportPng"/><MenuItem Header="Export _JPEG…" Click="ExportJpeg"/>
         </MenuItem>
         <MenuItem Header="_Edit"><MenuItem x:Name="UndoMenu" Header="_Undo" InputGestureText="Ctrl+Z" Click="Undo"/><MenuItem x:Name="RedoMenu" Header="_Redo" InputGestureText="Ctrl+Shift+Z" Click="Redo"/></MenuItem>
+        <MenuItem Header="_Select">
+          <MenuItem Header="Select all" InputGestureText="Ctrl+A" Click="SelectAll"/>
+          <MenuItem Header="Deselect" InputGestureText="Ctrl+D" Click="Deselect"/>
+          <MenuItem Header="Invert selection" Click="InvertSelection"/>
+          <Separator/><MenuItem Header="Clear selected pixels" InputGestureText="Delete" Click="ClearSelectionPixels"/>
+        </MenuItem>
         <MenuItem Header="_Image">
           <MenuItem x:Name="NewAdjustmentMenu" Header="New adjustment layer">
             <MenuItem Header="Hue / Saturation…" Click="AddHueSaturation"/>
@@ -72,6 +78,26 @@
       </StackPanel>
       <StackPanel x:Name="MaskOptions" Width="210" Visibility="Collapsed"><DockPanel><TextBlock Text="Mask gray"/><TextBox x:Name="MaskGray" Text="100" Width="45" Padding="4,2" IsEnabled="False" AutomationProperties.Name="Mask gray"/></DockPanel><DockPanel><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="Black" Click="MaskBlack" Style="{StaticResource CompactButton}"/><Button Content="White" Click="MaskWhite" Style="{StaticResource CompactButton}"/></StackPanel><Slider x:Name="MaskSlider" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="100" Value="100" AutomationProperties.Name="Mask gray slider"/></DockPanel></StackPanel>
      </WrapPanel>
+     <StackPanel x:Name="SelectionOptions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+      <StackPanel.Resources>
+       <Style TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{StaticResource Ink}"/><Setter Property="Padding" Value="9,5"/>
+        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
+         <Border x:Name="ModeFrame" Background="#2D3138" BorderBrush="{StaticResource Divider}" BorderThickness="1" CornerRadius="4" Padding="{TemplateBinding Padding}"><ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"/></Border>
+         <ControlTemplate.Triggers>
+          <Trigger Property="IsChecked" Value="True"><Setter TargetName="ModeFrame" Property="Background" Value="{StaticResource AccentMuted}"/><Setter TargetName="ModeFrame" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ModeFrame" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="ModeFrame" Property="BorderBrush" Value="{StaticResource Ink}"/></Trigger>
+         </ControlTemplate.Triggers>
+        </ControlTemplate></Setter.Value></Setter>
+       </Style>
+      </StackPanel.Resources>
+      <RadioButton Content="New" GroupName="SelectionMode" Tag="0" IsChecked="True" Checked="SelectionModeChanged" Margin="4,0,12,0"/>
+      <RadioButton Content="Add" GroupName="SelectionMode" Tag="1" Checked="SelectionModeChanged" Margin="0,0,12,0"/>
+      <RadioButton Content="Subtract" GroupName="SelectionMode" Tag="2" Checked="SelectionModeChanged" Margin="0,0,18,0"/>
+      <CheckBox x:Name="SelectionAA" Foreground="{StaticResource Ink}" VerticalAlignment="Center" Content="Smooth edges" IsChecked="True" Click="SelectionAAChanged" Margin="0,0,18,0"/>
+      <TextBlock Text="Drag to select · Shift: square · Esc: cancel" Foreground="{StaticResource MutedInk}" FontSize="11" VerticalAlignment="Center"/>
+     </StackPanel>
      <TextBlock Grid.Column="1" VerticalAlignment="Center" x:Name="ToolHint" Foreground="{StaticResource MutedInk}" Margin="6,0" Text="Wheel: zoom · Middle drag: pan" FontSize="11"/>
     </Grid>
    </Border>
@@ -84,6 +110,8 @@
 <ListBoxItem ToolTip="Brush (B)" AutomationProperties.Name="Brush (B)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M8,15 L17,3 Q19,1 21,3 Q23,5 21,7 L12,17 Z M8,15 Q3,14 4,19 Q4,21 2,22 Q10,23 12,17"/></ListBoxItem>
 <ListBoxItem ToolTip="Eraser (E)" AutomationProperties.Name="Eraser (E)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M3,14 L13,3 Q14,2 15,3 L22,10 10,22 5,22 1,18 Z M7,10 L16,18 M10,22 L23,22"/></ListBoxItem>
 <ListBoxItem ToolTip="Hand (H)" AutomationProperties.Name="Hand (H)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M7,12 L7,4 Q7,1 10,3 L10,10 10,2 Q12,0 13,2 L13,10 13,3 Q16,1 16,4 L16,11 17,7 Q20,5 20,9 L20,15 Q20,22 13,23 L10,23 Q7,23 5,19 L2,13 Q1,10 4,11 Z"/></ListBoxItem>
+<ListBoxItem ToolTip="Rectangle selection (M)" AutomationProperties.Name="Rectangle selection (M)"><Rectangle Width="21" Height="17" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeDashArray="2,2"/></ListBoxItem>
+<ListBoxItem ToolTip="Ellipse selection (Shift+M)" AutomationProperties.Name="Ellipse selection (Shift+M)"><Ellipse Width="21" Height="17" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeDashArray="2,2"/></ListBoxItem>
      </ListBox>
      <Border Height="1" Background="{StaticResource Divider}" Margin="10,10"/>
      <Button x:Name="ColorButton" Click="PickBrushColor" Width="38" Height="38" Padding="5" ToolTip="Foreground color" AutomationProperties.Name="Choose foreground color" Style="{StaticResource CompactButton}"><Border x:Name="ColorSwatch" Background="#202020" Width="24" Height="24" BorderBrush="#CCCCCC" BorderThickness="1" CornerRadius="3"/></Button>

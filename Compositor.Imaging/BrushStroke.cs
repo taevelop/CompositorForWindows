@@ -31,7 +31,8 @@ public static class NativePixels
 }
 public sealed class BrushStroke
 {
-    private sealed record Work(byte[] Original, byte[] Output, float[] Coverage);
+    private sealed record Work(byte[] Original, byte[] Output, float[] Coverage, float[]? Selection);
+    private readonly SelectionCoverage? selection;
     private readonly Dictionary<TileKey, Work> work = [];
     private readonly Layer layer;
     private readonly BrushSettings settings;
@@ -39,7 +40,7 @@ public sealed class BrushStroke
     private readonly double[] mapping;
     private PointD? previous;
     public Raster Pixels { get; private set; }
-    public BrushStroke(Layer layer, BrushSettings settings, int canvasWidth, int canvasHeight)
+    public BrushStroke(Layer layer, BrushSettings settings, int canvasWidth, int canvasHeight, SelectionCoverage? selection = null)
     {
         if (!double.IsFinite(settings.Diameter) || settings.Diameter is < 1 or > 2000 ||
             !double.IsFinite(settings.Hardness) || settings.Hardness is < 0 or > 1 ||
@@ -47,6 +48,7 @@ public sealed class BrushStroke
             throw new ArgumentOutOfRangeException(nameof(settings));
         if (layer.IsAdjustment) throw new InvalidOperationException("Adjustment layers have no image pixels. Select Edit mask to paint their coverage.");
         if (layer.IsGroup) throw new InvalidOperationException("Groups cannot be painted directly.");
+        this.selection = selection;
         this.layer = layer; this.settings = settings; this.canvasWidth = canvasWidth; this.canvasHeight = canvasHeight;
         Pixels = layer.Pixels;
         PointD p = layer.Transform.ToDocument(new(0, 0), Pixels.Width, Pixels.Height),
@@ -58,6 +60,7 @@ public sealed class BrushStroke
     {
         if (!double.IsFinite(point.X) || !double.IsFinite(point.Y)) throw new ArgumentException("Invalid pointer.");
         var start = previous ?? point; previous = point;
+        if (selection?.IsEmpty == true) return;
         double radius = settings.Diameter / 2;
         double left = Math.Min(start.X, point.X) - radius, right = Math.Max(start.X, point.X) + radius;
         double top = Math.Min(start.Y, point.Y) - radius, bottom = Math.Max(start.Y, point.Y) + radius;
@@ -76,16 +79,37 @@ public sealed class BrushStroke
             if (!work.TryGetValue(key, out var tile))
             {
                 byte[] original = layer.Pixels.Tiles.TryGetValue(key, out var source) ? source.Bytes.ToArray() : new byte[PixelTile.ByteCount];
-                tile = new(original, (byte[])original.Clone(), new float[256 * 256]); work.Add(key, tile);
+                float[]? cachedWeights = null;
+                if (selection is not null)
+                {
+                    cachedWeights = new float[256 * 256];
+                    for (int y = 0; y < Math.Min(256, Pixels.Height - ty * 256); y++)
+                    for (int x = 0; x < Math.Min(256, Pixels.Width - tx * 256); x++)
+                        cachedWeights[y * 256 + x] = (float)selection.Sample(layer.Transform.ToDocument(new(tx * 256 + x + .5, ty * 256 + y + .5), Pixels.Width, Pixels.Height));
+                }
+                tile = new(original, (byte[])original.Clone(), new float[256 * 256], cachedWeights); work.Add(key, tile);
             }
+            if (tile.Selection is { } empty && empty.AsSpan().IndexOfAnyExcept(0f) < 0) continue;
             int updated = NativePixels.Brush(tile.Output, tile.Original, tile.Coverage, tx * 256, ty * 256,
                 Math.Min(256, Pixels.Width - tx * 256), Math.Min(256, Pixels.Height - ty * 256), mapping,
                 start.X, start.Y, point.X, point.Y, radius, settings.Hardness, settings.Opacity,
                 settings.Red, settings.Green, settings.Blue, settings.Erase ? 1 : 0, canvasWidth, canvasHeight);
             if (updated == 0) continue;
+            byte[] output = tile.Output;
+            if (tile.Selection is { } weights)
+            {
+                // Always blend the accumulated raw stroke against its initial pixels. Do not
+                // multiply feather coverage into the previous preview on every pointer event.
+                output = new byte[PixelTile.ByteCount];
+                for (int p = 0; p < weights.Length; p++)
+                    for (int c = 0; c < 4; c++)
+                        output[p * 4 + c] = (byte)Math.Clamp(Math.Round(tile.Original[p * 4 + c] * (1 - (double)weights[p]) + tile.Output[p * 4 + c] * (double)weights[p], MidpointRounding.AwayFromZero), 0, 255);
+                if (tiles.TryGetValue(key, out var current) && current.Bytes.SequenceEqual(output)) continue;
+                if (!tiles.ContainsKey(key) && output.AsSpan().IndexOfAnyExcept((byte)0) < 0) continue;
+            }
             changed = true;
-            if (tile.Output.AsSpan().IndexOfAnyExcept((byte)0) < 0) tiles.Remove(key);
-            else tiles[key] = new(tile.Output);
+            if (output.AsSpan().IndexOfAnyExcept((byte)0) < 0) tiles.Remove(key);
+            else tiles[key] = new(output);
         }
         if (changed) Pixels = new(Pixels.Width, Pixels.Height, tiles.ToImmutable());
     }

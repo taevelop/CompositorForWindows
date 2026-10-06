@@ -119,5 +119,5 @@ public sealed class EditorSession
         }
     }
     private static bool Equivalent(Document a, Document b) => ReferenceEquals(a, b) ||
-        (a.Id == b.Id && a.Width == b.Width && a.Height == b.Height && a.Resolution == b.Resolution && a.Layers.SequenceEqual(b.Layers));
+        (a.Id == b.Id && a.Width == b.Width && a.Height == b.Height && a.Resolution == b.Resolution && a.Selection == b.Selection && a.Layers.SequenceEqual(b.Layers));
 }

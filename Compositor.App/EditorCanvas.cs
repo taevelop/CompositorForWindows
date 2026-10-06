@@ -8,7 +8,7 @@ using SkiaSharp.Views.WPF;
 
 namespace Compositor.App;
 
-public enum EditorTool { Move, Brush, Eraser, Hand }
+public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection }
 public sealed class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
@@ -18,7 +18,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     public Action<string>? ReportError { get; set; }
     public Action? ViewportChanged { get; set; }
     public double Zoom { get; private set; } = 1;
-    public bool HasInteraction => originalLayer is not null || panStart is not null || gestureButton is not null;
+    public bool HasInteraction => selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
     private double panX = 30, panY = 30;
     private Point? panStart;
     private Point panOrigin;
@@ -27,6 +27,10 @@ public sealed class EditorCanvas : SKElement, IDisposable
     private MaskStroke? maskStroke;
     private Layer? originalLayer;
     private Document? groupMoveDocument;
+    private Document? selectionStart;
+    private SelectionMode gestureSelectionMode;
+    public SelectionMode SelectionMode { get; set; }
+    public bool SelectionAntialiased { get; set; } = true;
     private PointD anchor;
     public EditorCanvas()
     {
@@ -104,7 +108,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
         {
             panX += point.X - previous.X; panY += point.Y - previous.Y; panStart = point; InvalidateVisual(); return;
         }
-        if (originalLayer is not null) MovePointer(DocumentPoint(point));
+        if (originalLayer is not null || selectionStart is not null) MovePointer(DocumentPoint(point));
     }
     internal bool FinishInteraction(MouseButton button, Point point)
     {
@@ -116,7 +120,8 @@ public sealed class EditorCanvas : SKElement, IDisposable
     }
     public void CancelInteraction()
     {
-        bool editing = originalLayer is not null;
+        bool editing = originalLayer is not null || selectionStart is not null;
+        selectionStart = null;
         originalLayer = null; groupMoveDocument = null; stroke = null; maskStroke = null; gestureButton = null;
         if (panStart is not null) { panX = panOrigin.X; panY = panOrigin.Y; panStart = null; }
         if (editing && Session?.InTransaction == true) Session.Cancel();
@@ -125,7 +130,14 @@ public sealed class EditorCanvas : SKElement, IDisposable
     }
     public void BeginPointer(PointD point)
     {
-        if (Session.InTransaction || Session.ActiveLayer is not { } layer || Tool == EditorTool.Hand) return;
+        if (Session.InTransaction) return;
+        if (Tool is EditorTool.RectangleSelection or EditorTool.EllipseSelection)
+        {
+            selectionStart = Session.Document; anchor = point;
+            gestureSelectionMode = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) ? SelectionMode.Subtract : Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? SelectionMode.Add : SelectionMode;
+            Session.Begin(); MovePointer(point); return;
+        }
+        if (Session.ActiveLayer is not { } layer || Tool == EditorTool.Hand) return;
         if (Tool is EditorTool.Brush or EditorTool.Eraser)
         {
             if (layer.IsAdjustment && !Session.EditMask) throw new InvalidOperationException("Adjustment layers have no image pixels. Select Edit mask to paint coverage.");
@@ -137,14 +149,25 @@ public sealed class EditorCanvas : SKElement, IDisposable
         if (Tool is EditorTool.Brush or EditorTool.Eraser)
         {
             var settings = ReadBrush() with { Erase = Tool == EditorTool.Eraser };
-            if (Session.EditMask) maskStroke = new(layer, settings, Session.Document.Width, Session.Document.Height);
-            else stroke = new(layer, settings, Session.Document.Width, Session.Document.Height);
+            var selection = Session.Document.Selection is { } selected ? SelectionCoverage.Create(selected, Session.Document.Width, Session.Document.Height) : null;
+            if (Session.EditMask) maskStroke = new(layer, settings, Session.Document.Width, Session.Document.Height, selection);
+            else stroke = new(layer, settings, Session.Document.Width, Session.Document.Height, selection);
         }
         Session.Begin(); MovePointer(point);
     }
     public void MovePointer(PointD point)
     {
-        if (!Session.InTransaction || originalLayer is null) return;
+        if (!Session.InTransaction) return;
+        if (selectionStart is { } start)
+        {
+            double width = point.X - anchor.X, height = point.Y - anchor.Y;
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            { double size = Math.Max(Math.Abs(width), Math.Abs(height)); width = Math.CopySign(size, width); height = Math.CopySign(size, height); }
+            var shape = SelectionGeometry.Box(anchor.X, anchor.Y, width, height, Tool == EditorTool.EllipseSelection, SelectionAntialiased);
+            Session.Preview(start with { Selection = SelectionGeometry.Combine(start.Selection, shape, gestureSelectionMode, start.Width, start.Height) });
+            return;
+        }
+        if (originalLayer is null) return;
         if (maskStroke is not null)
         {
             maskStroke.Append(point);
@@ -166,7 +189,8 @@ public sealed class EditorCanvas : SKElement, IDisposable
     }
     public void EndPointer(bool commit)
     {
-        bool editing = originalLayer is not null;
+        bool editing = originalLayer is not null || selectionStart is not null;
+        selectionStart = null;
         stroke = null; maskStroke = null; originalLayer = null; groupMoveDocument = null; gestureButton = null;
         if (editing) { if (commit) Session.Commit(); else Session.Cancel(); }
         InvalidateVisual();
@@ -202,6 +226,14 @@ public sealed class EditorCanvas : SKElement, IDisposable
             PointD[] corners = [new(0, 0), new(layer.Pixels.Width, 0), new(layer.Pixels.Width, layer.Pixels.Height), new(0, layer.Pixels.Height)];
             for (int i = 0; i < 4; i++) { var p = outlineTransform.ToDocument(corners[i], layer.Pixels.Width, layer.Pixels.Height); if (i == 0) path.MoveTo((float)p.X, (float)p.Y); else path.LineTo((float)p.X, (float)p.Y); }
             path.Close(); using var outlinePath = path.Detach(); c.DrawPath(outlinePath, outline);
+        }
+        if (doc.Selection is { IsEmpty: false } selected)
+        {
+            using var path = SelectionGeometry.Path(selected);
+            using var white = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };
+            using var dash = SKPathEffect.CreateDash([(float)(4 / Zoom), (float)(4 / Zoom)], 0);
+            using var black = new SKPaint { Color = SKColors.Black, Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true, PathEffect = dash };
+            c.Save(); c.ClipRect(new(0, 0, doc.Width, doc.Height)); c.DrawPath(path, white); c.DrawPath(path, black); c.Restore();
         }
         c.Restore();
     }

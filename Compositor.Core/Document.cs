@@ -58,7 +58,7 @@ public sealed record Layer(Guid Id, string Name, Raster Pixels, LayerTransform T
     public static Layer Blank(string name, int width, int height) =>
         new(Guid.NewGuid(), name, new(width, height), new(0, 0, width, height));
 }
-public sealed record Document(Guid Id, int Width, int Height, double Resolution, ImmutableArray<Layer> Layers)
+public sealed record Document(Guid Id, int Width, int Height, double Resolution, ImmutableArray<Layer> Layers, DocumentSelection? Selection = null)
 {
     public static Document Create(int width, int height)
     {
@@ -70,6 +70,7 @@ public sealed record Document(Guid Id, int Width, int Height, double Resolution,
         Limits.CheckDimensions(Width, Height);
         if (Id == Guid.Empty || !double.IsFinite(Resolution) || Resolution is < 1 or > 9600 || Layers.Length > 10_000)
             throw new InvalidDataException("Invalid document metadata.");
+        Selection?.Validate();
         LayerHierarchy.Validate(Layers);
         var ids = new HashSet<Guid>();
         long pixels = 0, maskPixels = 0;

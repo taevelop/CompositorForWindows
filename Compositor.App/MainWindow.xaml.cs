@@ -62,7 +62,7 @@ public partial class MainWindow : Window
     }
     private void UpdateStatus()
     {
-        if (!busy) Status.Text = $"{session.Document.Width:N0} × {session.Document.Height:N0} px   ·   {session.Document.Layers.Length} layers   ·   {Canvas.Zoom:P0}   ·   {Canvas.Tool}   ·   {(session.EditMask ? "Mask" : "Image")}";
+        if (!busy) Status.Text = $"{session.Document.Width:N0} × {session.Document.Height:N0} px   ·   {session.Document.Layers.Length} layers   ·   {Canvas.Zoom:P0}   ·   {Canvas.Tool}   ·   {(session.EditMask ? "Mask" : "Image")}   ·   {(session.Document.Selection is null ? "No selection" : session.Document.Selection.IsEmpty ? "Empty selection — painting blocked" : "Selection active")}";
     }
     private static string F(double n) => n.ToString("0.###", CultureInfo.InvariantCulture);
     private static double Number(TextBox input)
@@ -264,6 +264,7 @@ public partial class MainWindow : Window
                 case Key.N: NewDocument(null, e); break; case Key.O: OpenProject(null, e); break; case Key.I: ImportImages(null, e); break;
                 case Key.S: if (shift) SaveProjectAs(null, e); else SaveProject(null, e); break;
                 case Key.Z: if (shift) Redo(null, e); else Undo(null, e); break; case Key.Y: Redo(null, e); break;
+                case Key.A: SelectAll(null, e); break; case Key.D: Deselect(null, e); break;
                 case Key.D0: Fit(null, e); break; case Key.D1: ActualPixels(null, e); break; default: return;
             }
         }
@@ -273,7 +274,8 @@ public partial class MainWindow : Window
             {
                 case Key.V: ToolPicker.SelectedIndex = 0; break; case Key.B: ToolPicker.SelectedIndex = 1; break;
                 case Key.E: ToolPicker.SelectedIndex = 2; break; case Key.H: ToolPicker.SelectedIndex = 3; break;
-                case Key.Delete: DeleteLayer(null, e); break; default: return;
+                case Key.M: ToolPicker.SelectedIndex = shift ? 5 : 4; break;
+                case Key.Delete: if (session.Document.Selection is not null) ClearSelectionPixels(null, e); else DeleteLayer(null, e); break; default: return;
             }
         }
         e.Handled = true;
@@ -323,6 +325,7 @@ public partial class MainWindow : Window
             GradientMapSmokeTest(Path.ChangeExtension(screenshot, ".gradient-map.json"));
             HueSaturationSmokeTest(Path.ChangeExtension(screenshot, ".hue-saturation.json"));
             PixelAdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".pixel-adjustments.json"));
+        await SelectionSmokeTest(Path.ChangeExtension(screenshot, ".selection.json"));
         await LevelsSmokeTest(Path.ChangeExtension(screenshot, ".levels.json"));
         await CurvesSmokeTest(Path.ChangeExtension(screenshot, ".curves.json"));
         await ColorOverlaySmokeTest(Path.ChangeExtension(screenshot, ".overlay.json"));

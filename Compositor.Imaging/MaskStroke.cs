@@ -8,14 +8,14 @@ public sealed class MaskStroke
     private readonly BrushStroke stroke;
     private LayerMask current;
     public LayerMask Mask => current;
-    public MaskStroke(Layer layer, BrushSettings settings, int width, int height)
+    public MaskStroke(Layer layer, BrushSettings settings, int width, int height, SelectionCoverage? selection = null)
     {
         current = layer.Mask ?? throw new InvalidOperationException("Add a mask before painting it.");
         if (!current.Enabled) throw new InvalidOperationException("Enable the mask before painting it.");
         // Match the Mac mask brush: its grayscale control supplies the red component.
         byte gray = settings.Erase ? (byte)0 : settings.Red;
         stroke = new(layer with { Pixels = current.EditingPixels(layer.Pixels.Width, layer.Pixels.Height), Mask = null, Exposure = null, Levels = null, Curves = null, Invert = false, BlackWhite = null, ColorBalance = null, Grain = null, GradientMap = null, HueSaturation = null, Effects = null },
-            settings with { Red = gray, Green = gray, Blue = gray, Erase = false }, width, height);
+            settings with { Red = gray, Green = gray, Blue = gray, Erase = false }, width, height, selection);
     }
     public void Append(PointD point)
     {

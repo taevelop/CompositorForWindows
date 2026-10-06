@@ -55,9 +55,11 @@ public partial class MainWindow
     {
         if (BrushOptions is null) return;
         bool painting = ToolPicker.SelectedIndex is 1 or 2;
-        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", _ => "Brush" };
+        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", _ => "Brush" };
         ColorButton.IsEnabled = ToolbarColorButton.IsEnabled = !session.EditMask;
-        ToolHint.Visibility = painting ? Visibility.Collapsed : Visibility.Visible;
+        bool selecting = ToolPicker.SelectedIndex is 4 or 5;
+        SelectionOptions.Visibility = selecting ? Visibility.Visible : Visibility.Collapsed;
+        ToolHint.Visibility = painting || selecting ? Visibility.Collapsed : Visibility.Visible;
         BrushOptions.Visibility = painting ? Visibility.Visible : Visibility.Collapsed;
         ColorOptions.Visibility = !session.EditMask && ToolPicker.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
         MaskOptions.Visibility = session.EditMask && ToolPicker.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;

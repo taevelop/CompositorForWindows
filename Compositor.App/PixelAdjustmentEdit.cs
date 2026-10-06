@@ -9,6 +9,7 @@ internal sealed class PixelAdjustmentEdit : IDisposable
     private readonly EditorSession actual;
     private readonly Document original;
     private readonly Layer source;
+    private readonly SelectionCoverage? selection;
     private Layer? cachedAdjustment;
     private Raster? cachedPixels;
     private bool finished;
@@ -21,6 +22,7 @@ internal sealed class PixelAdjustmentEdit : IDisposable
         if (!LayerHierarchy.Entries(session.Document).First(e => e.Layer.Id == source.Id).Visible)
             throw new InvalidOperationException("Show the layer and its parent groups before adjusting its pixels.");
         actual = session; original = session.Document;
+        selection = original.Selection is null ? null : SelectionCoverage.Create(original.Selection, original.Width, original.Height);
         var document = Document.Create(source.Pixels.Width, source.Pixels.Height);
         document = document.Replace(document.Layers[0] with { Pixels = source.Pixels, Name = source.Name });
         PreviewSession = new(document);
@@ -32,7 +34,8 @@ internal sealed class PixelAdjustmentEdit : IDisposable
         if (adjustment is null) { actual.Preview(original); return; }
         if (cachedAdjustment != adjustment)
         {
-            cachedPixels = PixelAdjustments.Apply(source.Pixels, adjustment);
+            cachedPixels = selection?.IsEmpty == true ? source.Pixels : SelectionPixels.Blend(source.Pixels,
+                PixelAdjustments.Apply(source.Pixels, adjustment), source.Transform, selection);
             cachedAdjustment = adjustment;
         }
         var next = ReferenceEquals(cachedPixels, source.Pixels) ? original : original.Replace(source with { Pixels = cachedPixels! });

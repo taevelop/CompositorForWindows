@@ -84,6 +84,16 @@ public partial class MainWindow
             });edit.Complete();
         }
         Check(session.UndoCount==1,"Retry after render failure did not apply.");
-        File.WriteAllText(path,JsonSerializer.Serialize(new{passed=true,checks=new[]{"nine pixel adjustments","preview/compare/cancel","single Undo/Redo","transform/mask/effects preservation","identity no-op","render-failure recovery"}}));
+        var selected=Source();
+        selected=selected.Replace(selected.Layers[0] with{Transform=new(0,0,64,64)}) with{Selection=SelectionGeometry.Box(0,0,32,64,antialiased:false)};
+        session.Load(selected);Refresh();ApplyPixelAdjustment(new MenuItem{Tag="Invert"},new RoutedEventArgs());
+        var selectedBytes=session.ActiveLayer!.Pixels.ToRgba();
+        Check(selectedBytes[(10*64+10)*4]==50&&selectedBytes[(10*64+40)*4]==130,"Selection did not clip pixel adjustment.");
+        session.Undo();Check(ReferenceEquals(selected,session.Document),"Selection or pixels lost on Undo.");
+        var empty=selected with{Selection=DocumentSelection.Empty};session.Load(empty);Refresh();
+        ApplyPixelAdjustment(new MenuItem{Tag="Invert"},new RoutedEventArgs());
+        Check(ReferenceEquals(empty,session.Document)&&session.UndoCount==0,"Empty selection edited all pixels.");
+
+        File.WriteAllText(path,JsonSerializer.Serialize(new{passed=true,checks=new[]{"nine pixel adjustments","preview/compare/cancel","single Undo/Redo","transform/mask/effects preservation","identity no-op","render-failure recovery","document selection clipping","empty selection no-op"}}));
     }
 }

@@ -9,6 +9,7 @@ public partial class ColorAdjustmentWindow : Window
     private readonly EditorSession session;
     private readonly Document original;
     private readonly Layer layer;
+    private readonly SelectionCoverage? selection;
     private Raster? result;
     private CancellationTokenSource? pending;
     private bool initialized, closed, finished, settingValues;
@@ -21,6 +22,7 @@ public partial class ColorAdjustmentWindow : Window
         if (session.InTransaction || session.EditMask || session.ActiveLayer is not { IsGroup: false, IsAdjustment: false } selected)
             throw new InvalidOperationException("Select an image layer and Edit image before adjusting colors.");
         this.session = session; original = session.Document; layer = selected; result = layer.Pixels;
+        selection = original.Selection is { } selectedArea ? SelectionCoverage.Create(selectedArea, original.Width, original.Height) : null;
         InitializeComponent(); TargetName.Text = layer.Name;
         session.Begin(); initialized = true;
         Closed += (_, _) => CancelEdit();
@@ -45,7 +47,8 @@ public partial class ColorAdjustmentWindow : Window
         try
         {
             if (!immediate) await Task.Delay(180, cancellation.Token);
-            var pixels = await Task.Run(() => ColorAdjustments.Apply(layer.Pixels, settings, cancellation.Token), cancellation.Token);
+            var pixels = await Task.Run(() => selection?.IsEmpty == true ? layer.Pixels : SelectionPixels.Blend(layer.Pixels,
+                ColorAdjustments.Apply(layer.Pixels, settings, cancellation.Token), layer.Transform, selection, cancellation.Token), cancellation.Token);
             if (closed || version != request) return;
             // A full-image edit can exceed the history cap. Never apply a change whose own Undo would be evicted.
             var next = original.Replace(layer with { Pixels = pixels });
