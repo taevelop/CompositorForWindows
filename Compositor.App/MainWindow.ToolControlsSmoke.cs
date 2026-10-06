@@ -27,7 +27,7 @@ public partial class MainWindow
         UpdateLayout();
         var titleOrigin = ToolTitle.TranslatePoint(new Point(), this);
         double canvasTop = Canvas.TranslatePoint(new Point(), this).Y;
-        foreach (int tool in new[] { 0, 1, 2, 3, 4, 5 })
+        foreach (int tool in new[] { 0, 1, 2, 3, 4, 5, 6 })
         {
             ToolPicker.SelectedIndex = tool; UpdateLayout();
             Check((ToolTitle.TranslatePoint(new Point(), this) - titleOrigin).Length < .1, "Tool title moves when switching tools.");
@@ -96,7 +96,7 @@ public partial class MainWindow
         }
 
         var document = session.Document; int undo = session.UndoCount, redo = session.RedoCount;
-        for (int tool = 0; tool < 6; tool++)
+        for (int tool = 0; tool < 7; tool++)
         {
             ToolPicker.SelectedIndex = tool;
             Check((int)Canvas.Tool == tool, "Tool button and canvas disagree.");

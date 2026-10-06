@@ -7,6 +7,21 @@ namespace Compositor.App;
 
 public partial class MainWindow
 {
+    private void SelectionCenterChanged(object sender, RoutedEventArgs e)
+    { Canvas.CancelInteraction(); Canvas.SelectionFromCenter = SelectionCenter.IsChecked == true; }
+    private void NudgeSelection(System.Windows.Input.Key key, int distance) => Safe(() =>
+    {
+        if (session.Document.Selection is not { IsEmpty: false } selected) return;
+        double dx = key == System.Windows.Input.Key.Left ? -distance : key == System.Windows.Input.Key.Right ? distance : 0;
+        double dy = key == System.Windows.Input.Key.Up ? -distance : key == System.Windows.Input.Key.Down ? distance : 0;
+        session.Apply(d => d with { Selection = SelectionGeometry.Move(selected, dx, dy) });
+    });
+    private void ModifySelection(object sender, RoutedEventArgs e) => Safe(() =>
+    {
+        if (sender is not MenuItem { Tag: string tag } || !Enum.TryParse<SelectionModification>(tag, out var operation)) return;
+        var dialog = new SelectionModifyWindow(session, operation) { Owner = this };
+        dialog.ShowDialog(); Canvas.Focus();
+    });
     private void SelectionModeChanged(object sender, RoutedEventArgs e)
     {
         if (Canvas is not null && sender is RadioButton { Tag: string tag })

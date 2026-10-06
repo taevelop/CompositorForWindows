@@ -8,7 +8,7 @@ using SkiaSharp.Views.WPF;
 
 namespace Compositor.App;
 
-public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection }
+public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection }
 public sealed class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
@@ -29,6 +29,12 @@ public sealed class EditorCanvas : SKElement, IDisposable
     private Document? groupMoveDocument;
     private Document? selectionStart;
     private SelectionMode gestureSelectionMode;
+    private bool movingSelection, constrainArmed;
+    private DocumentSelection? drawnSelection;
+    private readonly List<PointD> lassoPoints = [];
+    public bool SelectionFromCenter { get; set; }
+    public bool IsSelectionTool => Tool is EditorTool.RectangleSelection or EditorTool.EllipseSelection or EditorTool.FreehandSelection;
+    private static double Whole(double n) => Math.Round(n, MidpointRounding.AwayFromZero);
     public SelectionMode SelectionMode { get; set; }
     public bool SelectionAntialiased { get; set; } = true;
     private PointD anchor;
@@ -121,7 +127,7 @@ public sealed class EditorCanvas : SKElement, IDisposable
     public void CancelInteraction()
     {
         bool editing = originalLayer is not null || selectionStart is not null;
-        selectionStart = null;
+        selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear();
         originalLayer = null; groupMoveDocument = null; stroke = null; maskStroke = null; gestureButton = null;
         if (panStart is not null) { panX = panOrigin.X; panY = panOrigin.Y; panStart = null; }
         if (editing && Session?.InTransaction == true) Session.Cancel();
@@ -131,10 +137,14 @@ public sealed class EditorCanvas : SKElement, IDisposable
     public void BeginPointer(PointD point)
     {
         if (Session.InTransaction) return;
-        if (Tool is EditorTool.RectangleSelection or EditorTool.EllipseSelection)
+        if (IsSelectionTool)
         {
-            selectionStart = Session.Document; anchor = point;
+            selectionStart = Session.Document;
+            constrainArmed = !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
             gestureSelectionMode = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) ? SelectionMode.Subtract : Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? SelectionMode.Add : SelectionMode;
+            movingSelection = gestureSelectionMode == SelectionMode.Replace && selectionStart.Selection is { IsEmpty: false } selected && SelectionGeometry.Contains(selected, point);
+            anchor = movingSelection || Tool == EditorTool.FreehandSelection ? point : new(Whole(point.X), Whole(point.Y));
+            lassoPoints.Clear(); drawnSelection = null;
             Session.Begin(); MovePointer(point); return;
         }
         if (Session.ActiveLayer is not { } layer || Tool == EditorTool.Hand) return;
@@ -160,11 +170,30 @@ public sealed class EditorCanvas : SKElement, IDisposable
         if (!Session.InTransaction) return;
         if (selectionStart is { } start)
         {
-            double width = point.X - anchor.X, height = point.Y - anchor.Y;
-            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
-            { double size = Math.Max(Math.Abs(width), Math.Abs(height)); width = Math.CopySign(size, width); height = Math.CopySign(size, height); }
-            var shape = SelectionGeometry.Box(anchor.X, anchor.Y, width, height, Tool == EditorTool.EllipseSelection, SelectionAntialiased);
-            Session.Preview(start with { Selection = SelectionGeometry.Combine(start.Selection, shape, gestureSelectionMode, start.Width, start.Height) });
+            if (movingSelection)
+            {
+                double dx = Whole(point.X - anchor.X), dy = Whole(point.Y - anchor.Y);
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) { if (Math.Abs(dx) >= Math.Abs(dy)) dy = 0; else dx = 0; }
+                Session.Preview(dx == 0 && dy == 0 ? start : start with { Selection = SelectionGeometry.Move(start.Selection!, dx, dy) });
+                return;
+            }
+            if (Tool == EditorTool.FreehandSelection)
+            {
+                if (lassoPoints.Count > 0 && double.Hypot(point.X - lassoPoints[^1].X, point.Y - lassoPoints[^1].Y) < .25) return;
+                if (lassoPoints.Count >= 100_000) throw new InvalidOperationException("The selection outline is too complex.");
+                lassoPoints.Add(point); drawnSelection = SelectionGeometry.Polygon(lassoPoints, SelectionAntialiased);
+            }
+            else
+            {
+                double width = Whole(point.X) - anchor.X, height = Whole(point.Y) - anchor.Y;
+                if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) constrainArmed = true;
+                if (constrainArmed && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+                { double size = Math.Max(Math.Abs(width), Math.Abs(height)); width = Math.CopySign(size, width); height = Math.CopySign(size, height); }
+                drawnSelection = SelectionGeometry.Box(SelectionFromCenter ? anchor.X - width : anchor.X, SelectionFromCenter ? anchor.Y - height : anchor.Y,
+                    SelectionFromCenter ? width * 2 : width, SelectionFromCenter ? height * 2 : height, Tool == EditorTool.EllipseSelection, SelectionAntialiased);
+            }
+            if (Tool == EditorTool.FreehandSelection) { InvalidateVisual(); return; }
+            Session.Preview(drawnSelection.IsEmpty ? start : start with { Selection = SelectionGeometry.Combine(start.Selection, drawnSelection, gestureSelectionMode, start.Width, start.Height) });
             return;
         }
         if (originalLayer is null) return;
@@ -189,8 +218,13 @@ public sealed class EditorCanvas : SKElement, IDisposable
     }
     public void EndPointer(bool commit)
     {
+        if (commit && selectionStart is { } lassoStart && !movingSelection && Tool == EditorTool.FreehandSelection && drawnSelection is { IsEmpty: false } shape)
+            Session.Preview(lassoStart with { Selection = SelectionGeometry.Combine(lassoStart.Selection, shape, gestureSelectionMode, lassoStart.Width, lassoStart.Height) });
+        if (commit && selectionStart is { } start && gestureSelectionMode == SelectionMode.Replace &&
+            (movingSelection ? ReferenceEquals(start, Session.Document) : drawnSelection?.IsEmpty != false))
+            Session.Preview(start with { Selection = null });
         bool editing = originalLayer is not null || selectionStart is not null;
-        selectionStart = null;
+        selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear();
         stroke = null; maskStroke = null; originalLayer = null; groupMoveDocument = null; gestureButton = null;
         if (editing) { if (commit) Session.Commit(); else Session.Cancel(); }
         InvalidateVisual();
@@ -234,6 +268,14 @@ public sealed class EditorCanvas : SKElement, IDisposable
             using var dash = SKPathEffect.CreateDash([(float)(4 / Zoom), (float)(4 / Zoom)], 0);
             using var black = new SKPaint { Color = SKColors.Black, Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true, PathEffect = dash };
             c.Save(); c.ClipRect(new(0, 0, doc.Width, doc.Height)); c.DrawPath(path, white); c.DrawPath(path, black); c.Restore();
+        }
+        if (selectionStart is not null && !movingSelection && Tool == EditorTool.FreehandSelection && lassoPoints.Count > 1)
+        {
+            using var builder = new SKPathBuilder(); builder.AddPoly(lassoPoints.Select(p => new SKPoint((float)p.X, (float)p.Y)).ToArray(), false);
+            using var path = builder.Detach();
+            using var under = new SKPaint { Color = SKColors.Black, Style = SKPaintStyle.Stroke, StrokeWidth = (float)(2 / Zoom), IsAntialias = true };
+            using var line = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };
+            c.DrawPath(path, under); c.DrawPath(path, line);
         }
         c.Restore();
     }
