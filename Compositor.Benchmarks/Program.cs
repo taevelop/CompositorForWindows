@@ -17,6 +17,7 @@ if (args.Length > 0 && args[0] == "--soak")
     return;
 }
 
+if (args.Length > 0 && args[0] == "--stroke") { StrokeBenchmark.Run(args.Length > 1 ? args[1] : "stroke-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--shadow") { ShadowBenchmark.Run(args.Length > 1 ? args[1] : "shadow-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--overlay")
 {

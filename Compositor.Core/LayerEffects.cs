@@ -26,7 +26,18 @@ public sealed record ShadowEffect(double Angle = 90, double Distance = 20, doubl
     }
 }
 
-public sealed record LayerEffects(ColorOverlayEffect? ColorOverlay = null, ShadowEffect? Shadow = null)
+public sealed record StrokeEffect(double Size = 4, double Red = 0, double Green = 0, double Blue = 0,
+    double Opacity = 1, bool Inside = false, bool? Enabled = null)
 {
-    public void Validate() { ColorOverlay?.Validate(); Shadow?.Validate(); }
+    public bool IsEnabled => Enabled != false;
+    public void Validate()
+    {
+        new ColorOverlayEffect(Red, Green, Blue, Opacity).Validate();
+        if (!double.IsFinite(Size) || Size is < 0 or > 500) throw new InvalidDataException("Stroke size must be 0..500.");
+    }
+}
+
+public sealed record LayerEffects(ColorOverlayEffect? ColorOverlay = null, ShadowEffect? Shadow = null, StrokeEffect? Stroke = null)
+{
+    public void Validate() { ColorOverlay?.Validate(); Shadow?.Validate(); Stroke?.Validate(); }
 }

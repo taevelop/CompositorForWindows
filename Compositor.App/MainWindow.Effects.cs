@@ -16,8 +16,15 @@ public partial class MainWindow
         try { dialog.ShowDialog(); }
         finally { dialog.CancelEdit(); Refresh(); Canvas.Focus(); }
     });
+    private void EditStroke(object sender, RoutedEventArgs e) => Safe(() =>
+    {
+        var dialog = new StrokeWindow(session) { Owner = this };
+        try { dialog.ShowDialog(); }
+        finally { dialog.CancelEdit(); Refresh(); Canvas.Focus(); }
+    });
     private void RefreshEffectsControls()
     {
+        StrokeMenu.IsEnabled = StrokeButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false };
         ShadowMenu.IsEnabled = ShadowButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false };
         ColorOverlayMenu.IsEnabled = ColorOverlayButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false };
         var overlay = session.ActiveLayer?.Effects?.ColorOverlay;

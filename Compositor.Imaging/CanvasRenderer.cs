@@ -24,7 +24,7 @@ public sealed class CanvasRenderer : IDisposable
     private SKImage? composite;
     public void Draw(SKCanvas canvas, Document document)
     {
-        if (!document.Layers.Any(l => l.Effects?.Shadow is { IsEnabled: true, Opacity: > 0 })) ClearShadowSource();
+        if (!document.Layers.Any(l => HasSurfaceEffects(l))) ClearShadowSource();
         if (document.Layers.Any(l => l.IsAdjustment))
         {
             if (!ReferenceEquals(compositeDocument, document))
@@ -63,9 +63,9 @@ public sealed class CanvasRenderer : IDisposable
             using var paint = new SKPaint { Color = SKColors.White.WithAlpha((byte)Math.Round(entry.Opacity * 255)),
                 BlendMode = Blend(layer.Blend), IsAntialias = false };
             var sampling = new SKSamplingOptions(t.Sampling == Sampling.Nearest ? SKFilterMode.Nearest : SKFilterMode.Linear);
-            if (layer.Effects?.Shadow is { IsEnabled: true, Opacity: > 0 } shadow)
+            if (HasSurfaceEffects(layer))
             {
-                DrawShadowLayer(canvas, layer, shadow, paint, sampling);
+                DrawShadowLayer(canvas, layer, paint, sampling);
                 canvas.Restore(); continue;
             }
             var overlay = layer.Effects?.ColorOverlay is { IsEnabled: true, Opacity: > 0 } effect ? effect : null;
@@ -99,15 +99,21 @@ public sealed class CanvasRenderer : IDisposable
         foreach (var key in cache.Keys.Where(k => !used.Contains(k)).ToArray()) { cache[key].Image.Dispose(); cache.Remove(key); }
     }
 
+    internal static bool HasSurfaceEffects(Layer layer) => layer.Effects?.Shadow is { IsEnabled: true, Opacity: > 0 } ||
+        layer.Effects?.Stroke is { IsEnabled: true, Opacity: > 0, Size: > 0 };
+    private SKImage? strokeImage;
+    private StrokeEffect? cachedStroke;
+    private int strokeInset;
     private Raster? shadowPixels, shadowMask;
     private ColorOverlayEffect? shadowOverlay;
     private SKImage? shadowSource, shadowColored;
     private void ClearShadowSource()
     {
+        strokeImage?.Dispose(); strokeImage = null; cachedStroke = null;
         shadowSource?.Dispose(); shadowColored?.Dispose();
         shadowSource = shadowColored = null; shadowPixels = shadowMask = null; shadowOverlay = null;
     }
-    private void DrawShadowLayer(SKCanvas canvas, Layer layer, ShadowEffect shadow, SKPaint layerPaint, SKSamplingOptions sampling)
+    private void DrawShadowLayer(SKCanvas canvas, Layer layer, SKPaint layerPaint, SKSamplingOptions sampling)
     {
         // A single source image avoids blur seams at tile boundaries. The filter expands beyond
         // the source rectangle; only the document clip limits the result.
@@ -150,15 +156,27 @@ public sealed class CanvasRenderer : IDisposable
             }
             shadowPixels = layer.Pixels; shadowMask = currentMask; shadowOverlay = currentOverlay;
         }
+        var stroke = layer.Effects?.Stroke is { IsEnabled: true, Opacity: > 0, Size: > 0 } st ? st : null;
+        if (cachedStroke != stroke)
+        {
+            strokeImage?.Dispose(); strokeImage = null; cachedStroke = null;
+            if (stroke is not null) strokeImage = StrokeProcessor.Render(shadowSource!, stroke, out strokeInset);
+            cachedStroke = stroke;
+        }
+        canvas.SaveLayer(layerPaint);
+        if (layer.Effects?.Shadow is { IsEnabled: true, Opacity: > 0 } shadow)
+        {
         using var filter = SKImageFilter.CreateDropShadowOnly((float)shadow.OffsetX, (float)shadow.OffsetY,
             (float)(shadow.Blur / 2), (float)(shadow.Blur / 2),
             new SKColor((byte)Math.Round(shadow.Red * 255), (byte)Math.Round(shadow.Green * 255),
                 (byte)Math.Round(shadow.Blue * 255), (byte)Math.Round(shadow.Opacity * 255)));
         using var shadowPaint = new SKPaint { ImageFilter = filter };
         // Composite source + shadow first, then apply layer blend/opacity exactly once.
-        canvas.SaveLayer(layerPaint);
         canvas.DrawImage(shadowSource!, 0, 0, sampling, shadowPaint);
+        }
+        if (stroke is { Inside: false }) canvas.DrawImage(strokeImage!, -strokeInset, -strokeInset, sampling);
         canvas.DrawImage(shadowColored ?? shadowSource!, 0, 0, sampling);
+        if (stroke is { Inside: true }) canvas.DrawImage(strokeImage!, -strokeInset, -strokeInset, sampling);
         canvas.Restore();
     }
 

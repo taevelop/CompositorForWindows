@@ -322,6 +322,7 @@ public partial class MainWindow : Window
         await CurvesSmokeTest(Path.ChangeExtension(screenshot, ".curves.json"));
         await ColorOverlaySmokeTest(Path.ChangeExtension(screenshot, ".overlay.json"));
         ShadowSmokeTest(Path.ChangeExtension(screenshot, ".shadow.json"));
+        StrokeSmokeTest(Path.ChangeExtension(screenshot, ".stroke.json"));
         await ToolControlsSmokeTest(Path.ChangeExtension(screenshot, ".tools.json"));
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         UpdateLayout();
