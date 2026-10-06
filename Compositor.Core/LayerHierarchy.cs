@@ -121,6 +121,44 @@ public static class LayerHierarchy
         var layer = doc.Layers.First(l => l.Id == id); if (layer.ParentId == parent) return doc;
         return Normalize(doc with { Layers = doc.Layers.Remove(layer).Add(layer with { ParentId = parent }) });
     }
+    public static Layer[] SelectedRoots(Document doc, IEnumerable<Guid> selection)
+    {
+        doc.Validate();
+        var selected = selection.ToHashSet(); var byId = doc.Layers.ToDictionary(l => l.Id);
+        if (selected.Any(id => !byId.ContainsKey(id))) throw new InvalidOperationException("Layer no longer exists.");
+        bool IsRoot(Layer layer)
+        {
+            for (var parent = layer.ParentId; parent is {} id; parent = byId[id].ParentId)
+                if (selected.Contains(id)) return false;
+            return true;
+        }
+        return Entries(doc).Select(e => e.Layer).Where(l => selected.Contains(l.Id) && IsRoot(l)).ToArray();
+    }
+    public static Document ReparentSelected(Document doc, IEnumerable<Guid> selection, Guid? parent)
+    {
+        var roots = SelectedRoots(doc, selection);
+        if (roots.Length == 0) return doc;
+        if (roots.Any(l => !CanReparent(doc, l.Id, parent))) throw new InvalidOperationException("A group cannot be moved into itself or its descendants.");
+        // Keep the existing no-op behavior when all selected roots already have this parent.
+        if (roots.All(l => l.ParentId == parent)) return doc;
+        var ids = roots.Select(l => l.Id).ToHashSet();
+        var layers = doc.Layers.Where(l => !ids.Contains(l.Id)).Concat(roots.Select(l => l with { ParentId = parent }));
+        return Normalize(doc with { Layers = layers.ToImmutableArray() });
+    }
+    public static Document MoveSelectedOut(Document doc, IEnumerable<Guid> selection)
+    {
+        var roots = SelectedRoots(doc, selection).Where(l => l.ParentId is not null).ToArray();
+        if (roots.Length == 0) return doc;
+        var byId = doc.Layers.ToDictionary(l => l.Id); var ids = roots.Select(l => l.Id).ToHashSet();
+        var layers = doc.Layers.Where(l => !ids.Contains(l.Id)).ToList();
+        foreach (var siblings in roots.GroupBy(l => l.ParentId!.Value))
+        {
+            var parent = byId[siblings.Key];
+            int index = layers.FindIndex(l => l.Id == parent.Id);
+            layers.InsertRange(index + 1, siblings.Select(l => l with { ParentId = parent.ParentId }));
+        }
+        return Normalize(doc with { Layers = layers.ToImmutableArray() });
+    }
     public static Document Reorder(Document doc, Guid id, int offset)
     {
         var layer = doc.Layers.First(l => l.Id == id); var siblings = doc.Layers.Where(l => l.ParentId == layer.ParentId).ToArray();

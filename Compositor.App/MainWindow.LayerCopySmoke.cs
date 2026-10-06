@@ -31,5 +31,15 @@ public partial class MainWindow
         Check(session.Document.Layers.Single(l=>l.Id==d.Layers[0].Id).ParentId==group.Id,"Multiple grouping flattened selected folder.");
         session.Undo();Check(ReferenceEquals(multiple,session.Document)&&Layers.SelectedItems.Count==2,"Multiple grouping Undo lost selection.");
         session.Redo();Check(session.ActiveLayerId==combined.Id&&Layers.SelectedItems.Count==1,"Multiple grouping Redo lost active group.");
+        var target=Layer.Group("Destination",12,12);var relocation=multiple with{Layers=multiple.Layers.Add(target)};
+        session.Load(relocation,group.Id);Layers.SelectedItems.Add(Layers.Items.Cast<LayerRow>().Single(r=>r.Id==other.Id));
+        Check(!ParentGroup.Items.Cast<ParentOption>().Any(p=>p.Id==group.Id),"Move destination includes another selected group.");
+        ParentGroup.SelectedItem=ParentGroup.Items.Cast<ParentOption>().Single(p=>p.Id==target.Id);
+        MoveToGroup(this,new());
+        Check(session.Document.Layers.Count(l=>l.ParentId==target.Id)==2&&session.SelectedLayerIds.Count==2&&Layers.SelectedItems.Count==2,"Multiple move into group lost roots or selection.");
+        MoveOutOfGroup(this,new());
+        Check(session.Document.Layers.Where(l=>l.ParentId is null).Select(l=>l.Id).SequenceEqual(new[]{target.Id,group.Id,other.Id}),"Move out did not place roots above their parent.");
+        session.Undo();Check(session.Document.Layers.Count(l=>l.ParentId==target.Id)==2&&Layers.SelectedItems.Count==2,"Move out Undo failed.");
+        session.Undo();Check(ReferenceEquals(relocation,session.Document)&&Layers.SelectedItems.Count==2,"Move into group Undo failed.");
     }
 }

@@ -50,13 +50,13 @@ public partial class MainWindow
         var choices = new List<ParentOption> { new(null, "Document root") };
         if (active is not null)
         {
-            var excluded = LayerHierarchy.Subtree(session.Document, active.Id);
+            var excluded = session.SelectedLayerIds.SelectMany(id => LayerHierarchy.Subtree(session.Document, id)).ToHashSet();
             choices.AddRange(LayerHierarchy.Entries(session.Document, topFirst: true).Where(e => e.Layer.IsGroup && !excluded.Contains(e.Layer.Id))
                 .Select(e => new ParentOption(e.Layer.Id, new string(' ', e.Depth * 2) + e.Layer.Name)));
         }
         ParentGroup.ItemsSource = choices; ParentGroup.SelectedItem = choices.FirstOrDefault(p => p.Id == active?.ParentId);
         ParentGroup.IsEnabled = MoveToGroupButton.IsEnabled = active is not null;
-        MoveOutButton.IsEnabled = active?.ParentId is not null;
+        MoveOutButton.IsEnabled = LayerHierarchy.SelectedRoots(session.Document, session.SelectedLayerIds).Any(l => l.ParentId is not null);
     }
     private void ToggleGroup(object sender, RoutedEventArgs e) => Safe(() =>
     {
@@ -93,13 +93,14 @@ public partial class MainWindow
     private void MoveToGroup(object sender, RoutedEventArgs e) => Safe(() =>
     {
         if (session.ActiveLayer is not { } layer || ParentGroup.SelectedItem is not ParentOption parent) return;
-        session.Apply(d => LayerHierarchy.Reparent(d, layer.Id, parent.Id));
+        var selected = session.SelectedLayerIds;
+        session.Apply(d => LayerHierarchy.ReparentSelected(d, selected, parent.Id));
         if (parent.Id is Guid id) collapsedGroups.Remove(id); Refresh();
     });
     private void MoveOutOfGroup(object sender, RoutedEventArgs e) => Safe(() =>
     {
-        if (session.ActiveLayer is not { ParentId: Guid parent } layer) return;
-        var group = session.Document.Layers.First(l => l.Id == parent);
-        session.Apply(d => LayerHierarchy.Reparent(d, layer.Id, group.ParentId)); Refresh();
+        if (session.SelectedLayerIds.Count == 0) return;
+        var selected = session.SelectedLayerIds;
+        session.Apply(d => LayerHierarchy.MoveSelectedOut(d, selected)); Refresh();
     });
 }
