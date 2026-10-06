@@ -159,6 +159,24 @@ public static class LayerHierarchy
         }
         return Normalize(doc with { Layers = layers.ToImmutableArray() });
     }
+
+    /// <summary>Moves selected roots to a list drop slot. Array order is bottom to top.</summary>
+    public static Document PlaceSelected(Document doc, IEnumerable<Guid> selection, Guid? parent, Guid? above = null, bool atBottom = false)
+    {
+        var roots = SelectedRoots(doc, selection);
+        if (roots.Length == 0) return doc;
+        if (above is not null && atBottom) throw new ArgumentException("A drop cannot have both an anchor and a bottom position.");
+        if (roots.Any(l => !CanReparent(doc, l.Id, parent))) throw new InvalidOperationException("A group cannot be moved into itself or its descendants.");
+        var carried = roots.SelectMany(l => Subtree(doc, l.Id)).ToHashSet();
+        if (above is {} anchor && (carried.Contains(anchor) || !doc.Layers.Any(l => l.Id == anchor && l.ParentId == parent)))
+            throw new InvalidOperationException("Invalid layer drop anchor.");
+        var ids = roots.Select(l => l.Id).ToHashSet();
+        var layers = doc.Layers.Where(l => !ids.Contains(l.Id)).ToList();
+        int insertion = above is {} target ? layers.FindIndex(l => l.Id == target) + 1 : atBottom ? 0 : layers.Count;
+        layers.InsertRange(insertion, roots.Select(l => l.ParentId == parent ? l : l with { ParentId = parent }));
+        var next = Normalize(doc with { Layers = layers.ToImmutableArray() });
+        return Entries(doc).Select(e => e.Layer).SequenceEqual(next.Layers) ? doc : next;
+    }
     /// <summary>Moves selected roots one sibling step without reversing their relative order.</summary>
     public static Document ReorderSelected(Document doc, IEnumerable<Guid> selection, int direction)
     {

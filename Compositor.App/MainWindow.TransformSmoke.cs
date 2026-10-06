@@ -93,6 +93,6 @@ public partial class MainWindow
         session.Undo();Check(session.Document.Layers.Length==3&&Layers.SelectedItems.Count==2,"Delete Undo did not restore selection.");
         Layers.SelectAll();Check(session.SelectedLayerIds.Count==3,"Native select-all failed.");
         Layers.UnselectAll();Check(session.ActiveLayerId is null&&session.SelectedLayerIds.Count==0,"Native clear selection failed.");
-        session.Load(doc);
+        session.Load(doc);LayerDragSmokeTest(path+".layers.png");
     }
 }
