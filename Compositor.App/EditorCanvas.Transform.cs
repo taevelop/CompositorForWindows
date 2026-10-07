@@ -27,7 +27,9 @@ public sealed partial class EditorCanvas
     {
         if(transformEdit is not {} edit)return;
         transformEdit=null;transformDrag=null;gestureButton=null;ReleaseGestureCapture();
-        Cursor=null;edit.Complete();edit.Dispose();TransformChanged?.Invoke();InvalidateVisual();
+        Cursor=null;
+        try { edit.Complete(); }
+        finally { edit.Dispose();TransformChanged?.Invoke();InvalidateVisual(); }
     }
     public void CancelTransform()
     {

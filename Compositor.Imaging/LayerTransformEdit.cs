@@ -45,7 +45,19 @@ public sealed class LayerTransformEdit:IDisposable
     public void Complete()
     {
         if(finished)return;
-        finished=true;session.Commit();
+        try
+        {
+            if(selected is null && Draft != InitialTransform)
+            {
+                var next=session.Document;
+                foreach(var current in next.Layers)
+                    if(current.Transform != original.Layers.First(l=>l.Id==current.Id).Transform)
+                        next=next.Replace(ShapeRedraw.Apply(current));
+                session.Preview(next);
+            }
+            session.Commit();finished=true;
+        }
+        catch { Dispose();throw; }
     }
     public void Dispose()
     {
