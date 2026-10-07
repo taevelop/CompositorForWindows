@@ -64,18 +64,47 @@ public partial class MainWindow
         }
         return true;
     }
+    private readonly Dictionary<Guid,(Border Frame,Button Select,Button Close,TextBlock Label)> tabControls=[];
+    private Guid? visibleTab;
     private void RefreshTabs()
     {
-        DocumentTabs.Children.Clear();
-        foreach(var tab in workspace.Documents)
+        var ids=workspace.Documents.Select(t=>t.Id).ToHashSet();
+        foreach(var id in tabControls.Keys.Where(id=>!ids.Contains(id)).ToArray())
+        { DocumentTabs.Children.Remove(tabControls[id].Frame);tabControls.Remove(id); }
+        for(int index=0;index<workspace.Documents.Count;index++)
         {
-            var row=new StackPanel{Orientation=Orientation.Horizontal};
-            var button=new Button{Content=tab.Title+(tab.Session.IsModified?" *":""),MaxWidth=220,ToolTip=tab.ProjectPath??tab.DefaultName,Style=(Style)FindResource("CompactButton")};
-            button.Click+=(_,_)=>SelectTab(tab.Id);
-            var close=new Button{Content="×",ToolTip="Close document",Style=(Style)FindResource("CompactButton")};
-            close.Click+=async(_,_)=>await CloseTab(tab.Id);
-            row.Children.Add(button);row.Children.Add(close);
-            DocumentTabs.Children.Add(new Border{Child=row,CornerRadius=new(5),Margin=new(0,0,5,0),BorderThickness=new(0,0,0,2),BorderBrush=tab==workspace.Current?(Brush)FindResource("Accent"):Brushes.Transparent,Background=tab==workspace.Current?new SolidColorBrush(Color.FromRgb(44,48,55)):Brushes.Transparent});
+            var tab=workspace.Documents[index];
+            if(!tabControls.TryGetValue(tab.Id,out var controls))
+            {
+                var row=new StackPanel{Orientation=Orientation.Horizontal};
+                var label=new TextBlock{TextTrimming=TextTrimming.CharacterEllipsis,MaxWidth=190};
+                var button=new Button{Content=label,MaxWidth=220,Style=(Style)FindResource("CompactButton")};
+                button.Click+=(_,_)=>SelectTab(tab.Id);
+                var close=new Button{Content="×",Style=(Style)FindResource("CompactButton")};
+                close.Click+=async(_,_)=>await CloseTab(tab.Id);
+                row.Children.Add(button);row.Children.Add(close);
+                var frame=new Border{Child=row,CornerRadius=new(5),Margin=new(0,0,5,0),BorderThickness=new(0,0,0,2)};
+                controls=(frame,button,close,label);tabControls.Add(tab.Id,controls);
+            }
+            if(DocumentTabs.Children.IndexOf(controls.Frame)!=index)
+            { DocumentTabs.Children.Remove(controls.Frame);DocumentTabs.Children.Insert(index,controls.Frame); }
+            bool active=tab==workspace.Current;
+            controls.Label.Text=tab.Title+(tab.Session.IsModified?" *":"");
+            controls.Select.ToolTip=tab.ProjectPath??tab.DefaultName;
+            controls.Close.ToolTip="Close "+tab.Title+" (Ctrl+W)";
+            System.Windows.Automation.AutomationProperties.SetName(controls.Select,
+                (active?"Selected document: ":"Document: ")+tab.Title+(tab.Session.IsModified?", unsaved changes":""));
+            System.Windows.Automation.AutomationProperties.SetName(controls.Close,"Close document: "+tab.Title);
+            controls.Frame.BorderBrush=active?(Brush)FindResource("Accent"):Brushes.Transparent;
+            controls.Frame.Background=active?new SolidColorBrush(Color.FromRgb(44,48,55)):Brushes.Transparent;
+        }
+        if(visibleTab!=workspace.Current.Id)
+        {
+            visibleTab=workspace.Current.Id;var selected=visibleTab.Value;
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded,new Action(()=>
+            {
+                if(workspace.Current.Id==selected&&tabControls.TryGetValue(selected,out var controls))controls.Frame.BringIntoView();
+            }));
         }
     }
 }

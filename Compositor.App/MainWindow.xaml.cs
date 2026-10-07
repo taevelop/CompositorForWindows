@@ -389,6 +389,7 @@ public partial class MainWindow : Window
         CropSmokeTest(Path.ChangeExtension(screenshot, ".crop.png"));
         TransformSmokeTest(Path.ChangeExtension(screenshot, ".transform.png"));
         await WorkspaceSmokeTest(Path.ChangeExtension(screenshot, ".workspace.png"));
+        await TabPresentationSmokeTest();
         LayerCopySmokeTest();
         ClipboardSmokeTest(Path.ChangeExtension(screenshot, ".clipboard.json"));
         await SelectionAutoScrollSmokeTest();
