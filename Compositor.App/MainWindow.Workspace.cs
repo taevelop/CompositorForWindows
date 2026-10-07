@@ -84,6 +84,7 @@ public partial class MainWindow
                 close.Click+=async(_,_)=>await CloseTab(tab.Id);
                 row.Children.Add(button);row.Children.Add(close);
                 var frame=new Border{Child=row,CornerRadius=new(5),Margin=new(0,0,5,0),BorderThickness=new(0,0,0,2)};
+                AttachTabDrop(frame,tab.Id);
                 controls=(frame,button,close,label);tabControls.Add(tab.Id,controls);
             }
             if(DocumentTabs.Children.IndexOf(controls.Frame)!=index)
