@@ -5,7 +5,7 @@ public static class LayerFill
 {
     public static Document Apply(Document document,Guid layerId,byte red,byte green,byte blue,bool editMask=false,CancellationToken cancellation=default)
         =>ApplyWithUndoBudget(document,layerId,red,green,blue,editMask,cancellation,EditorSession.MaxHistoryBytes);
-    internal static Document ApplyWithUndoBudget(Document document,Guid layerId,byte red,byte green,byte blue,bool editMask,CancellationToken cancellation,long undoBudget)
+    internal static Document ApplyWithUndoBudget(Document document,Guid layerId,byte red,byte green,byte blue,bool editMask,CancellationToken cancellation,long undoBudget,GradientFillSettings? gradient=null)
     {
         if(undoBudget<0)throw new ArgumentOutOfRangeException(nameof(undoBudget));
         cancellation.ThrowIfCancellationRequested();document.Validate();
@@ -43,9 +43,11 @@ public static class LayerFill
                 var point=layer.Transform.ToDocument(new(tx*256+x+.5,ty*256+y+.5),pixels.Width,pixels.Height);
                 if(point.X<0||point.Y<0||point.X>=document.Width||point.Y>=document.Height)continue;
                 double weight=selection?.Sample(point)??1;if(weight<=0)continue;
+                var colorAtPoint=gradient?.Sample(point)??((double)red,(double)green,(double)blue,1d);
+                weight*=colorAtPoint.Item4;if(weight<=0)continue;
                 int p=(y*256+x)*4;
                 for(int channel=0;channel<4;channel++)
-                {int color=channel switch{0=>red,1=>green,2=>blue,_=>255};buffer[p+channel]=(byte)Math.Round(buffer[p+channel]*(1-weight)+color*weight,MidpointRounding.AwayFromZero);}
+                {double color=channel switch{0=>colorAtPoint.Item1,1=>editMask?colorAtPoint.Item1:colorAtPoint.Item2,2=>editMask?colorAtPoint.Item1:colorAtPoint.Item3,_=>255};buffer[p+channel]=(byte)Math.Round(buffer[p+channel]*(1-weight)+color*weight,MidpointRounding.AwayFromZero);}
             }
             if(before is not null&&before.Bytes.SequenceEqual(buffer))continue;
             if(before is null&&buffer.AsSpan().IndexOfAnyExcept((byte)0)<0)continue;
