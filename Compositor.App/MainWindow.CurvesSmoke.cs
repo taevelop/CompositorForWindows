@@ -89,7 +89,7 @@ public partial class MainWindow
             bool rejected = false; try { Canvas.BeginPointer(new(100, 100)); } catch (InvalidOperationException) { rejected = true; } finally { Canvas.CancelInteraction(); }
             Check(rejected, "Curves source painting was allowed.");
             projectPath = Path.Combine(root, "Curves.comp"); Check(await Save(false), "Curves UI save failed."); var expected = CompositePixels(session.Document);
-            Check(await LoadProject(projectPath, false), "Curves reopen failed."); Check(expected.SequenceEqual(CompositePixels(session.Document)), "Curves reopen changed output.");
+            Check(await ReopenSavedProject(projectPath!), "Curves reopen failed."); Check(expected.SequenceEqual(CompositePixels(session.Document)), "Curves reopen changed output.");
             Check(session.ActiveLayer!.Curves == second, "Reopen lost editable settings.");
             Dialog(false, dialog => { dialog.SetSettings(first); dialog.ApplyEdit(); }); Undo(this, new());
             Check(expected.SequenceEqual(CompositePixels(session.Document)) && !session.IsModified, "Reopened edit Undo lost saved state.");

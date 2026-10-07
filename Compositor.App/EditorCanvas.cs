@@ -52,6 +52,11 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         LostMouseCapture += (_, _) => { if (!releasingGestureCapture) CancelInteraction(); };
         Unloaded += (_, _) => { CancelInteraction(); Dispose(); };
     }
+    internal (double Zoom,double X,double Y) CaptureView() => (Zoom,panX,panY);
+    internal void RestoreView(double zoom,double x,double y)
+    {
+        CancelInteraction();Zoom=zoom;panX=x;panY=y;InvalidateVisual();ViewportChanged?.Invoke();
+    }
     public void Fit()
     {
         if (Session is null || ActualWidth <= 0 || ActualHeight <= 0) return;

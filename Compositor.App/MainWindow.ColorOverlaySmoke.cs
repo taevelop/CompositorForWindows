@@ -61,7 +61,7 @@ public partial class MainWindow
             EditTarget.SelectedIndex = 0; Canvas.BeginPointer(new(250, 250)); Canvas.MovePointer(new(500, 300)); Canvas.EndPointer(true);
             Check(!ReferenceEquals(source.Pixels, session.ActiveLayer!.Pixels) && session.ActiveLayer.Effects!.ColorOverlay == savedEffect, "Image paint did not remain live.");
             projectPath = Path.Combine(root, "Overlay.comp"); Check(await Save(false), "UI save failed."); byte[] expected = CompositePixels(session.Document);
-            Check(await LoadProject(projectPath, false), "UI reopen failed."); Check(expected.SequenceEqual(CompositePixels(session.Document)) && session.ActiveLayer!.Effects!.ColorOverlay == savedEffect, "Reopen changed output/settings.");
+            Check(await ReopenSavedProject(projectPath!), "UI reopen failed."); Check(expected.SequenceEqual(CompositePixels(session.Document)) && session.ActiveLayer!.Effects!.ColorOverlay == savedEffect, "Reopen changed output/settings.");
             Dialog(dialog => { dialog.SetSettings(first); dialog.ApplyEdit(); }); Undo(this, new()); Check(!session.IsModified && expected.SequenceEqual(CompositePixels(session.Document)), "Reopened edit Undo failed.");
             string png = Path.Combine(root, "Overlay.png"); ImageCodec.Export(session.Document, png, false); Check(expected.SequenceEqual(ImageCodec.Load(png).ToRgba()), "PNG output differs.");
             WrapInGroup(this, new()); Check(!ColorOverlayMenu.IsEnabled && !ColorOverlayButton.IsEnabled, "Group effects enabled.");

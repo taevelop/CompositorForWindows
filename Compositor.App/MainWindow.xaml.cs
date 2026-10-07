@@ -15,7 +15,7 @@ namespace Compositor.App;
 
 public partial class MainWindow : Window
 {
-    private readonly EditorSession session = new(Document.Create(1400, 900));
+    private EditorSession session = null!;
     private string? projectPath;
     private readonly EditorPrompts defaultPrompts;
     private EditorPrompts prompts;
@@ -23,6 +23,7 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        session = workspace.Current.Session;
         defaultPrompts = prompts = EditorPrompts.For(this);
         InitializeComponent();
         InitializeToolControls();
@@ -42,8 +43,8 @@ public partial class MainWindow : Window
     {
         Canvas.ReconcileCrop(); RefreshCropControls();
         Canvas.InvalidateVisual();
-        Title = $"{(projectPath is null ? "Untitled" : Path.GetFileName(projectPath))}{(session.IsModified ? " *" : "")} — Compositor for Windows";
-        DocumentLabel.Text = $"{(projectPath is null ? "Untitled" : Path.GetFileName(projectPath))}{(session.IsModified ? " *" : "")}";
+        Title = $"{(projectPath is null ? workspace.Current.DefaultName : Path.GetFileName(projectPath))}{(session.IsModified ? " *" : "")} — Compositor for Windows";
+        RefreshTabs();
         if (session.InTransaction) return;
         refreshing = true;
         RefreshHierarchy();
@@ -111,9 +112,9 @@ public partial class MainWindow : Window
         var response = prompts.ConfirmSaveChanges();
         return response == MessageBoxResult.No || (response == MessageBoxResult.Yes && await Save(false));
     }
-    private async void NewDocument(object? sender, RoutedEventArgs e)
+    private void NewDocument(object? sender, RoutedEventArgs e)
     {
-        if (!await ConfirmDiscard()) return;
+        if (busy || (session.InTransaction && !Canvas.IsTransforming)) return;
         string? value = Prompt("New canvas", "Width × height in pixels", "1400 x 900");
         if (value is null) return;
         Safe(() =>
@@ -121,7 +122,7 @@ public partial class MainWindow : Window
             var dimensions = value.ToLowerInvariant().Replace('×', 'x').Split('x');
             if (dimensions.Length != 2 || !int.TryParse(dimensions[0].Trim(), out int w) || !int.TryParse(dimensions[1].Trim(), out int h))
                 throw new InvalidDataException("Enter dimensions such as 1400 x 900.");
-            var doc = Document.Create(w, h); session.Load(doc); projectPath = null;
+            var doc = Document.Create(w, h); AddDocumentTab(doc);
             // An untitled blank document is clean until the first edit.
             Canvas.Fit(); Refresh();
         });
@@ -130,7 +131,7 @@ public partial class MainWindow : Window
     private async void OpenRecovery(object? sender, RoutedEventArgs e) => await OpenProjectFolder(true);
     private async Task OpenProjectFolder(bool recoveryOnly)
     {
-        if (!await ConfirmDiscard()) return;
+        if (busy || (session.InTransaction && !Canvas.IsTransforming)) return;
         var dialog = new OpenFolderDialog { Title = recoveryOnly ? "Select a .comp.recovery folder" : "Select a .comp project folder" };
         if (dialog.ShowDialog(this) != true) return;
         bool recovery = recoveryOnly || dialog.FolderName.EndsWith(".comp.recovery", StringComparison.OrdinalIgnoreCase);
@@ -138,13 +139,17 @@ public partial class MainWindow : Window
     }
     private async Task<bool> LoadProject(string source, bool recovery)
     {
+        if (!recovery && workspace.FindPath(source) is {} existing)
+        { SelectTab(existing.Id); return workspace.Current == existing; }
         LoadedProject? loaded = null;
         if (!await Work("Opening project…", () => loaded = recovery ? ProjectStore.LoadRecovery(source) : ProjectStore.Load(source))) return false;
         OpenLoadedProject(loaded!, source, recovery); return true;
     }
     private void OpenLoadedProject(LoadedProject loaded, string source, bool recovery)
     {
-        session.Load(loaded.Document, loaded.ActiveLayerId, recovered: recovery);
+        if (!PrepareTabChange()) return;
+        workspace.Open(loaded.Document, source, loaded.ActiveLayerId, recovery);
+        BindCurrentTab();
         projectPath = recovery ? null : source; Canvas.Fit(); Refresh();
         if (recovery) Status.Text = "Recovery copy opened. Save to a new project name; the original and recovery folders are preserved.";
     }
@@ -194,9 +199,12 @@ public partial class MainWindow : Window
             destination = Path.Combine(folder.FolderName, name);
             if (Directory.Exists(destination) && MessageBox.Show(this, "Replace this existing project?", "Save project", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return false;
         }
+        var savingTab = workspace.Current;
+        try { destination = workspace.ValidateSaveDestination(savingTab.Id, destination); }
+        catch (Exception error) { ShowError(error.Message); return false; }
         var document = session.Document; var active = session.ActiveLayerId;
         if (!await Work("Saving project…", () => ProjectStore.Save(document, active, destination))) return false;
-        projectPath = destination; session.MarkSaved(); Refresh(); return true;
+        projectPath = destination; workspace.RecordSaved(savingTab.Id, destination); Refresh(); return true;
     }
     private async void SaveProject(object? sender, RoutedEventArgs e) => await Save(false);
     private async void SaveProjectAs(object? sender, RoutedEventArgs e) => await Save(true);
@@ -333,7 +341,8 @@ public partial class MainWindow : Window
         if (allowClose) return;
         Canvas.CancelInteraction();
         e.Cancel = true;
-        if (await ConfirmDiscard()) { allowClose = true; _ = Dispatcher.BeginInvoke(new Action(Close)); }
+        if(!await ConfirmWorkspaceClose())return;
+        allowClose=true;workspace.Dispose();_ = Dispatcher.BeginInvoke(new Action(Close));
     }
     private string? Prompt(string title, string label, string initial)
     {
@@ -377,6 +386,7 @@ public partial class MainWindow : Window
         await CanvasSizeSmokeTest(Path.ChangeExtension(screenshot, ".canvas-size.png"));
         CropSmokeTest(Path.ChangeExtension(screenshot, ".crop.png"));
         TransformSmokeTest(Path.ChangeExtension(screenshot, ".transform.png"));
+        await WorkspaceSmokeTest(Path.ChangeExtension(screenshot, ".workspace.png"));
         LayerCopySmokeTest();
         ClipboardSmokeTest(Path.ChangeExtension(screenshot, ".clipboard.json"));
         await SelectionAutoScrollSmokeTest();
@@ -395,7 +405,7 @@ public partial class MainWindow : Window
         bitmap.Render(this);
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using (var file = File.Create(screenshot)) encoder.Save(file);
-        session.MarkSaved(); Close();
+        foreach(var tab in workspace.Documents)tab.Session.MarkSaved(); Close();
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         if (IsVisible) throw new InvalidOperationException("Clean window did not close.");
     }

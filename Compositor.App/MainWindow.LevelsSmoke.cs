@@ -67,7 +67,7 @@ public partial class MainWindow
             bool rejected = false; try { Canvas.BeginPointer(new(100, 100)); } catch (InvalidOperationException) { rejected = true; } finally { Canvas.CancelInteraction(); }
             Check(rejected, "Levels source painting was allowed.");
             projectPath = Path.Combine(root, "Levels.comp"); Check(await Save(false), "Levels UI save failed."); var expected = CompositePixels(session.Document);
-            Check(await LoadProject(projectPath, false), "Levels reopen failed."); Check(expected.SequenceEqual(CompositePixels(session.Document)), "Levels reopen changed output.");
+            Check(await ReopenSavedProject(projectPath!), "Levels reopen failed."); Check(expected.SequenceEqual(CompositePixels(session.Document)), "Levels reopen changed output.");
             Check(session.ActiveLayer!.Levels == new LevelsAdjustment { RGB = new(8, 1.1, 245), Channel = LevelsChannel.Blue, Blue = new(5, .8, 250) }, "Reopen lost editable settings.");
             Dialog(false, dialog => { dialog.SetSettings(new() { RGB = new(Gamma: 2) }); dialog.ApplyEdit(); }); Undo(this, new());
             Check(expected.SequenceEqual(CompositePixels(session.Document)) && !session.IsModified, "Reopened edit Undo lost saved state.");

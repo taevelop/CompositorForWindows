@@ -76,7 +76,7 @@ public partial class MainWindow
             Undo(this, new()); Check(CompositePixels(session.Document).SequenceEqual(pixels), "Visibility undo changed output.");
 
             projectPath = Path.Combine(root, "Groups.comp"); Check(await Save(false), "Grouped project UI save failed.");
-            Check(await LoadProject(projectPath, false), "Grouped project UI load failed.");
+            Check(await ReopenSavedProject(projectPath!), "Grouped project UI load failed.");
             Check(session.ActiveLayer!.IsGroup && CompositePixels(session.Document).SequenceEqual(pixels), "Grouped reopen changed selection or pixels.");
             string png = Path.Combine(root, "Groups.png"); ImageCodec.Export(session.Document, png, false);
             Check(ImageCodec.Load(png).ToRgba().SequenceEqual(pixels), "Grouped export differs from composition.");

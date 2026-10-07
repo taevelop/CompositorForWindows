@@ -66,7 +66,7 @@
       </Menu>
    <Border Grid.Row="1" Background="#202226" Padding="12,5" BorderBrush="{StaticResource Divider}" BorderThickness="0,0,0,1"><DockPanel>
     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="Import" Click="ImportImages" Style="{StaticResource CompactButton}"/><Button Content="Export PNG" Click="ExportPng" Style="{StaticResource CompactButton}"/><Border Width="1" Background="{StaticResource Divider}" Margin="8,4"/><Button Content="Fit" Click="Fit" Style="{StaticResource CompactButton}"/><Button Content="100%" Click="ActualPixels" Style="{StaticResource CompactButton}"/></StackPanel>
-    <Border Background="#2C3037" CornerRadius="5" HorizontalAlignment="Left" Padding="12,5"><StackPanel Orientation="Horizontal"><Ellipse Fill="{StaticResource Accent}" Width="6" Height="6" Margin="0,0,8,0"/><TextBlock x:Name="DocumentLabel" Text="Untitled" MaxWidth="400" TextTrimming="CharacterEllipsis"/></StackPanel></Border>
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"><StackPanel x:Name="DocumentTabs" Orientation="Horizontal"/></ScrollViewer>
    </DockPanel></Border>
    <Border x:Name="ToolOptionsBar" Grid.Row="2" Background="{StaticResource Panel}" Padding="14,6" MinHeight="65" BorderBrush="{StaticResource Divider}" BorderThickness="0,0,0,1">
     <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="86"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock VerticalAlignment="Center" x:Name="ToolTitle" Text="Brush" Width="78" FontWeight="SemiBold" Margin="0,0,8,0"/>

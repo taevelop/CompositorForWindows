@@ -81,7 +81,7 @@ public partial class MainWindow
             var applied = session.Document; Undo(this, new()); Check(ReferenceEquals(doc, session.Document), "Adjustment Undo lost original pixels.");
             Redo(this, new()); Check(ReferenceEquals(applied, session.Document), "Adjustment Redo failed.");
             projectPath = Path.Combine(root, "Adjusted.comp"); Check(await Save(false), "Adjusted UI save failed.");
-            var composite = CompositePixels(session.Document); Check(await LoadProject(projectPath, false), "Adjusted UI load failed.");
+            var composite = CompositePixels(session.Document); Check(await ReopenSavedProject(projectPath!), "Adjusted UI load failed.");
             Check(composite.SequenceEqual(CompositePixels(session.Document)) && !session.IsModified, "Adjustment save round trip differs.");
             string png = Path.Combine(root, "Adjusted.png"); ImageCodec.Export(session.Document, png, false);
             Check(composite.SequenceEqual(ImageCodec.Load(png).ToRgba()), "Adjustment output differs from the composite.");

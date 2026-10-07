@@ -50,7 +50,7 @@ public partial class MainWindow
             bool rejected = false; try { Canvas.BeginPointer(new(100, 100)); } catch (InvalidOperationException) { rejected = true; } finally { Canvas.CancelInteraction(); }
             Check(rejected, "BlackWhite source painting was allowed.");
             projectPath = Path.Combine(root, "BlackWhite.comp"); Check(await Save(false), "BlackWhite UI save failed."); var expected = CompositePixels(session.Document);
-            Check(await LoadProject(projectPath, false), "BlackWhite reopen failed."); Check(expected.SequenceEqual(CompositePixels(session.Document)), "BlackWhite reopen changed output.");
+            Check(await ReopenSavedProject(projectPath!), "BlackWhite reopen failed."); Check(expected.SequenceEqual(CompositePixels(session.Document)), "BlackWhite reopen changed output.");
             Check(session.ActiveLayer!.BlackWhite == new BlackWhiteAdjustment(.75, 0, 1.1), "Reopen lost editable settings.");
             Dialog(false, dialog => { dialog.SetSettings(new(2)); dialog.ApplyEdit(); }); Undo(this, new());
             Check(expected.SequenceEqual(CompositePixels(session.Document)) && !session.IsModified, "Reopened edit Undo lost saved state.");

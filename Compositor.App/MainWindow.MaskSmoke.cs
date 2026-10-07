@@ -41,7 +41,7 @@ public partial class MainWindow
             Check(CompositePixels(session.Document)[(300 * 800 + 400) * 4 + 3] == 0 && ReferenceEquals(image, session.ActiveLayer!.Pixels), "Mask eraser changed source or failed to hide.");
             projectPath = Path.Combine(root, "Masked.comp"); Check(await Save(false), "Masked UI save failed.");
             byte[] expected = CompositePixels(session.Document);
-            Check(await LoadProject(projectPath, false), "Masked UI reopen failed.");
+            Check(await ReopenSavedProject(projectPath!), "Masked UI reopen failed.");
             Check(expected.SequenceEqual(CompositePixels(session.Document)) && !session.IsModified, "Masked reopen changed the composite.");
             string png = Path.Combine(root, "Masked.png"); ImageCodec.Export(session.Document, png, false);
             Check(expected.SequenceEqual(ImageCodec.Load(png).ToRgba()), "Masked export differs from UI composition.");

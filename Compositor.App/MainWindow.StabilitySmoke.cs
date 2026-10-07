@@ -72,7 +72,7 @@ public partial class MainWindow
             var edited = session.Document; session.Undo(); session.Redo(); Check(ReferenceEquals(edited, session.Document), "Redo lost the edited snapshot.");
             projectPath = Path.Combine(root, "Workflow.comp"); Check(await Save(false), "Workflow save failed.");
             byte[] expected = CompositePixels(session.Document);
-            Check(await LoadProject(projectPath, false), "Workflow reopen failed.");
+            Check(await ReopenSavedProject(projectPath!), "Workflow reopen failed.");
             Check(!session.IsModified && !session.CanUndo && expected.SequenceEqual(CompositePixels(session.Document)), "Reopen changed pixels or retained history.");
             string export = Path.Combine(root, "output.png"); ImageCodec.Export(session.Document, export, false);
             Check(expected.SequenceEqual(ImageCodec.Load(export).ToRgba()), "Export differs from the current composite.");
