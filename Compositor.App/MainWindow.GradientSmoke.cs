@@ -44,6 +44,15 @@ public partial class MainWindow
             await GradientTargetSmokeTest();
             await GradientPaletteSmokeTest();
             await GradientTabSmokeTest();
+            var shortcutDoc=Document.Create(3,1);session.Load(shortcutDoc);ToolPicker.SelectedIndex=10;Canvas.RestoreView(20,30,30);
+            Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));
+            if(!await HandleGradientShortcut(Key.G,ModifierKeys.None)||!Canvas.HasGradient||session.UndoCount!=0)
+                throw new InvalidOperationException("Current gradient tool shortcut unexpectedly committed the edit.");
+            if(await HandleGradientShortcut(Key.B,ModifierKeys.Control)||!Canvas.HasGradient)
+                throw new InvalidOperationException("Unrelated modified shortcut changed the gradient.");
+            if(!await HandleGradientShortcut(Key.B,ModifierKeys.None)||Canvas.HasGradient||Canvas.Tool!=EditorTool.Brush||session.UndoCount!=1)
+                throw new InvalidOperationException("Brush shortcut did not commit the pending gradient.");
+            session.Undo();if(!ReferenceEquals(shortcutDoc,session.Document))throw new InvalidOperationException("Tool shortcut gradient Undo failed.");
         }
         finally{Canvas.CancelGradient();session.Load(original);GradientTransparent.IsChecked=true;GradientOpacity.Value=100;RestoreTabTools(tools);Canvas.Fit();Refresh();}
     }
@@ -145,7 +154,7 @@ public partial class MainWindow
             BrushColor.Text="#FF0000";SetBackgroundColor("#0000FF");GradientTransparent.IsChecked=false;
             projectPath=destination;
             Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));
-            if(!await Save(false)||Canvas.HasGradient||session.InTransaction||session.UndoCount!=1||session.IsModified)
+            if(!await HandleGradientShortcut(Key.S,ModifierKeys.Control)||Canvas.HasGradient||session.InTransaction||session.UndoCount!=1||session.IsModified)
                 throw new InvalidOperationException("Save did not commit the pending gradient.");
             var expected=new byte[]{255,0,0,255,128,0,128,255,0,0,255,255};
             if(!ProjectStore.Load(destination).Document.Layers[0].Pixels.ToRgba().SequenceEqual(expected))

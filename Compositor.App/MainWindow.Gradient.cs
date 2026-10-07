@@ -1,10 +1,29 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Compositor.Core;
 using Compositor.Imaging;
 namespace Compositor.App;
 public partial class MainWindow
 {
+    private async Task<bool> HandleGradientShortcut(Key key,ModifierKeys modifiers)
+    {
+        if(!Canvas.HasGradient||busy)return false;
+        if(key==Key.S&&modifiers is ModifierKeys.Control or (ModifierKeys.Control|ModifierKeys.Shift))
+        {await Save(modifiers.HasFlag(ModifierKeys.Shift));return true;}
+        if(modifiers is not (ModifierKeys.None or ModifierKeys.Shift))return false;
+        int tool=key switch
+        {
+            Key.V=>0,Key.B=>1,Key.E=>2,Key.H=>3,
+            Key.M=>modifiers.HasFlag(ModifierKeys.Shift)?5:4,
+            Key.L=>modifiers.HasFlag(ModifierKeys.Shift)?7:6,
+            Key.C=>8,Key.I=>9,Key.G=>10,_=>-1
+        };
+        if(tool<0)return false;
+        if(tool==ToolPicker.SelectedIndex)return true;
+        if(await ResolveGradientBeforeAction())ToolPicker.SelectedIndex=tool;
+        return true;
+    }
     private async Task<bool> ResolveGradientBeforeAction()
     {
         if (busy) return false;

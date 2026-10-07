@@ -303,6 +303,7 @@ public partial class MainWindow : Window
         if(await HandleDocumentShortcut(e.Key,Keyboard.Modifiers)){e.Handled=true;return;}
         // Text editing owns its own shortcuts, including Undo and Delete.
         if (Keyboard.FocusedElement is TextBox) return;
+        if(await HandleGradientShortcut(e.Key,Keyboard.Modifiers)){e.Handled=true;return;}
         if(Canvas.HasGradient&&e.Key is Key.Enter or Key.Escape){e.Handled=true;if(e.Key==Key.Escape)CancelGradient(null,e);else await Canvas.CommitGradientAsync();return;}
         var fillKey=e.Key==Key.System?e.SystemKey:e.Key;
         if(fillKey==Key.Back&&Keyboard.Modifiers is ModifierKeys.Alt or ModifierKeys.Control)
