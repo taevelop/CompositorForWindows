@@ -1,11 +1,11 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using Compositor.Core;
 using Compositor.Imaging;
 namespace Compositor.App;
 public partial class MainWindow
 {
-    private async Task<bool> PrepareGradientForOutput()
+    private async Task<bool> ResolveGradientBeforeAction()
     {
         if (busy) return false;
         if (!Canvas.HasGradient) return true;

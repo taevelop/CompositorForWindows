@@ -40,11 +40,17 @@ public partial class MainWindow
         if (session.ActiveLayer is not { Mask: { } mask } layer) return;
         session.Apply(d => d.Replace(layer with { Mask = mask with { Enabled = MaskEnabled.IsChecked == true } }));
     });
-    private void EditTargetChanged(object sender, SelectionChangedEventArgs e)
+    private Task maskTargetChange=Task.CompletedTask;
+    private async void EditTargetChanged(object sender, SelectionChangedEventArgs e)
     {
         if (refreshing || busy || Canvas?.Session is null) return;
+        await (maskTargetChange=SelectMaskTarget(EditTarget.SelectedIndex == 1));
+    }
+    private async Task SelectMaskTarget(bool editMask)
+    {
+        if (!await ResolveGradientBeforeAction()) return;
         Canvas.CancelInteraction();
-        session.EditMask = EditTarget.SelectedIndex == 1 && session.ActiveLayer?.Mask is not null;
+        session.EditMask = editMask && session.ActiveLayer?.Mask is not null;
         Refresh(); Canvas.Focus();
     }
 }

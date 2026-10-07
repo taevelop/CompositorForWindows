@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Input;
 using Compositor.Core;
 using Compositor.Imaging;
@@ -23,8 +23,31 @@ public partial class MainWindow
             Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.MoveInteraction(new(80,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));Canvas.CancelGradient();await Canvas.GradientPending;
             if(!ReferenceEquals(doc,session.Document)||session.InTransaction)throw new InvalidOperationException("Gradient cancel failed.");
             await GradientSaveSmokeTest();
+            await GradientTargetSmokeTest();
         }
         finally{Canvas.CancelGradient();session.Load(original);GradientTransparent.IsChecked=true;GradientOpacity.Value=100;RestoreTabTools(tools);Canvas.Fit();Refresh();}
+    }
+    private async Task GradientTargetSmokeTest()
+    {
+        var doc=Document.Create(3,1);var first=doc.Layers[0] with{Mask=LayerMask.Solid(3,1)};
+        var second=Layer.Blank("Second",3,1);doc=doc.Replace(first) with{Layers=doc.Replace(first).Layers.Add(second)};
+        session.Load(doc,first.Id);Refresh();ToolPicker.SelectedIndex=10;Canvas.RestoreView(20,30,30);
+        BrushColor.Text="#FF0000";SetBackgroundColor("#0000FF");GradientTransparent.IsChecked=false;
+        Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));
+        EditTarget.SelectedIndex=1;
+        await maskTargetChange;
+        if(!session.EditMask||session.InTransaction||Canvas.HasGradient||session.UndoCount!=1||EditTarget.SelectedIndex!=1)
+            throw new InvalidOperationException("Gradient image-to-mask target change failed.");
+        MaskSlider.Value=0;
+        Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));
+        Layers.SelectedItem=Layers.Items.Cast<LayerRow>().Single(row=>row.Id==second.Id);
+        await layerSelectionChange;
+        if(session.ActiveLayerId!=second.Id||session.InTransaction||Canvas.HasGradient||session.UndoCount!=2||
+            session.Document.Layers[0].Mask!.Pixels.ToRgba()[0]!=0)
+            throw new InvalidOperationException($"Gradient mask-to-layer target change failed: active={session.ActiveLayerId==second.Id}, transaction={session.InTransaction}, gradient={Canvas.HasGradient}, undo={session.UndoCount}, mask={session.Document.Layers[0].Mask!.Pixels.ToRgba()[0]}.");
+        session.Undo();
+        if(session.Document.Layers[0].Mask!.Pixels.ToRgba()[0]!=255||session.Document.Layers[0].Pixels.ToRgba()[0]!=255)
+            throw new InvalidOperationException("Gradient target changes did not preserve separate Undo steps.");
     }
     private async Task GradientSaveSmokeTest()
     {

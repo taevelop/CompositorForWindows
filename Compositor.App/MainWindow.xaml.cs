@@ -189,7 +189,7 @@ public partial class MainWindow : Window
     }
     private async Task<bool> Save(bool saveAs)
     {
-        if (!await PrepareGradientForOutput()) return false;
+        if (!await ResolveGradientBeforeAction()) return false;
         if (!busy && Canvas.IsTransforming) Canvas.CommitTransform();
         if (busy || session.InTransaction) return false;
         string? destination = projectPath;
@@ -216,7 +216,7 @@ public partial class MainWindow : Window
     private async void SaveProjectAs(object? sender, RoutedEventArgs e) => await Save(true);
     private async Task Export(bool jpeg)
     {
-        if (!await PrepareGradientForOutput()) return;
+        if (!await ResolveGradientBeforeAction()) return;
         if (!busy && Canvas.IsTransforming) Canvas.CommitTransform();
         if (busy || session.InTransaction) return;
         var dialog = new SaveFileDialog { Title = "Export flattened image", Filter = jpeg ? "JPEG image|*.jpg" : "PNG image|*.png", DefaultExt = jpeg ? ".jpg" : ".png", FileName = "Untitled" };
@@ -245,14 +245,20 @@ public partial class MainWindow : Window
     });
     private void LayerUp(object sender, RoutedEventArgs e) => Reorder(1);
     private void LayerDown(object sender, RoutedEventArgs e) => Reorder(-1);
-    private void LayerSelected(object sender, SelectionChangedEventArgs e)
+    private Task layerSelectionChange=Task.CompletedTask;
+    private async void LayerSelected(object sender, SelectionChangedEventArgs e)
     {
         if (refreshing) return;
-        if (busy || (session.InTransaction && !Canvas.IsTransforming)) return;
+        if (busy || (session.InTransaction && !Canvas.IsTransforming && !Canvas.HasGradient)) return;
         // Commit refreshes ItemsSource, so retain the user's new selection first.
         var ids = Layers.SelectedItems.Cast<LayerRow>().Select(row => row.Id).ToArray();
         var primary = e.AddedItems.Cast<LayerRow>().LastOrDefault()?.Id;
         if (primary is null && session.ActiveLayerId is {} active && ids.Contains(active)) primary = active;
+        await (layerSelectionChange=SelectLayerTargets(ids,primary));
+    }
+    private async Task SelectLayerTargets(Guid[] ids,Guid? primary)
+    {
+        if (!await ResolveGradientBeforeAction()) return;
         if (Canvas.IsTransforming) Canvas.CommitTransform();
         session.SelectLayers(ids, primary);
     }
