@@ -397,5 +397,5 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         c.Restore();
         c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);DrawSampleRing(c);c.Restore();
     }
-    public void Dispose() { CancelTransform(); StopSelectionAutoScroll(); colorSampler.Dispose(); renderer.Dispose(); }
+    public void Dispose() { CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
 }

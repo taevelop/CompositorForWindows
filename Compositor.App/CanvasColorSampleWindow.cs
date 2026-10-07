@@ -9,7 +9,7 @@ namespace Compositor.App;
 internal sealed class CanvasColorSampleWindow : Window
 {
     private readonly EditorCanvas editor;
-    private readonly CompositeColorSampler sampler = new();
+
     private bool dragging;
     private readonly PickerSampleRing ring;
     internal Action<Color>? PreviewColor { get; set; }
@@ -30,11 +30,11 @@ internal sealed class CanvasColorSampleWindow : Window
         MouseLeftButtonUp+=(_,e)=>{if(!dragging)return;Sample(e.GetPosition(this));dragging=false;ReleaseMouseCapture();DialogResult=Sampled.HasValue;e.Handled=true;};
         PreviewKeyDown+=(_,e)=>{if(e.Key==Key.Escape){e.Handled=true;DialogResult=false;}};
         LostMouseCapture+=(_,_)=>{if(dragging){dragging=false;DialogResult=false;}};
-        Closed+=(_,_)=>sampler.Dispose();
+
     }
     internal void Sample(Point point)
     {
-        if(sampler.Sample(editor.Session.Document,editor.DocumentPoint(point)) is {} color)
+        if(editor.SampleComposite(editor.DocumentPoint(point)) is {} color)
         {
             Sampled=Color.FromRgb(color.Red,color.Green,color.Blue);PreviewColor?.Invoke(Sampled.Value);
         }

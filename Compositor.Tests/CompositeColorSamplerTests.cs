@@ -1,4 +1,4 @@
-﻿using Compositor.Core;
+using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 using Xunit;
@@ -36,6 +36,20 @@ public sealed class CompositeColorSamplerTests
         var changed=d.Replace(d.Layers[0] with{Pixels=Raster.FromRgba(1,1,[0,0,255,255])});
         Assert.Equal(new SampledColor(255,255,0),sampler.Sample(changed,new(0,0)));
         Assert.Equal(new SampledColor(0,255,255),sampler.Sample(d,new(0,0)));
+    }
+    [Fact] public void ViewportSamplingPreservesCanonicalColorsAcrossEditsAndDisposal()
+    {
+        var d=Pixels([255,0,0,255,0,0,255,255]);d=d with{Layers=d.Layers.Add(Layer.InvertLayer(2,1))};
+        var view=new ViewportRenderer();using var independent=new CompositeColorSampler();
+        using(var frame=view.Render(d,17,13,2.5f,-3,4)){}
+        Assert.Equal(independent.Sample(d,new(1,0)),view.Sample(d,new(1,0)));
+        var changed=d.Replace(d.Layers[0] with{Opacity=.5});
+        Assert.Equal(independent.Sample(changed,new(0,0)),view.Sample(changed,new(0,0)));
+        using(var frame=view.Render(changed,17,13,2.5f,-3,4)){}
+        Assert.Equal(independent.Sample(d,new(0,0)),view.Sample(d,new(0,0)));
+        using(var frame=view.Render(d,17,13,1,0,0)){}
+        Assert.Null(view.Sample(d,new(-1,0)));view.Dispose();view.Dispose();
+        Assert.Throws<ObjectDisposedException>(()=>view.Sample(d,new(0,0)));
     }
     [Fact] public void DisposeRejectsFurtherSampling()
     {

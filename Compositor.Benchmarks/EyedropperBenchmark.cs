@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using Compositor.Core;
@@ -31,6 +31,14 @@ internal static class EyedropperBenchmark
             rows.Add(new{name,coldMs,medianMs=sorted[10],p95Ms=sorted[18],maxMs=sorted[^1],changedMs,restoreMs,
                 allocatedMiB=(GC.GetTotalAllocatedBytes(true)-allocated)/1048576d,baselineWorkingSetMiB=baseline,workingSetMiB=process.WorkingSet64/1048576d,
                 processLifetimePeakMiB=process.PeakWorkingSet64/1048576d,times});
+            using var viewport=new ViewportRenderer();clock.Restart();
+            using(var frame=viewport.Render(current,1000,1000,.25f,0,0)){}
+            double screenPrepareMs=clock.Elapsed.TotalMilliseconds;
+            long sharedAllocated=GC.GetTotalAllocatedBytes(true);clock.Restart();
+            var shared=viewport.Sample(current,new(1200,1500));double sharedFirstMs=clock.Elapsed.TotalMilliseconds;
+            if(shared!=first)throw new InvalidOperationException("Shared sampler differs from independent composite");
+            rows.Add(new{name,mode="prepared-viewport",screenPrepareMs,sharedFirstMs,allocatedMiB=(GC.GetTotalAllocatedBytes(true)-sharedAllocated)/1048576d});
+            Console.WriteLine($"{name}: prepared viewport sample {sharedFirstMs:F3} ms (screen preparation {screenPrepareMs:F2} ms)");
             Console.WriteLine($"{name}: cold {coldMs:F2} ms; median {sorted[10]:F2} ms; p95 {sorted[18]:F2} ms");
         }
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
