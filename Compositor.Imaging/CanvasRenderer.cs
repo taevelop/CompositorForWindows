@@ -61,6 +61,8 @@ public sealed class CanvasRenderer : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             var layer = entry.Layer;
             if (layer.IsGroup || !entry.Visible || entry.Opacity <= 0) continue;
+            if(layer.Mask is { Enabled:true, Placement:{} placement } placedMask)
+                layer=layer with { Mask=ResolvePlacedMask(placedMask,placement,layer.Transform,layer.Pixels.Width,layer.Pixels.Height,cancellationToken) };
             if (layer.IsAdjustment)
             {
                 canvas.Flush(); AdjustmentProcessor.Apply(adjustmentSurface!, document, layer, entry.Opacity,cancellationToken); continue;

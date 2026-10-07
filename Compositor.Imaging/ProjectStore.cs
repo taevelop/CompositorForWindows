@@ -147,6 +147,8 @@ public static class ProjectStore
         Action<SaveCheckpoint>? checkpoint = null)
     {
         document.Validate();
+        if(document.Layers.Any(l=>l.Mask is { Placement:not null } or { Linked:false }))
+            throw new NotSupportedException("Independent mask serialization is not connected yet. Nothing was saved or changed.");
         if (active is not null && !document.Layers.Any(l => l.Id == active)) throw new InvalidDataException("Invalid active layer.");
         string destination = Path.GetFullPath(path);
         if (!destination.EndsWith(".comp", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Projects must use the .comp extension.");

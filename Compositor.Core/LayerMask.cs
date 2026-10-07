@@ -7,6 +7,8 @@ public sealed record LayerMask
 {
     public Raster Pixels { get; }
     public bool Enabled { get; init; }
+    public LayerTransform? Placement { get; init; }
+    public bool Linked { get; init; } = true;
 
     public LayerMask(Raster pixels, bool enabled = true) : this(pixels, enabled, null) { }
     private LayerMask(Raster pixels, bool enabled, Raster? previous)
@@ -25,7 +27,7 @@ public sealed record LayerMask
         }
         Pixels = pixels; Enabled = enabled;
     }
-    public LayerMask WithPixels(Raster pixels) => ReferenceEquals(Pixels, pixels) ? this : new(pixels, Enabled, Pixels);
+    public LayerMask WithPixels(Raster pixels) => ReferenceEquals(Pixels, pixels) ? this : new(pixels, Enabled, Pixels) { Placement=Placement, Linked=Linked };
 
     public static LayerMask Solid(int width, int height, byte coverage = 255)
     {

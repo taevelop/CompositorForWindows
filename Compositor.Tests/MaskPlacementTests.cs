@@ -1,9 +1,54 @@
 using Compositor.Core;
 using Compositor.Imaging;
 using Xunit;
+using SkiaSharp;
 namespace Compositor.Tests;
 public sealed class MaskPlacementTests
 {
+    private static byte[] Render(CanvasRenderer renderer,Document document)
+    {
+        using var image=renderer.Flatten(document);using var bitmap=new SKBitmap(CanvasRenderer.Info(image.Width,image.Height));
+        Assert.True(image.ReadPixels(bitmap.Info,bitmap.GetPixels(),bitmap.RowBytes,0,0));return bitmap.GetPixelSpan().ToArray();
+    }
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public void PlacedMaskScreenAndOutputMatchResolvedCoverageIncludingEffectsAndAdjustments(bool effects)
+    {
+        var d=Document.Create(8,8);var mask=LayerMask.Solid(2,2,128) with {Placement=new(1,2,3,4,17),Linked=false};
+        var pixels=ShapeRaster.Create(new(ShapeKind.Rectangle,1,0,0),8,8);
+        var layer=d.Layers[0] with{Pixels=pixels,Mask=mask};
+        if(effects)layer=layer with{Effects=new(Stroke:new(1,0,0,1,1,false))};
+        d=d.Replace(layer);d.Validate();
+        var resolved=MaskPlacement.Resolve(mask,mask.Placement!,layer.Transform,8,8);
+        var expected=d.Replace(layer with{Mask=resolved});
+        using var actualRenderer=new CanvasRenderer();using var expectedRenderer=new CanvasRenderer();
+        Assert.Equal(Render(expectedRenderer,expected),Render(actualRenderer,d));
+        Assert.Equal(Render(expectedRenderer,expected),Render(actualRenderer,d));
+        var adjusted=Layer.ExposureLayer(8,8) with{Mask=mask,Exposure=new(-1)};
+        var actualAdjustment=d with{Layers=d.Layers.Add(adjusted)};
+        var expectedAdjustment=expected with{Layers=expected.Layers.Add(adjusted with{Mask=resolved})};
+        Assert.Equal(Render(expectedRenderer,expectedAdjustment),Render(actualRenderer,actualAdjustment));
+        Assert.NotEqual(Render(actualRenderer,d),Render(actualRenderer,actualAdjustment));
+        Assert.Same(mask.Pixels,d.Layers[0].Mask!.Pixels);Assert.Equal(mask.Placement,d.Layers[0].Mask!.Placement);
+    }
+    [Fact] public void PixelReplacementKeepsPlacementAndSaveRefusesUnserializedMetadataBeforeTouchingFiles()
+    {
+        var mask=LayerMask.Solid(2,2,128) with{Placement=new(2,3,4,5),Linked=false,Enabled=false};
+        var changed=mask.WithPixels(LayerMask.Solid(2,2,255).Pixels);
+        Assert.Equal(mask.Placement,changed.Placement);Assert.False(changed.Linked);Assert.False(changed.Enabled);
+        string root=Path.Combine(Path.GetTempPath(),"Compositor-mask-placement-"+Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            string path=Path.Combine(root,"Mask.comp");var d=Document.Create(8,8);ProjectStore.Save(d,null,path);
+            var before=File.ReadAllBytes(Path.Combine(path,"manifest.json"));
+            Assert.Throws<NotSupportedException>(()=>ProjectStore.Save(d.Replace(d.Layers[0] with{Mask=mask}),null,path));
+            Assert.Equal(before,File.ReadAllBytes(Path.Combine(path,"manifest.json")));
+            string fresh=Path.Combine(root,"Rejected.comp");
+            Assert.Throws<NotSupportedException>(()=>ProjectStore.Save(d.Replace(d.Layers[0] with{Mask=mask}),null,fresh));
+            Assert.False(Directory.Exists(fresh));Assert.False(File.Exists(fresh+".write-lock"));
+        }
+        finally{Directory.Delete(root,true);}
+    }
     [Fact] public void CacheReusesImmutableCoverageAndHonorsEnabledChangesCancellationAndLruBudget()
     {
         var mask=LayerMask.Solid(2,2,128);var t=new LayerTransform(0,0,2,2);

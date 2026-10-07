@@ -97,7 +97,8 @@ public sealed record Document(Guid Id, int Width, int Height, double Resolution,
             if (layer.Mask is { } mask)
             {
                 var m = mask.Pixels;
-                if (!(m.Width == 1 && m.Height == 1) && (m.Width != layer.Pixels.Width || m.Height != layer.Pixels.Height))
+                mask.Placement?.Validate();
+                if (mask.Placement is null && !(m.Width == 1 && m.Height == 1) && (m.Width != layer.Pixels.Width || m.Height != layer.Pixels.Height))
                     throw new NotSupportedException("This Windows build supports masks matching the source size or uniform 1x1 masks only.");
                 maskPixels += (long)m.Width * m.Height;
             }
