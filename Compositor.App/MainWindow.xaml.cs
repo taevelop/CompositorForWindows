@@ -282,6 +282,7 @@ public partial class MainWindow : Window
     });
     private async void ToolChanged(object sender, SelectionChangedEventArgs e)
     {
+        gradientOpacityDigit=null;
         if (Canvas is null) return;
         await Canvas.CommitGradientAsync();
         Canvas.CommitTransform();

@@ -15,6 +15,7 @@ public partial class MainWindow
         GradientRadial.IsChecked==true,GradientTransparent.IsChecked==true,GradientReverse.IsChecked==true,GradientOpacity.Value);
     private void RestoreTabTools(TabTools state)
     {
+        gradientOpacityDigit=null;
         ToolPicker.SelectedIndex=state.Tool;
         SampleRingToggle.IsChecked=Canvas.ShowSampleRing=state.SampleRing;
         BrushSize.Text=state.Size;BrushHardness.Text=state.Hardness;BrushOpacity.Text=state.Opacity;

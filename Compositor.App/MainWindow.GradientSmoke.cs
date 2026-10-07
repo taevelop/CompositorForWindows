@@ -48,6 +48,20 @@ public partial class MainWindow
             Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));
             if(!await HandleGradientShortcut(Key.G,ModifierKeys.None)||!Canvas.HasGradient||session.UndoCount!=0)
                 throw new InvalidOperationException("Current gradient tool shortcut unexpectedly committed the edit.");
+            if(!await HandleGradientShortcut(Key.D3,ModifierKeys.None,1)||GradientOpacity.Value!=30||GradientOpacityValue.Text!="30")
+                throw new InvalidOperationException("Gradient opacity shortcut failed.");
+            await Canvas.GradientPending;
+            if(session.Document.Layers[0].Pixels.ToRgba()[3]!=77||session.UndoCount!=0)
+                throw new InvalidOperationException("Opacity shortcut did not update pending alpha without committing.");
+            if(await HandleGradientShortcut(Key.D0,ModifierKeys.Control)||GradientOpacity.Value!=30)
+                throw new InvalidOperationException("Modified opacity key was intercepted.");
+            await HandleGradientShortcut(Key.NumPad0,ModifierKeys.None,2);await Canvas.GradientPending;
+            if(GradientOpacity.Value!=100)throw new InvalidOperationException("Numpad zero did not restore full opacity.");
+            await HandleGradientShortcut(Key.NumPad5,ModifierKeys.None,2.2);
+            if(GradientOpacity.Value!=5)throw new InvalidOperationException("Two-digit leading zero opacity failed.");
+            await HandleGradientShortcut(Key.D4,ModifierKeys.None,3);await HandleGradientShortcut(Key.D5,ModifierKeys.None,3.2);
+            if(GradientOpacity.Value!=45)throw new InvalidOperationException("Two-digit opacity failed.");
+            await HandleGradientShortcut(Key.D0,ModifierKeys.None,4);await Canvas.GradientPending;
             if(await HandleGradientShortcut(Key.B,ModifierKeys.Control)||!Canvas.HasGradient)
                 throw new InvalidOperationException("Unrelated modified shortcut changed the gradient.");
             if(!await HandleGradientShortcut(Key.B,ModifierKeys.None)||Canvas.HasGradient||Canvas.Tool!=EditorTool.Brush||session.UndoCount!=1)

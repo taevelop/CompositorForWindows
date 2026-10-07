@@ -6,9 +6,24 @@ using Compositor.Imaging;
 namespace Compositor.App;
 public partial class MainWindow
 {
-    private async Task<bool> HandleGradientShortcut(Key key,ModifierKeys modifiers)
+    private (int Digit,double Time)? gradientOpacityDigit;
+    private async Task<bool> HandleGradientShortcut(Key key,ModifierKeys modifiers,double? opacityTime=null)
     {
-        if(!Canvas.HasGradient||busy)return false;
+        if(busy)return false;
+        if(Canvas.Tool==EditorTool.Gradient&&modifiers==ModifierKeys.None)
+        {
+            int digit=key is >=Key.D0 and <=Key.D9?(int)key-(int)Key.D0:key is >=Key.NumPad0 and <=Key.NumPad9?(int)key-(int)Key.NumPad0:-1;
+            if(digit>=0)
+            {
+                double now=opacityTime??(double)System.Diagnostics.Stopwatch.GetTimestamp()/System.Diagnostics.Stopwatch.Frequency;
+                int percent=digit==0?100:digit*10;
+                if(gradientOpacityDigit is {} previous&&now>=previous.Time&&now-previous.Time<.6)
+                {percent=Math.Max(1,previous.Digit*10+digit);gradientOpacityDigit=null;}
+                else gradientOpacityDigit=(digit,now);
+                GradientOpacity.Value=percent;return true;
+            }
+        }
+        if(!Canvas.HasGradient)return false;
         if(key==Key.S&&modifiers is ModifierKeys.Control or (ModifierKeys.Control|ModifierKeys.Shift))
         {await Save(modifiers.HasFlag(ModifierKeys.Shift));return true;}
         if(modifiers is not (ModifierKeys.None or ModifierKeys.Shift))return false;
