@@ -13,7 +13,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
     private EditorSession session=null!;
-    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value))CancelRenderPreparation();session=value;} }
+    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
     public EditorTool Tool { get; set; } = EditorTool.Brush;
     public Func<BrushSettings> ReadBrush { get; set; } = () => new(40, .7, 1, 32, 32, 32);
     public Action<string>? ReportError { get; set; }
@@ -359,13 +359,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     {
         var c = e.Surface.Canvas; c.Clear(new SKColor(28, 30, 34));
         if (Session is null || ActualWidth <= 0) return;
-        if(!EnsurePrepared(Session.Document))
-        {
-            DrawPreparation(c);
-            c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);
-            c.Save();c.Translate((float)panX,(float)panY);c.Scale((float)Zoom);DrawGradient(c);c.Restore();
-            DrawGradientStatus(c);c.Restore();return;
-        }
+        bool ready=EnsurePrepared(Session.Document);
         c.Save(); c.Scale(e.Info.Width / (float)ActualWidth, e.Info.Height / (float)ActualHeight);
         c.Translate((float)panX, (float)panY); c.Scale((float)Zoom);
         var doc = Session.Document;
@@ -381,9 +375,14 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
                 if ((x + y) % 2 == 0) c.DrawRect((float)(x * cell), (float)(y * cell), (float)cell, (float)cell, checker);
             c.Restore();
         }
-        using (var frame = renderer.Render(doc, e.Info.Width, e.Info.Height, (float)(Zoom * e.Info.Width / ActualWidth),
-            (float)(panX * e.Info.Width / ActualWidth), (float)(panY * e.Info.Height / ActualHeight)))
-        { c.Save(); c.ResetMatrix(); c.DrawImage(frame, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest)); c.Restore(); }
+        float deviceZoom=(float)(Zoom*e.Info.Width/ActualWidth),deviceX=(float)(panX*e.Info.Width/ActualWidth),deviceY=(float)(panY*e.Info.Height/ActualHeight);
+        using(var frame=ready?renderer.Render(doc,e.Info.Width,e.Info.Height,deviceZoom,deviceX,deviceY):renderer.PreviousFrame(doc,e.Info.Width,e.Info.Height,deviceZoom,deviceX,deviceY))
+        {if(frame is not null){c.Save();c.ResetMatrix();c.DrawImage(frame,0,0,new SKSamplingOptions(SKFilterMode.Nearest));c.Restore();}}
+        if(!ready)
+        {
+            DrawGradient(c);c.Restore();c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);
+            DrawPreparation(c);DrawGradientStatus(c);c.Restore();return;
+        }
         if (Session.ActiveLayer is { } layer && Tool == EditorTool.Move && !IsTransforming)
         {
             using var outline = new SKPaint { Color = new(108, 154, 224), Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };

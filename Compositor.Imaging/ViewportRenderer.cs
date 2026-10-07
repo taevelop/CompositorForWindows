@@ -25,6 +25,15 @@ public sealed class ViewportRenderer : IDisposable
     private Document? previous;
     private int width, height;
     private float zoom, offsetX, offsetY;
+    public void InvalidatePreviousFrame()=>previous=null;
+    /// <summary>Display-only last completed pixels while a replacement is prepared.</summary>
+    public SKImage? PreviousFrame(Document document,int width,int height,float zoom,float offsetX,float offsetY)
+    {
+        ObjectDisposedException.ThrowIf(disposed,this);
+        if(surface is null||previous is null||previous.Id!=document.Id||previous.Width!=document.Width||previous.Height!=document.Height||
+            this.width!=width||this.height!=height||this.zoom!=zoom||this.offsetX!=offsetX||this.offsetY!=offsetY)return null;
+        return surface.Snapshot();
+    }
 
     public SKImage Render(Document document, int width, int height, float zoom, float offsetX, float offsetY)
     {

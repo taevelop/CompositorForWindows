@@ -4,6 +4,25 @@ using Xunit;
 namespace Compositor.Tests;
 public sealed class PreparedDocumentRenderTests
 {
+    [Fact] public void PreviousFrameIsDisplayOnlyAndRejectsOtherDocumentsOrViewports()
+    {
+        var doc=Document.Create(2,1);doc=doc.Replace(doc.Layers[0] with{Pixels=Raster.FromRgba(2,1,[255,0,0,255,0,0,255,255])});
+        using var renderer=new ViewportRenderer();
+        Assert.Null(renderer.PreviousFrame(doc,2,1,1,0,0));
+        using var rendered=renderer.Render(doc,2,1,1,0,0);
+        var changed=LayerFill.Apply(doc,doc.Layers[0].Id,0,255,0);
+        using var retained=renderer.PreviousFrame(changed,2,1,1,0,0);Assert.NotNull(retained);
+        using var oldPixels=rendered.PeekPixels();using var retainedPixels=retained!.PeekPixels();
+        Assert.True(oldPixels.GetPixelSpan().SequenceEqual(retainedPixels.GetPixelSpan()));
+        Assert.Equal(new SampledColor(0,255,0),renderer.Sample(changed,new(0,0)));
+        Assert.Null(renderer.PreviousFrame(doc with{Id=Guid.NewGuid()},2,1,1,0,0));
+        Assert.Null(renderer.PreviousFrame(doc,2,1,2,0,0));
+        Assert.Null(renderer.PreviousFrame(doc,2,1,1,1,0));
+        Assert.Null(renderer.PreviousFrame(doc,3,1,1,0,0));
+        using var current=renderer.Render(changed,2,1,1,0,0);
+        using var currentPixels=current.PeekPixels();Assert.False(oldPixels.GetPixelSpan().SequenceEqual(currentPixels.GetPixelSpan()));
+        renderer.InvalidatePreviousFrame();Assert.Null(renderer.PreviousFrame(changed,2,1,1,0,0));
+    }
     [Fact] public async Task ViewportPreparationMatchesFreshRenderAcrossZoomPanAndMasks()
     {
         var doc=Document.Create(600,300);var layer=doc.Layers[0];
