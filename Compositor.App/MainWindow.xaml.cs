@@ -335,6 +335,8 @@ public partial class MainWindow : Window
                 case Key.M: ToolPicker.SelectedIndex = shift ? 5 : 4; break;
                 case Key.L: ToolPicker.SelectedIndex = shift ? 7 : 6; break;
                 case Key.C: ToolPicker.SelectedIndex = 8; break;
+                case Key.X when Keyboard.Modifiers==ModifierKeys.None: SwapPalette(null,e);break;
+                case Key.D when Keyboard.Modifiers==ModifierKeys.None: ResetPalette(null,e);break;
                 case Key.Delete: if (session.Document.Selection is not null) ClearSelectionPixels(null, e); else DeleteLayer(null, e); break; default: return;
             }
         }
@@ -390,6 +392,7 @@ public partial class MainWindow : Window
         await CanvasSizeSmokeTest(Path.ChangeExtension(screenshot, ".canvas-size.png"));
         CropSmokeTest(Path.ChangeExtension(screenshot, ".crop.png"));
         TransformSmokeTest(Path.ChangeExtension(screenshot, ".transform.png"));
+        PaletteSmokeTest();
         await WorkspaceSmokeTest(Path.ChangeExtension(screenshot, ".workspace.png"));
         await TabPresentationSmokeTest();
         await TabDropSmokeTest();

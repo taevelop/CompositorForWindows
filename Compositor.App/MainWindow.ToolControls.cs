@@ -24,6 +24,7 @@ public partial class MainWindow
                 ToolbarColorButton.ToolTip = $"Choose brush color · {ColorPickerWindow.Hex(color)}";
             }
         };
+        MaskGray.TextChanged+=(_,_)=>RefreshPaletteSwatches();
         RefreshToolControls();
     }
 
@@ -58,7 +59,8 @@ public partial class MainWindow
         bool painting = ToolPicker.SelectedIndex is 1 or 2;
         ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", 6 => "Lasso", 7 => "Polygon", 8 => "Crop", _ => "Brush" };
         if (transforming) ToolTitle.Text = "Transform";
-        ColorButton.IsEnabled = ToolbarColorButton.IsEnabled = !session.EditMask;
+        ColorButton.IsEnabled = ToolbarColorButton.IsEnabled = BackgroundColorButton.IsEnabled = !session.EditMask;
+        RefreshPaletteSwatches();
         bool selecting = ToolPicker.SelectedIndex is 4 or 5 or 6 or 7;
         SelectionOptions.Visibility = selecting ? Visibility.Visible : Visibility.Collapsed;
         SelectionCenter.Visibility = ToolPicker.SelectedIndex is 4 or 5 ? Visibility.Visible : Visibility.Collapsed;

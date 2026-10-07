@@ -22,11 +22,11 @@ public partial class MainWindow
         {
             session.Apply(d=>d.Replace(d.Layers[0] with{Name="First tab edits"}));var edited=session.Document;
             Canvas.ActualPixels();Canvas.ZoomAt(new(140,110),120);var view=Canvas.CaptureView();
-            var firstTools=defaultTabTools with{Tool=4,Size="127",Hardness="31",Opacity="62",Color="#336699",Mask="27",Mode=Compositor.Core.SelectionMode.Add,Antialiased=false,Center=true,CropRatio=3,CropSnap=false};
+            var firstTools=defaultTabTools with{Tool=4,Size="127",Hardness="31",Opacity="62",Color="#336699",Background="#669933",Mask="27",Mode=Compositor.Core.SelectionMode.Add,Antialiased=false,Center=true,CropRatio=3,CropSnap=false};
             RestoreTabTools(firstTools);
             AddDocumentTab(Document.Create(64,48));var second=workspace.Current;
             Check(CaptureTabTools()==defaultTabTools,"New tab inherited another document's tools.");
-            var secondTools=defaultTabTools with{Tool=2,Size="81",Color="#CC6633"};RestoreTabTools(secondTools);
+            var secondTools=defaultTabTools with{Tool=2,Size="81",Color="#CC6633",Background="#3366CC"};RestoreTabTools(secondTools);
             Check(first!=second&&ReferenceEquals(Canvas.Session,second.Session),"New tab did not bind its own session.");
             session.Apply(d=>d.Replace(d.Layers[0] with{Name="Second tab edits"}));var secondDocument=session.Document;
             SelectTab(first.Id);Check(ReferenceEquals(edited,session.Document)&&Canvas.CaptureView()==view,"Switch lost document or viewport.");

@@ -6,16 +6,16 @@ namespace Compositor.App;
 public partial class MainWindow
 {
     private sealed record TabTools(int Tool,string Size,string Hardness,string Opacity,string Color,string Mask,
-        Compositor.Core.SelectionMode Mode,bool Antialiased,bool Center,int CropRatio,bool CropSnap);
+        Compositor.Core.SelectionMode Mode,bool Antialiased,bool Center,int CropRatio,bool CropSnap,string Background);
     private TabTools defaultTabTools=null!;
     private TabTools CaptureTabTools()=>new(ToolPicker.SelectedIndex,BrushSize.Text,BrushHardness.Text,BrushOpacity.Text,
         BrushColor.Text,MaskGray.Text,Canvas.SelectionMode,Canvas.SelectionAntialiased,Canvas.SelectionFromCenter,
-        CropRatioPicker.SelectedIndex,Canvas.CropSnapEnabled);
+        CropRatioPicker.SelectedIndex,Canvas.CropSnapEnabled,backgroundColor);
     private void RestoreTabTools(TabTools state)
     {
         ToolPicker.SelectedIndex=state.Tool;
         BrushSize.Text=state.Size;BrushHardness.Text=state.Hardness;BrushOpacity.Text=state.Opacity;
-        BrushColor.Text=state.Color;MaskGray.Text=state.Mask;
+        BrushColor.Text=state.Color;MaskGray.Text=state.Mask;SetBackgroundColor(state.Background);
         foreach(var radio in SelectionOptions.Children.OfType<RadioButton>())radio.IsChecked=radio.Tag?.ToString()==((int)state.Mode).ToString();
         Canvas.SelectionMode=state.Mode;
         SelectionAA.IsChecked=Canvas.SelectionAntialiased=state.Antialiased;

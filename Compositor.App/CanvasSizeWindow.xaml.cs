@@ -11,21 +11,21 @@ public partial class CanvasSizeWindow:Window
 {
     private readonly Document original;
     private readonly CanvasSizeDraft draft;
-    private readonly Color foreground;
+    private readonly Color foreground,background;
     private Color custom=Colors.White;
     private readonly CancellationTokenSource cancellation=new();
     private bool updating,working;
     private int anchor=4;
     public Document? ResultDocument {get;private set;}
     internal Task PendingApply {get;private set;}=Task.CompletedTask;
-    public CanvasSizeWindow(Document document,Color foregroundColor)
+    public CanvasSizeWindow(Document document,Color foregroundColor,Color? backgroundColor=null)
     {
-        original=document;foreground=foregroundColor;
+        original=document;foreground=foregroundColor;background=backgroundColor??Colors.White;
         draft=new(document.Width,document.Height,document.Resolution);
         InitializeComponent();
         CurrentLabel.Text=$"Current: {document.Width:N0} × {document.Height:N0} pixels";
         updating=true;UnitPicker.ItemsSource=Enum.GetValues<CanvasUnit>();UnitPicker.SelectedIndex=0;
-        FillPicker.ItemsSource=new[]{"Transparent","Foreground","Black","White","Custom"};FillPicker.SelectedIndex=0;
+        FillPicker.ItemsSource=new[]{"Transparent","Foreground","Black","White","Custom","Background"};FillPicker.SelectedIndex=0;
         string[] names=["Top left","Top center","Top right","Middle left","Center","Middle right","Bottom left","Bottom center","Bottom right"];
         for(int i=0;i<9;i++)
         {
@@ -65,7 +65,7 @@ public partial class CanvasSizeWindow:Window
     private void RelativeChanged(object sender,RoutedEventArgs e){draft.Relative=Relative.IsChecked==true;SyncFields();RefreshPreview();}
     private void LockedChanged(object sender,RoutedEventArgs e){draft.Locked=Locked.IsChecked==true;if(draft.Locked)draft.Set(draft.Displayed(true),true);SyncFields();RefreshPreview();}
     private Color? FillColor => (FillPicker.SelectedItem as string) switch
-    {"Foreground"=>foreground,"Black"=>Colors.Black,"White"=>Colors.White,"Custom"=>custom,_=>null};
+    {"Background"=>background,"Foreground"=>foreground,"Black"=>Colors.Black,"White"=>Colors.White,"Custom"=>custom,_=>null};
     internal CanvasSizeOptions ReadOptions()
     {
         var size=draft.Dimensions();var color=FillColor;

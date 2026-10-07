@@ -13,6 +13,7 @@ public partial class MainWindow
     private async Task CanvasSizeSmokeTest(string path)
     {
         static void Check(bool value,string message){if(!value)throw new InvalidOperationException(message);}
+        var savedBackground=backgroundColor;SetBackgroundColor("#123456");
         session.Load(Document.Create(100,80));var original=session.Document;Exception? failure=null;
         _=Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle,new Action(async ()=>
         {
@@ -22,6 +23,7 @@ public partial class MainWindow
                 d.WidthField.Text="invalid";Check(!d.ApplyButton.IsEnabled,"Invalid dimension enabled apply.");
                 d.WidthField.Text="140";d.HeightField.Text="110";
                 ((ToggleButton)d.Anchors.Children[8]).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+                d.FillPicker.SelectedItem="Background";Check(d.ReadOptions().Fill==new CanvasFill(18,52,86),"Canvas extension ignored background palette.");
                 d.FillPicker.SelectedItem="Custom";
                 Exception? paletteFailure=null;
                 _=Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle,new Action(()=>
@@ -68,5 +70,6 @@ public partial class MainWindow
         }));
         ChangeCanvasSize(null,new());await cancelled;
         Check(ReferenceEquals(resized,session.Document),"Late resize result applied after cancellation.");
+        SetBackgroundColor(savedBackground);
     }
 }
