@@ -1,10 +1,12 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Media;
 using Compositor.Core;
 using Compositor.Imaging;
 namespace Compositor.App;
 public partial class MainWindow
 {
+    private CancellationTokenSource? fillCancellation;
+    private void CancelFill(object? sender,RoutedEventArgs e)=>fillCancellation?.Cancel();
     private async void FillForeground(object sender,RoutedEventArgs e)=>await FillPalette(false);
     private async void FillBackground(object sender,RoutedEventArgs e)=>await FillPalette(true);
     private async Task FillPalette(bool background)
@@ -15,19 +17,25 @@ public partial class MainWindow
         Color color;
         if(mask){byte gray=(byte)Math.Round(Math.Clamp(MaskSlider.Value,0,100)*255/100);if(background)gray=(byte)(255-gray);color=Color.FromRgb(gray,gray,gray);}
         else if(!ColorPickerWindow.TryHex(background?backgroundColor:BrushColor.Text,out color))return;
-        Document? filled=null;
-        if(await Work(mask?"Filling mask…":"Filling pixels…",()=>filled=LayerFill.Apply(original,layer.Id,color.R,color.G,color.B,mask)))
+        using var cancellation=new CancellationTokenSource();fillCancellation=cancellation;
+        busy=true;Editor.IsEnabled=false;FillCancelButton.Visibility=Visibility.Visible;Status.Text=mask?"Filling mask…":"Filling pixels…";
+        try
         {
-            if(ReferenceEquals(session,target)&&ReferenceEquals(target.Document,original)&&filled is not null)target.Apply(_=>filled);
-            Refresh();Canvas.Focus();
+            var filled=await Task.Run(()=>LayerFill.Apply(original,layer.Id,color.R,color.G,color.B,mask,cancellation.Token));
+            cancellation.Token.ThrowIfCancellationRequested();
+            if(ReferenceEquals(session,target)&&ReferenceEquals(target.Document,original))target.Apply(_=>filled);
         }
-    }
-    private async Task FillSmokeTest()
+        catch(OperationCanceledException){}
+        catch(Exception error){ShowError(error.Message);}
+        finally{fillCancellation=null;busy=false;Editor.IsEnabled=true;FillCancelButton.Visibility=Visibility.Collapsed;Refresh();Canvas.Focus();}
+    }    private async Task FillSmokeTest()
     {
         var original=session.Document;var tools=CaptureTabTools();
         try
         {
             var doc=Document.Create(3,1);session.Load(doc);BrushColor.Text="#123456";SetBackgroundColor("#ABCDEF");
+            var cancelled=FillPalette(false);CancelFill(null,new RoutedEventArgs());await cancelled;
+            if(!ReferenceEquals(doc,session.Document)||session.UndoCount!=0||busy||FillCancelButton.Visibility!=Visibility.Collapsed)throw new InvalidOperationException("Cancelled fill changed document/history or retained busy UI.");
             await FillPalette(false);
             if(!session.Document.Layers[0].Pixels.ToRgba()[..4].SequenceEqual(new byte[]{18,52,86,255})||session.UndoCount!=1)throw new InvalidOperationException("Foreground fill failed.");
             await FillPalette(true);

@@ -284,13 +284,16 @@ public partial class MainWindow : Window
     private void ActualPixels(object? sender, RoutedEventArgs e) { Canvas.ActualPixels(); Refresh(); }
     private async void WindowKeyDown(object sender, KeyEventArgs e)
     {
-        if (busy) return;
+        if (busy){if(e.Key==Key.Escape&&fillCancellation is not null){CancelFill(null,e);e.Handled=true;}return;}
         if (Canvas.IsTransforming && e.Key == Key.Escape) { CancelTransform(null, e); e.Handled = true; return; }
         if (Canvas.Tool == EditorTool.Crop && e.Key == Key.Escape) { CancelCrop(null, e); e.Handled = true; return; }
         if (e.Key == Key.Escape && Canvas.HasInteraction) { Canvas.CancelInteraction(); e.Handled = true; return; }
         if(await HandleDocumentShortcut(e.Key,Keyboard.Modifiers)){e.Handled=true;return;}
         // Text editing owns its own shortcuts, including Undo and Delete.
         if (Keyboard.FocusedElement is TextBox) return;
+        var fillKey=e.Key==Key.System?e.SystemKey:e.Key;
+        if(fillKey==Key.Back&&Keyboard.Modifiers is ModifierKeys.Alt or ModifierKeys.Control)
+        {e.Handled=true;await FillPalette(Keyboard.Modifiers==ModifierKeys.Control);return;}
         if (Canvas.IsTransforming && e.Key == Key.Enter) { ApplyTransform(null, e); e.Handled = true; return; }
         if (Canvas.Tool == EditorTool.Crop && e.Key == Key.Enter) { ApplyCrop(null, e); e.Handled = true; return; }
         if (Canvas.HandleSelectionKey(e.Key)) { e.Handled = true; return; }
