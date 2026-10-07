@@ -4,6 +4,25 @@ using Xunit;
 namespace Compositor.Tests;
 public sealed class PreparedDocumentRenderTests
 {
+    [Fact] public async Task ViewportPreparationMatchesFreshRenderAcrossZoomPanAndMasks()
+    {
+        var doc=Document.Create(600,300);var layer=doc.Layers[0];
+        doc=GradientFill.Apply(doc,layer.Id,new(new(.5,.5),new(599.5,299.5),255,0,0,0,0,255,Style:GradientStyle.ForegroundToBackground));
+        layer=doc.Layers[0];doc=doc.Replace(layer with{Mask=LayerMask.Solid(600,300,173),Transform=layer.Transform with{Rotation=17}});
+        foreach(var view in new[]{new RenderPreparationViewport(320,200,.5f,10,20),new RenderPreparationViewport(320,200,2,-300,-150)})
+        {
+            using var prepared=await PreparedDocumentRender.CreateAsync(doc,view);
+            using var actual=new ViewportRenderer();actual.InstallPrepared(prepared,doc);
+            int preparedTiles=actual.TileImageBuildCount;Assert.True(preparedTiles>1);
+            using var fresh=new ViewportRenderer();
+            using var a=actual.Render(doc,view.Width,view.Height,view.Zoom,view.OffsetX,view.OffsetY);
+            Assert.Equal(preparedTiles,actual.TileImageBuildCount);
+            using var b=fresh.Render(doc,view.Width,view.Height,view.Zoom,view.OffsetX,view.OffsetY);
+            using var ap=a.PeekPixels();using var bp=b.PeekPixels();
+            Assert.True(ap.GetPixelSpan().SequenceEqual(bp.GetPixelSpan()));
+        }
+        Assert.Throws<ArgumentException>(()=>{_=PreparedDocumentRender.CreateAsync(doc,new RenderPreparationViewport(0,10,1,0,0));});
+    }
     private static Document Create()
     {
         var doc=Document.Create(2,1);

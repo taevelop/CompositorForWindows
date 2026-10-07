@@ -8,6 +8,7 @@ public sealed class ViewportRenderer : IDisposable
 {
     private bool disposed;
     private CanvasRenderer renderer = new();
+    internal int TileImageBuildCount=>renderer.TileImageBuildCount;
     private CompositeColorSampler sampler;
     public ViewportRenderer(){sampler=new(renderer);}
     // UI-thread confined: shares canonical document caches, never samples viewport pixels.

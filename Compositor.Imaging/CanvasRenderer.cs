@@ -8,6 +8,7 @@ public sealed class CanvasRenderer : IDisposable
 {
     private sealed record Cached(PixelTile?[] Neighbors, ColorOverlayEffect? Overlay, SKImage Image);
     private readonly Dictionary<(Guid, TileKey), Cached> cache = [];
+    internal int TileImageBuildCount {get;private set;}
     // Bounded independently of document layer count; tile images only retain the effect values.
     private readonly Dictionary<ColorOverlayEffect, byte[]> overlayTables = [];
     private byte[] OverlayTable(ColorOverlayEffect effect)
@@ -96,7 +97,7 @@ public sealed class CanvasRenderer : IDisposable
                 if (!cache.TryGetValue(cacheKey, out var cached) || cached.Overlay != overlay || !cached.Neighbors.SequenceEqual(neighbors))
                 {
                     cached?.Image.Dispose();
-                    cached = new(neighbors, overlay, TileImage(layer.Pixels, key, mask, overlayTable)); cache[cacheKey] = cached;
+                    cached = new(neighbors, overlay, TileImage(layer.Pixels, key, mask, overlayTable)); cache[cacheKey] = cached;TileImageBuildCount++;
                 }
                 canvas.Save(); canvas.ClipRect(bounds, SKClipOperation.Intersect, false);
                 canvas.DrawImage(cached.Image, new SKRect(x - 1, y - 1, x + 257, y + 257), sampling, paint);
