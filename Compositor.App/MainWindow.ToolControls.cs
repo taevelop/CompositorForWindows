@@ -10,6 +10,7 @@ public partial class MainWindow
 {
     private void InitializeToolControls()
     {
+        LinkSlider(GradientOpacity,GradientOpacityValue);
         LinkSlider(SizeSlider, BrushSize);
         LinkSlider(HardnessSlider, BrushHardness);
         LinkSlider(OpacitySlider, BrushOpacity);
@@ -57,7 +58,7 @@ public partial class MainWindow
         if (BrushOptions is null) return;
         bool transforming = Canvas?.IsTransforming == true;
         bool painting = ToolPicker.SelectedIndex is 1 or 2;
-        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", 6 => "Lasso", 7 => "Polygon", 8 => "Crop", 9 => "Eyedropper", _ => "Brush" };
+        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", 6 => "Lasso", 7 => "Polygon", 8 => "Crop", 9 => "Eyedropper", 10 => "Gradient", _ => "Brush" };
         if (transforming) ToolTitle.Text = "Transform";
         ColorButton.IsEnabled = ToolbarColorButton.IsEnabled = BackgroundColorButton.IsEnabled = !session.EditMask;
         RefreshPaletteSwatches();
@@ -66,7 +67,8 @@ public partial class MainWindow
         SelectionCenter.Visibility = ToolPicker.SelectedIndex is 4 or 5 ? Visibility.Visible : Visibility.Collapsed;
         SelectionHint.Text = ToolPicker.SelectedIndex == 7 ? "Enter: close · Backspace: point · Ctrl-drag: pixels" : ToolPicker.SelectedIndex == 6 ? "Draw · Ctrl-drag: pixels · Esc: cancel" : "Shift: square · Ctrl-drag: pixels · Esc: cancel";
         CropOptions.Visibility = ToolPicker.SelectedIndex == 8 ? Visibility.Visible : Visibility.Collapsed;
-        ToolHint.Visibility = transforming || painting || selecting || ToolPicker.SelectedIndex is 8 or 9 ? Visibility.Collapsed : Visibility.Visible;
+        ToolHint.Visibility = transforming || painting || selecting || ToolPicker.SelectedIndex is 8 or 9 or 10 ? Visibility.Collapsed : Visibility.Visible;
+        GradientOptions.Visibility=ToolPicker.SelectedIndex==10?Visibility.Visible:Visibility.Collapsed;
         EyedropperOptions.Visibility=ToolPicker.SelectedIndex==9?Visibility.Visible:Visibility.Collapsed;
         BrushOptions.Visibility = painting ? Visibility.Visible : Visibility.Collapsed;
         ColorOptions.Visibility = !session.EditMask && ToolPicker.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;

@@ -27,7 +27,7 @@ public partial class MainWindow : Window
         defaultPrompts = prompts = EditorPrompts.For(this);
         InitializeComponent();
         InitializeToolControls();
-        Canvas.Session = session; Canvas.ReadBrush = ReadBrush;
+        Canvas.Session = session; Canvas.ReadBrush = ReadBrush;Canvas.ReadGradient=ReadGradient;
         defaultTabTools=CaptureTabTools();
         AttachTabDrop(NewCanvasDropFrame,null);
         Canvas.ReportError = ShowError;
@@ -269,9 +269,10 @@ public partial class MainWindow : Window
             Opacity = Number(LayerOpacity) / 100, Blend = (BlendMode)LayerBlend.SelectedItem, Transform = t };
         session.Apply(d => d.Replace(updated)); Canvas.Focus();
     });
-    private void ToolChanged(object sender, SelectionChangedEventArgs e)
+    private async void ToolChanged(object sender, SelectionChangedEventArgs e)
     {
         if (Canvas is null) return;
+        await Canvas.CommitGradientAsync();
         Canvas.CommitTransform();
         Canvas.CancelInteraction();
         Canvas.CancelCrop();
@@ -291,6 +292,7 @@ public partial class MainWindow : Window
         if(await HandleDocumentShortcut(e.Key,Keyboard.Modifiers)){e.Handled=true;return;}
         // Text editing owns its own shortcuts, including Undo and Delete.
         if (Keyboard.FocusedElement is TextBox) return;
+        if(Canvas.HasGradient&&e.Key is Key.Enter or Key.Escape){e.Handled=true;if(e.Key==Key.Escape)CancelGradient(null,e);else await Canvas.CommitGradientAsync();return;}
         var fillKey=e.Key==Key.System?e.SystemKey:e.Key;
         if(fillKey==Key.Back&&Keyboard.Modifiers is ModifierKeys.Alt or ModifierKeys.Control)
         {e.Handled=true;await FillPalette(Keyboard.Modifiers==ModifierKeys.Control);return;}
@@ -341,6 +343,7 @@ public partial class MainWindow : Window
                 case Key.L: ToolPicker.SelectedIndex = shift ? 7 : 6; break;
                 case Key.C: ToolPicker.SelectedIndex = 8; break;
                 case Key.I: ToolPicker.SelectedIndex = 9; break;
+                case Key.G: ToolPicker.SelectedIndex = 10; break;
                 case Key.X when Keyboard.Modifiers==ModifierKeys.None: SwapPalette(null,e);break;
                 case Key.D when Keyboard.Modifiers==ModifierKeys.None: ResetPalette(null,e);break;
                 case Key.Delete: if (session.Document.Selection is not null) ClearSelectionPixels(null, e); else DeleteLayer(null, e); break; default: return;
@@ -401,6 +404,7 @@ public partial class MainWindow : Window
         PaletteSmokeTest();
         await FillSmokeTest();
         EyedropperSmokeTest();
+        await GradientSmokeTest();
         await RenderPreparationSmokeTest();
         await WorkspaceSmokeTest(Path.ChangeExtension(screenshot, ".workspace.png"));
         await TabPresentationSmokeTest();

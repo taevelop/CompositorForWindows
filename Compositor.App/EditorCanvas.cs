@@ -8,7 +8,7 @@ using SkiaSharp.Views.WPF;
 
 namespace Compositor.App;
 
-public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection, Crop, Eyedropper }
+public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection, Crop, Eyedropper, Gradient }
 public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
@@ -125,6 +125,8 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             { EndPointer(true); ReleaseGestureCapture(); return true; }
             AppendLassoPoint(p); polygonCursor = p; gestureButton = button; InvalidateVisual(); return true;
         }
+        if(Tool==EditorTool.Gradient&&!HasInteraction&&button==MouseButton.Left&&(!Session.InTransaction||HasGradient))
+        {BeginGradient(DocumentPoint(point));return gradientDragging;}
         if (Session is null || HasInteraction || Session.InTransaction) return false;
         if (button == MouseButton.Middle || (button == MouseButton.Left && Tool == EditorTool.Hand))
         {
@@ -140,6 +142,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     internal void MoveInteraction(Point point)
     {
+        if(gradientDragging){MoveGradient(DocumentPoint(point));return;}
         if(samplingColor){SampleAt(point);return;}
         if (panStart is Point previous)
         {
@@ -152,6 +155,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     {
         if (gestureButton != button) return false;
         MoveInteraction(point);
+        if(gradientDragging){gradientDragging=false;gestureButton=null;ReleaseGestureCapture();if(double.Hypot(gradientEnd.X-gradientStart.X,gradientEnd.Y-gradientStart.Y)<.5)CancelGradient();return true;}
         if(samplingColor){EndColorSampling();return true;}
         if (panStart is not null) { panStart = null; gestureButton = null; }
         else if (PolygonActive) gestureButton = null;
@@ -193,6 +197,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     public void CancelInteraction()
     {
         sampleRequest++;
+        if(gradientDragging)CancelGradient();
         StopSelectionAutoScroll();
         if(samplingColor)EndColorSampling();
         CancelTransformDrag();
@@ -395,10 +400,11 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             using var line = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };
             c.DrawPath(path, under); c.DrawPath(path, line);
         }
+        DrawGradient(c);
         DrawCrop(c);
         DrawTransform(c);
         c.Restore();
         c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);DrawSampleRing(c);c.Restore();
     }
-    public void Dispose() { canvasDisposed=true;CancelRenderPreparation();CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
+    public void Dispose() { canvasDisposed=true;CancelGradient();CancelRenderPreparation();CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
 }
