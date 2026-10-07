@@ -6,11 +6,20 @@ namespace Compositor.Imaging;
 /// <summary>Persistent viewport surface. Pixel edits repaint only damaged tiles; structural edits repaint all.</summary>
 public sealed class ViewportRenderer : IDisposable
 {
-    private readonly CanvasRenderer renderer = new();
-    private readonly CompositeColorSampler sampler;
+    private bool disposed;
+    private CanvasRenderer renderer = new();
+    private CompositeColorSampler sampler;
     public ViewportRenderer(){sampler=new(renderer);}
     // UI-thread confined: shares canonical document caches, never samples viewport pixels.
     public SampledColor? Sample(Document document,PointD point)=>sampler.Sample(document,point);
+    public void InstallPrepared(PreparedDocumentRender prepared,Document expected)
+    {
+        ObjectDisposedException.ThrowIf(disposed,this);
+        var next=prepared.Take(expected);
+        sampler.Dispose();renderer.Dispose();renderer=next;sampler=new(renderer);
+        // Force repaint even if dimensions and document identity match a prior frame.
+        previous=null;
+    }
     private SKSurface? surface;
     private Document? previous;
     private int width, height;
@@ -18,6 +27,7 @@ public sealed class ViewportRenderer : IDisposable
 
     public SKImage Render(Document document, int width, int height, float zoom, float offsetX, float offsetY)
     {
+        ObjectDisposedException.ThrowIf(disposed,this);
         if (width < 1 || height < 1 || !float.IsFinite(zoom) || zoom <= 0) throw new ArgumentException("Invalid viewport.");
         bool full = surface is null || this.width != width || this.height != height || this.zoom != zoom || this.offsetX != offsetX || this.offsetY != offsetY;
         if (surface is null || this.width != width || this.height != height)
@@ -75,5 +85,5 @@ public sealed class ViewportRenderer : IDisposable
         if (current.Layers.Any(l => !l.IsGroup && l.Visible && l.Opacity > 0 && l.Transform.Rotation % 90 != 0)) return full;
         return SKRect.Intersect(new(left, top, right, bottom), full);
     }
-    public void Dispose() { sampler.Dispose(); surface?.Dispose(); surface = null; previous = null; renderer.Dispose(); }
+    public void Dispose() { if(disposed)return;disposed=true;sampler.Dispose(); surface?.Dispose(); surface = null; previous = null; renderer.Dispose(); }
 }
