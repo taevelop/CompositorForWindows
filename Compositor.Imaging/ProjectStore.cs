@@ -13,7 +13,7 @@ public static class ProjectStore
     private static readonly string[] RootFields = ["format", "version", "colorSpace", "resolution", "documentID", "width", "height", "activeLayerID", "layers", "guides"];
     private static readonly string[] LayerFields = ["id", "name", "isVisible", "transform", "imageFile", "parentID", "isGroup", "opacity", "blendMode",
         "maskFile", "maskEnabled", "maskSourceID", "adjustment", "maskPlacement", "maskLinked", "shape", "effects", "text"];
-    private static readonly string[] UnsupportedFields = ["maskSourceID", "maskPlacement", "shape", "text"];
+    private static readonly string[] UnsupportedFields = ["maskSourceID", "maskPlacement", "text"];
 
     public static LoadedProject LoadRecovery(string path)
     {
@@ -50,6 +50,9 @@ public static class ProjectStore
                     if (l.TryGetProperty(field, out var v) && v.ValueKind != JsonValueKind.Null)
                         throw new NotSupportedException($"Layer '{l.GetProperty("name").GetString()}' contains unsupported {field}. Nothing was opened or changed.");
                 var adjustment = AdjustmentJson.Read(l);
+                var shape = ShapeJson.Read(l);
+                if (shape is not null && (OptionalBool(l, "isGroup") == true || adjustment is not null || OptionalString(l, "imageFile") is null))
+                    throw new InvalidDataException("Shapes require a pixel layer with imageFile.");
                 var effects = EffectsJson.Read(l);
                 if (effects is not null && (OptionalBool(l, "isGroup") == true || adjustment is not null))
                     throw new NotSupportedException("Effects on groups or adjustment layers cannot be preserved yet.");
@@ -94,6 +97,9 @@ public static class ProjectStore
                 Raster raster;
                 string? asset = OptionalString(l, "imageFile");
                 var adjustment = AdjustmentJson.Read(l);
+                var shape = ShapeJson.Read(l);
+                if (shape is not null && (OptionalBool(l, "isGroup") == true || adjustment is not null || OptionalString(l, "imageFile") is null))
+                    throw new InvalidDataException("Shapes require a pixel layer with imageFile.");
                 var effects = EffectsJson.Read(l);
                 if (effects is not null && (OptionalBool(l, "isGroup") == true || adjustment is not null))
                     throw new NotSupportedException("Effects on groups or adjustment layers cannot be preserved yet.");
@@ -123,7 +129,7 @@ public static class ProjectStore
                     usedMaskPixels += (long)mask.Pixels.Width * mask.Pixels.Height;
                 }
                 if (adjustment is not null && mask is not null && (mask.Pixels.Width > 1 || mask.Pixels.Height > 1)) raster = new(mask.Pixels.Width, mask.Pixels.Height);
-                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask, parent, isGroup, adjustment?.Exposure, adjustment?.Levels, adjustment?.Curves, effects, adjustment?.Invert ?? false, adjustment?.BlackWhite, adjustment?.ColorBalance, adjustment?.Grain, adjustment?.GradientMap, adjustment?.HueSaturation));
+                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask, parent, isGroup, adjustment?.Exposure, adjustment?.Levels, adjustment?.Curves, effects, adjustment?.Invert ?? false, adjustment?.BlackWhite, adjustment?.ColorBalance, adjustment?.Grain, adjustment?.GradientMap, adjustment?.HueSaturation) { Shape = ShapeJson.Read(l) });
             }
             var document = new Document(m.GetProperty("documentID").GetGuid(), width, height, OptionalDouble(m, "resolution", 72), layers.ToImmutable());
             document.Validate();
@@ -160,7 +166,7 @@ public static class ProjectStore
             foreach (var l in document.Layers)
             {
                 string id = l.Id.ToString().ToUpperInvariant(); string? file = null;
-                if (!l.IsAdjustment && (l.Pixels.Tiles.Count != 0 || l.Mask is not null)) { file = id + ".png"; ImageCodec.SaveRaster(l.Pixels, Path.Combine(staging, "images", file)); }
+                if (!l.IsAdjustment && (l.Pixels.Tiles.Count != 0 || l.Mask is not null || l.Shape is not null)) { file = id + ".png"; ImageCodec.SaveRaster(l.Pixels, Path.Combine(staging, "images", file)); }
                 string? maskFile = null;
                 if (l.Mask is { } mask) { maskFile = id + ".mask.png"; MaskCodec.Save(mask, Path.Combine(staging, "images", maskFile)); }
                 var t = l.Transform;
@@ -179,6 +185,7 @@ public static class ProjectStore
                     }
                 });
                 checkpoint?.Invoke(SaveCheckpoint.AssetWritten);
+                if (l.Shape is not null) records[^1]!["shape"] = ShapeJson.Write(l.Shape);
                 if (l.Effects is not null) records[^1]!["effects"] = EffectsJson.Write(l.Effects);
                 if (l.HueSaturation is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.HueSaturation);
                 else if (l.GradientMap is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.GradientMap);

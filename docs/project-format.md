@@ -112,3 +112,6 @@ stroke/shadow/innerShadow/outerGlow도 지원한다. 각각의 필드·합성 �
 ## 추가 비파괴 조정
 
 Invert, Black & White, Color Balance, Grain을 지원한다. 필드와 범위는 [반전·흑백](blackwhite-invert.md), [색상 균형·그레인](color-balance-grain.md)을 따른다. 공통 필수 기본 필드, imageFile 없는 조정 레이어, 연결 마스크 및 비지원 비활성 설정 거부 규칙을 유지한다. Gradient Map도 지원하며 gradientMapSettings의 shadows/highlights 색과 reversed를 보존한다. [Gradient Map 규격과 검증](gradient-map.md)을 참고한다. Hue/Saturation도 지원한다. 구형 scalar 필드와 선택적인 hsvSettings를 따로 보존하며 색상군 사전은 Swift의 키·값 교대 배열이다. [Hue/Saturation 규격과 검증](hue-saturation.md)을 참고한다.
+
+## 도형 메타데이터 지원 (2026-10-07)
+Rectangle/Ellipse/Line의 shape 스타일과 PNG를 함께 읽고 저장한다. 위 미지원 목록의 도형 항목은 이 변경으로 대체한다. 픽셀 편집 후에는 shape를 제거한다. 도형 편집 UI와 크기 변경 시 재래스터화는 후속 작업이며 실제 Mac 왕복은 보류다.
