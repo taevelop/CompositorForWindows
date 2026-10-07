@@ -38,6 +38,11 @@ internal sealed class ColorPickerWindow : Window
         swatches.Children.Add(new StackPanel { Children = { new TextBlock { Text = "New" }, preview } }); details.Children.Add(swatches);
         ApplyButton.Style = (Style)Application.Current.FindResource("CompactButton"); ApplyButton.Background = (Brush)Application.Current.FindResource("Accent"); ApplyButton.Foreground = Brushes.Black;
         details.Children.Add(ApplyButton);
+        var sampleButton=new Button { Content="Sample canvas", ToolTip="Click or drag on the canvas; Esc cancels sampling", Style=(Style)Application.Current.FindResource("CompactButton") };
+        MainWindow? FindEditor(){Window? current=Owner;while(current is not null){if(current is MainWindow main)return main;current=current.Owner;}return null;}
+        Loaded+=(_,_)=>sampleButton.IsEnabled=FindEditor() is not null;
+        sampleButton.Click+=(_,_)=>FindEditor()?.SamplePickerColor(this);
+        details.Children.Add(sampleButton);
         details.Children.Add(new Button { Content = "Cancel", IsCancel = true, Style = (Style)Application.Current.FindResource("CompactButton") });
         for (int channel = 0; channel < 3; channel++)
         {
