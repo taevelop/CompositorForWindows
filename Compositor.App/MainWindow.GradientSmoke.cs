@@ -8,6 +8,14 @@ public partial class MainWindow
 {
     private async Task GradientSmokeTest()
     {
+        var anchor=new PointD(12,-8);
+        foreach(double angle in new[]{0.1,0.7,1.6,2.3,3.0,-0.7,-1.6,-2.3})
+        {
+            var snapped=EditorCanvas.SnapGradientPoint(new(anchor.X+10*Math.Cos(angle),anchor.Y+10*Math.Sin(angle)),anchor);
+            double resultAngle=Math.Atan2(snapped.Y-anchor.Y,snapped.X-anchor.X)/(Math.PI/4);
+            if(Math.Abs(double.Hypot(snapped.X-anchor.X,snapped.Y-anchor.Y)-10)>1e-9||Math.Abs(resultAngle-Math.Round(resultAngle))>1e-9)
+                throw new InvalidOperationException("Gradient Shift snapping changed length or missed the 45-degree grid.");
+        }
         var original=session.Document;var tools=CaptureTabTools();
         try
         {
@@ -52,6 +60,16 @@ public partial class MainWindow
             await HandleDocumentShortcut(Key.Tab,ModifierKeys.Control);
             if(workspace.Current==tab||tab.Session.InTransaction||tab.Session.UndoCount!=3)
                 throw new InvalidOperationException("Ctrl+Tab did not commit the gradient.");
+            await SelectTabAsync(tab.Id);
+            GradientRadial.IsChecked=true;GradientTransparent.IsChecked=false;GradientReverse.IsChecked=true;GradientOpacity.Value=37;
+            await SelectTabAsync(original.Id);
+            GradientLinear.IsChecked=true;GradientTransparent.IsChecked=true;GradientReverse.IsChecked=false;GradientOpacity.Value=82;
+            await SelectTabAsync(tab.Id);
+            if(GradientRadial.IsChecked!=true||GradientLinear.IsChecked==true||GradientTransparent.IsChecked!=false||GradientReverse.IsChecked!=true||GradientOpacity.Value!=37||GradientOpacityValue.Text!="37")
+                throw new InvalidOperationException("Radial gradient tab settings were not restored.");
+            await SelectTabAsync(original.Id);
+            if(GradientLinear.IsChecked!=true||GradientRadial.IsChecked==true||GradientTransparent.IsChecked!=true||GradientReverse.IsChecked!=false||GradientOpacity.Value!=82||GradientOpacityValue.Text!="82")
+                throw new InvalidOperationException("Linear gradient tab settings were not restored.");
         }
         finally
         {

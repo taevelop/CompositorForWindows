@@ -23,8 +23,15 @@ public sealed partial class EditorCanvas
     }
     private void MoveGradient(PointD point)
     {
+        if(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))point=SnapGradientPoint(point,gradientMovingStart?gradientEnd:gradientStart);
         if(gradientMovingStart)gradientStart=point;else gradientEnd=point;
         UpdateGradient();
+    }
+    internal static PointD SnapGradientPoint(PointD point,PointD anchor)
+    {
+        double x=point.X-anchor.X,y=point.Y-anchor.Y,length=double.Hypot(x,y);
+        double angle=Math.Round(Math.Atan2(y,x)/(Math.PI/4),MidpointRounding.AwayFromZero)*(Math.PI/4);
+        return new(anchor.X+Math.Cos(angle)*length,anchor.Y+Math.Sin(angle)*length);
     }
     public async void UpdateGradient()
     {
