@@ -16,11 +16,13 @@ public partial class MainWindow
             string project=Path.Combine(root,"Sample.comp"),image=Path.Combine(root,"Image.png");
             ProjectStore.Save(Document.Create(6,5),null,project);ImageCodec.Export(Document.Create(2,3),image,false);
             AddDocumentTab(Document.Create(20,15));var target=workspace.Current;
-            await RouteDroppedFiles(target.Id,new[]{project+Path.DirectorySeparatorChar,image});
+            Canvas.RestoreView(2.5,-20,30);
+            await DropCanvasFiles(new[]{project+Path.DirectorySeparatorChar,image},new Point(91,73));
             var opened=workspace.FindPath(project)!;
             Check(opened is not null&&opened.Session.Document.Width==6&&opened.Session.Document.Layers.Length==1,"Project drop imported images into newly opened project.");
             Check(workspace.Current==target&&target.Session.Document.Layers.Length==2,"Mixed drop lost original image destination.");
             Check(ReferenceEquals(original,source.Session.Document),"Project drop changed unrelated document.");
+            Check(target.Session.ActiveLayer!.Transform.X==43&&target.Session.ActiveLayer.Transform.Y==15,"Canvas drop lost zoom/pan position or pixel snapping after opening project.");
             SelectTab(opened!.Id);session.Apply(d=>d.Replace(d.Layers[0] with{Name="Keep edits"}));var edited=session.Document;int count=workspace.Documents.Count;
             await RouteDroppedFiles(null,new[]{project});Check(workspace.Documents.Count==count&&ReferenceEquals(edited,session.Document),"Repeated project drop replaced existing edits.");
             string corrupt=Path.Combine(root,"Corrupt.comp");Directory.CreateDirectory(corrupt);File.WriteAllText(Path.Combine(corrupt,"manifest.json"),"{bad");

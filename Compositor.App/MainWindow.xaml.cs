@@ -162,7 +162,7 @@ public partial class MainWindow : Window
         var dialog = new OpenFileDialog { Title = "Import images as layers", Filter = "Images|*.png;*.jpg;*.jpeg", Multiselect = true };
         if (dialog.ShowDialog(this) == true) await Import(dialog.FileNames);
     }
-    private async Task Import(string[] paths)
+    private async Task Import(string[] paths,PointD? point=null)
     {
         Guid? parent = InsertionParent;
         var before = session.Document; var imported = new List<Layer>();
@@ -173,7 +173,7 @@ public partial class MainWindow : Window
             {
                 var pixels = ImageCodec.Load(path, Limits.MaxPixels - used); used += (long)pixels.Width * pixels.Height;
                 imported.Add(new(Guid.NewGuid(), Path.GetFileNameWithoutExtension(path), pixels,
-                    new((before.Width - pixels.Width) / 2.0, (before.Height - pixels.Height) / 2.0, pixels.Width, pixels.Height), ParentId: parent));
+                    new(Math.Floor((point?.X ?? before.Width / 2.0) - pixels.Width / 2.0), Math.Floor((point?.Y ?? before.Height / 2.0) - pixels.Height / 2.0), pixels.Width, pixels.Height), ParentId: parent));
             }
             (before with { Layers = before.Layers.AddRange(imported) }).Validate();
         });

@@ -144,7 +144,7 @@
      <Border Height="1" Background="{StaticResource Divider}" Margin="10,10"/>
      <Button x:Name="ColorButton" Click="PickBrushColor" Width="38" Height="38" Padding="5" ToolTip="Foreground color" AutomationProperties.Name="Choose foreground color" Style="{StaticResource CompactButton}"><Border x:Name="ColorSwatch" Background="#202020" Width="24" Height="24" BorderBrush="#CCCCCC" BorderThickness="1" CornerRadius="3"/></Button>
     </StackPanel></ScrollViewer></Border>
-    <local:EditorCanvas x:Name="Canvas" Grid.Column="1" Focusable="True"/>
+    <local:EditorCanvas x:Name="Canvas" Grid.Column="1" Focusable="True" AllowDrop="True" DragOver="CanvasFileDragOver" Drop="CanvasFileDrop"/>
     <GridSplitter Grid.Column="2" HorizontalAlignment="Stretch" Background="{StaticResource Divider}" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Resize layers panel"/>
     <Border Grid.Column="3" Background="{StaticResource Panel}" BorderBrush="{StaticResource Divider}" BorderThickness="1,0,0,0" Padding="8"><Grid>
      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>

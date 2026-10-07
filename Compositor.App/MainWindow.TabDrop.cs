@@ -32,12 +32,12 @@ public partial class MainWindow
             RefreshTabs();
         };
     }
-    private async Task ImportIntoTab(Guid target,string[] paths)
+    private async Task ImportIntoTab(Guid target,string[] paths,Compositor.Core.PointD? point=null)
     {
         if(paths.Length==0||!CanDropTabFiles(target))return;
         SelectTab(target);
         if(workspace.Current.Id!=target)return;
-        await Import(paths);
+        await Import(paths,point);
     }
     private async Task OpenImagesInTabs(string[] paths)
     {

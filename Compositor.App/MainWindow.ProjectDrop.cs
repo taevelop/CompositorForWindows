@@ -1,8 +1,8 @@
-﻿using System.IO;
+using System.IO;
 namespace Compositor.App;
 public partial class MainWindow
 {
-    private async Task RouteDroppedFiles(Guid? target,string[] paths)
+    private async Task RouteDroppedFiles(Guid? target,string[] paths,Compositor.Core.PointD? point=null)
     {
         if(!CanDropTabFiles(target))return;
         var images=new List<string>();
@@ -10,7 +10,7 @@ public partial class MainWindow
         {
             if(images.Count==0)return;
             var batch=images.ToArray();images.Clear();
-            if(target is {} id)await ImportIntoTab(id,batch);else await OpenImagesInTabs(batch);
+            if(target is {} id)await ImportIntoTab(id,batch,point);else await OpenImagesInTabs(batch);
         }
         foreach(var path in paths)
         {
