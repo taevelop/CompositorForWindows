@@ -27,7 +27,7 @@ public partial class MainWindow : Window
         defaultPrompts = prompts = EditorPrompts.For(this);
         InitializeComponent();
         InitializeToolControls();
-        Canvas.Session = session; Canvas.ReadBrush = ReadBrush;Canvas.ReadGradient=ReadGradient;
+        Canvas.Session = session; Canvas.ReadBrush = ReadBrush;Canvas.ReadGradient=ReadGradient;Canvas.ReadShape=ReadShape;
         defaultTabTools=CaptureTabTools();
         AttachTabDrop(NewCanvasDropFrame,null);
         Canvas.ReportError = ShowError;
@@ -288,7 +288,7 @@ public partial class MainWindow : Window
         Canvas.CommitTransform();
         Canvas.CancelInteraction();
         Canvas.CancelCrop();
-        Canvas.Cursor = ToolPicker.SelectedIndex==9?Cursors.Cross:null; Canvas.Tool = (EditorTool)ToolPicker.SelectedIndex; RefreshToolControls(); Canvas.InvalidateVisual(); Canvas.Focus();
+        Canvas.Cursor = ToolPicker.SelectedIndex is 9 or 11?Cursors.Cross:null; Canvas.Tool = (EditorTool)ToolPicker.SelectedIndex; RefreshToolControls(); Canvas.InvalidateVisual(); Canvas.Focus();
         UpdateStatus();
     }
     private void Undo(object? sender, RoutedEventArgs e) => Safe(session.Undo);
@@ -359,6 +359,8 @@ public partial class MainWindow : Window
                 case Key.C: ToolPicker.SelectedIndex = 8; break;
                 case Key.I: ToolPicker.SelectedIndex = 9; break;
                 case Key.G: ToolPicker.SelectedIndex = 10; break;
+                case Key.U: if(shift&&ToolPicker.SelectedIndex==11)CycleShapeKind();else ToolPicker.SelectedIndex=11;break;
+                case Key.Tab when ToolPicker.SelectedIndex==11: CycleShapeKind();break;
                 case Key.X when Keyboard.Modifiers==ModifierKeys.None: SwapPalette(null,e);break;
                 case Key.D when Keyboard.Modifiers==ModifierKeys.None: ResetPalette(null,e);break;
                 case Key.Delete: if (session.Document.Selection is not null) ClearSelectionPixels(null, e); else DeleteLayer(null, e); break; default: return;
@@ -404,6 +406,7 @@ public partial class MainWindow : Window
         if (session.ActiveLayer!.Transform.X != 25) throw new InvalidOperationException("UI move gesture failed.");
         await StabilitySmokeTest(Path.ChangeExtension(screenshot, ".checks.json"));
         await MaskSmokeTest(Path.ChangeExtension(screenshot, ".masks.json"));
+        await ShapeSmokeTest(Path.ChangeExtension(screenshot,".shapes.json"));
         await GroupSmokeTest(Path.ChangeExtension(screenshot, ".groups.json"));
         await AdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".adjustments.json"));
         await ExposureSmokeTest(Path.ChangeExtension(screenshot, ".exposure.json"));

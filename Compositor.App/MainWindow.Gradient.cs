@@ -32,7 +32,7 @@ public partial class MainWindow
             Key.V=>0,Key.B=>1,Key.E=>2,Key.H=>3,
             Key.M=>modifiers.HasFlag(ModifierKeys.Shift)?5:4,
             Key.L=>modifiers.HasFlag(ModifierKeys.Shift)?7:6,
-            Key.C=>8,Key.I=>9,Key.G=>10,_=>-1
+            Key.C=>8,Key.I=>9,Key.G=>10,Key.U=>11,_=>-1
         };
         if(tool<0)return false;
         if(tool==ToolPicker.SelectedIndex)return true;

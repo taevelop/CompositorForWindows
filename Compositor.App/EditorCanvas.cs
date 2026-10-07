@@ -8,7 +8,7 @@ using SkiaSharp.Views.WPF;
 
 namespace Compositor.App;
 
-public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection, Crop, Eyedropper, Gradient }
+public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection, Crop, Eyedropper, Gradient, Shape }
 public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
@@ -19,7 +19,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     public Action<string>? ReportError { get; set; }
     public Action? ViewportChanged { get; set; }
     public double Zoom { get; private set; } = 1;
-    public bool HasInteraction => transformDrag is not null || cropDrag is not null || pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
+    public bool HasInteraction => shapeDrag is not null || transformDrag is not null || cropDrag is not null || pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
     private double panX = 30, panY = 30;
     private Point? panStart;
     private Point panOrigin;
@@ -151,7 +151,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         {
             panX += point.X - previous.X; panY += point.Y - previous.Y; panStart = point; InvalidateVisual(); return;
         }
-        if (transformDrag is not null || cropDrag is not null || pixelMove is not null || originalLayer is not null || selectionStart is not null) MovePointer(DocumentPoint(point));
+        if (shapeDrag is not null || transformDrag is not null || cropDrag is not null || pixelMove is not null || originalLayer is not null || selectionStart is not null) MovePointer(DocumentPoint(point));
         UpdateSelectionAutoScroll(point);
     }
     internal bool FinishInteraction(MouseButton button, Point point)
@@ -199,6 +199,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void CancelInteraction()
     {
+        if(shapeDrag is not null)EndShape(false);
         sampleRequest++;
         if(gradientDragging)CancelGradient();
         StopSelectionAutoScroll();
@@ -219,6 +220,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         if (Session.InTransaction) return;
         if(Tool==EditorTool.Eyedropper){SampleDocumentColor(point);return;}
         var keys = modifiers ?? Keyboard.Modifiers;
+        if(Tool==EditorTool.Shape){BeginShape(point,keys);return;}
         if (Tool == EditorTool.Crop) { BeginCrop(point); return; }
         if (IsSelectionTool && keys.HasFlag(ModifierKeys.Control) && Session.Document.Selection is { IsEmpty: false } selectedPixels && SelectionGeometry.Contains(selectedPixels, point))
         {
@@ -257,6 +259,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void MovePointer(PointD point, ModifierKeys? modifiers = null)
     {
+        if(shapeDrag is not null){MoveShape(point,modifiers??Keyboard.Modifiers);return;}
         if (transformDrag is not null) { MoveTransformPointer(point, modifiers ?? Keyboard.Modifiers); return; }
         if (cropDrag is not null) { MoveCrop(point, modifiers ?? Keyboard.Modifiers); return; }
         if (!Session.InTransaction) return;
@@ -319,6 +322,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void EndPointer(bool commit)
     {
+        if(shapeDrag is not null){EndShape(commit);return;}
         StopSelectionAutoScroll();
         if (transformDrag is not null)
         {
@@ -385,7 +389,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         {if(frame is not null){c.Save();c.ResetMatrix();c.DrawImage(frame,0,0,new SKSamplingOptions(SKFilterMode.Nearest));c.Restore();}}
         if(!ready)
         {
-            DrawGradient(c);c.Restore();c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);
+            DrawShape(c);DrawGradient(c);c.Restore();c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);
             DrawPreparation(c);DrawGradientStatus(c);c.Restore();return;
         }
         if (Session.ActiveLayer is { } layer && Tool == EditorTool.Move && !IsTransforming)
@@ -421,7 +425,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             using var line = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };
             c.DrawPath(path, under); c.DrawPath(path, line);
         }
-        DrawGradient(c);
+        DrawShape(c);DrawGradient(c);
         DrawCrop(c);
         DrawTransform(c);
         c.Restore();

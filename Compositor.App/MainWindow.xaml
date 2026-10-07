@@ -93,6 +93,27 @@
       <TextBlock Text="Opacity" VerticalAlignment="Center"/><Slider Style="{StaticResource EditorSlider}" x:Name="GradientOpacity" Minimum="1" Maximum="100" Value="100" Width="110" ValueChanged="GradientChanged" Margin="8,0"/><TextBox x:Name="GradientOpacityValue" Text="100" Width="46" Margin="0,0,8,0" AutomationProperties.Name="Gradient opacity percent"/>
       <Button Content="Apply" Click="ApplyGradient" Style="{StaticResource CompactButton}"/><Button Content="Cancel" Click="CancelGradient" Style="{StaticResource CompactButton}"/>
      </StackPanel>
+     <StackPanel x:Name="ShapeOptions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+<StackPanel.Resources>
+       <Style TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{StaticResource Ink}"/><Setter Property="Padding" Value="9,5"/>
+        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
+         <Border x:Name="ModeFrame" Background="#2D3138" BorderBrush="{StaticResource Divider}" BorderThickness="1" CornerRadius="4" Padding="{TemplateBinding Padding}"><ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"/></Border>
+         <ControlTemplate.Triggers>
+          <Trigger Property="IsChecked" Value="True"><Setter TargetName="ModeFrame" Property="Background" Value="{StaticResource AccentMuted}"/><Setter TargetName="ModeFrame" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ModeFrame" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="ModeFrame" Property="BorderBrush" Value="{StaticResource Ink}"/></Trigger>
+         </ControlTemplate.Triggers>
+        </ControlTemplate></Setter.Value></Setter>
+       </Style>
+      </StackPanel.Resources>
+      <RadioButton x:Name="ShapeRectangle" Content="Rectangle" GroupName="ShapeKind" IsChecked="True" Foreground="{StaticResource Ink}" Checked="ShapeKindChanged" Margin="0,0,10,0"/>
+      <RadioButton x:Name="ShapeEllipse" Content="Ellipse" GroupName="ShapeKind" Foreground="{StaticResource Ink}" Checked="ShapeKindChanged" Margin="0,0,10,0"/>
+      <RadioButton x:Name="ShapeLine" Content="Line" GroupName="ShapeKind" Foreground="{StaticResource Ink}" Checked="ShapeKindChanged" Margin="0,0,16,0"/>
+      <TextBlock x:Name="ShapeRadiusLabel" Text="Radius" VerticalAlignment="Center"/><Slider x:Name="ShapeRadius" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="200" Value="0" Width="100" Margin="8,0"/><TextBox x:Name="ShapeRadiusValue" Text="0" Width="52" AutomationProperties.Name="Shape corner radius"/>
+      <TextBlock x:Name="ShapeWidthLabel" Text="Width" VerticalAlignment="Center" Margin="12,0,0,0"/><Slider x:Name="ShapeWidth" Style="{StaticResource EditorSlider}" Minimum="1" Maximum="100" Value="4" Width="100" Margin="8,0"/><TextBox x:Name="ShapeWidthValue" Text="4" Width="52" AutomationProperties.Name="Shape line width"/>
+      <Button x:Name="ShapeColorButton" Click="PickBrushColor" ToolTip="Shape foreground color" Style="{StaticResource CompactButton}" Margin="12,0"><Border Width="26" Height="20" Background="{Binding Background, ElementName=ToolbarColorSwatch}"/></Button>
+     </StackPanel>
      <StackPanel x:Name="EyedropperOptions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed"><CheckBox x:Name="SampleRingToggle" Content="Sample ring" IsChecked="True" Foreground="{StaticResource Ink}" Click="SampleRingChanged" Margin="0,0,18,0"/><TextBlock Text="Click or drag to sample · Alt with Brush/Eraser" Foreground="{StaticResource MutedInk}" VerticalAlignment="Center"/></StackPanel>
      <StackPanel x:Name="SelectionOptions" ToolTip="Inside selection: drag outline · Ctrl-drag: move pixels · Ctrl+Alt-drag: duplicate pixels · Ctrl+arrows: move pixels" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
       <StackPanel.Resources>
@@ -151,7 +172,7 @@
 <ListBoxItem ToolTip="Freehand lasso (L)" AutomationProperties.Name="Freehand lasso (L)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" Data="M8,17 C-3,17 0,2 12,2 C25,0 25,18 10,18 C3,17 5,12 9,14 C13,16 9,22 4,22"/></ListBoxItem>
 <ListBoxItem ToolTip="Polygonal lasso (Shift+L)" AutomationProperties.Name="Polygonal lasso (Shift+L)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" Data="M2,5 L19,2 22,17 6,20 2,5 M6,20 L3,24"/></ListBoxItem>
      <ListBoxItem ToolTip="Crop (C)" AutomationProperties.Name="Crop (C)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M6,1 L6,18 23,18 M1,6 L18,6 18,23 M6,6 L18,18"/></ListBoxItem>
-<ListBoxItem ToolTip="Eyedropper (I) · Alt with Brush/Eraser" AutomationProperties.Name="Eyedropper (I)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M14,3 L21,10 M16,1 L23,8 19,12 12,5 Z M13,7 L3,17 2,23 8,22 18,12 M4,17 L8,21"/></ListBoxItem><ListBoxItem ToolTip="Gradient (G)" AutomationProperties.Name="Gradient (G)"><TextBlock Text="◩" FontSize="25"/></ListBoxItem>
+<ListBoxItem ToolTip="Eyedropper (I) · Alt with Brush/Eraser" AutomationProperties.Name="Eyedropper (I)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M14,3 L21,10 M16,1 L23,8 19,12 12,5 Z M13,7 L3,17 2,23 8,22 18,12 M4,17 L8,21"/></ListBoxItem><ListBoxItem ToolTip="Gradient (G)" AutomationProperties.Name="Gradient (G)"><TextBlock Text="◩" FontSize="25"/></ListBoxItem><ListBoxItem ToolTip="Shape (U) · Shift+U: next kind" AutomationProperties.Name="Shape (U)"><Path Width="18" Height="18" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" Data="M2,2 L22,2 22,22 2,22 Z"/></ListBoxItem>
 </ListBox>
      <Border Height="1" Background="{StaticResource Divider}" Margin="10,10"/>
      <Grid Width="46" Height="56">

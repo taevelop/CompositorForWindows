@@ -10,6 +10,7 @@ public partial class MainWindow
 {
     private void InitializeToolControls()
     {
+        InitializeShapeControls();
         LinkSlider(GradientOpacity,GradientOpacityValue);
         LinkSlider(SizeSlider, BrushSize);
         LinkSlider(HardnessSlider, BrushHardness);
@@ -60,16 +61,18 @@ public partial class MainWindow
         if (BrushOptions is null) return;
         bool transforming = Canvas?.IsTransforming == true;
         bool painting = ToolPicker.SelectedIndex is 1 or 2;
-        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", 6 => "Lasso", 7 => "Polygon", 8 => "Crop", 9 => "Eyedropper", 10 => "Gradient", _ => "Brush" };
+        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", 6 => "Lasso", 7 => "Polygon", 8 => "Crop", 9 => "Eyedropper", 10 => "Gradient", 11 => "Shape", _ => "Brush" };
         if (transforming) ToolTitle.Text = "Transform";
-        ColorButton.IsEnabled = ToolbarColorButton.IsEnabled = BackgroundColorButton.IsEnabled = !session.EditMask;
+        ColorButton.IsEnabled = ToolbarColorButton.IsEnabled = BackgroundColorButton.IsEnabled = !session.EditMask||ToolPicker.SelectedIndex==11;
         RefreshPaletteSwatches();
         bool selecting = ToolPicker.SelectedIndex is 4 or 5 or 6 or 7;
         SelectionOptions.Visibility = selecting ? Visibility.Visible : Visibility.Collapsed;
         SelectionCenter.Visibility = ToolPicker.SelectedIndex is 4 or 5 ? Visibility.Visible : Visibility.Collapsed;
         SelectionHint.Text = ToolPicker.SelectedIndex == 7 ? "Enter: close · Backspace: point · Ctrl-drag: pixels" : ToolPicker.SelectedIndex == 6 ? "Draw · Ctrl-drag: pixels · Esc: cancel" : "Shift: square · Ctrl-drag: pixels · Esc: cancel";
         CropOptions.Visibility = ToolPicker.SelectedIndex == 8 ? Visibility.Visible : Visibility.Collapsed;
-        ToolHint.Visibility = transforming || painting || selecting || ToolPicker.SelectedIndex is 8 or 9 or 10 ? Visibility.Collapsed : Visibility.Visible;
+        ToolHint.Visibility = transforming || painting || selecting || ToolPicker.SelectedIndex is 8 or 9 or 10 or 11 ? Visibility.Collapsed : Visibility.Visible;
+        ShapeOptions.Visibility=ToolPicker.SelectedIndex==11?Visibility.Visible:Visibility.Collapsed;
+        RefreshShapeControls();
         GradientOptions.Visibility=ToolPicker.SelectedIndex==10?Visibility.Visible:Visibility.Collapsed;
         EyedropperOptions.Visibility=ToolPicker.SelectedIndex==9?Visibility.Visible:Visibility.Collapsed;
         BrushOptions.Visibility = painting ? Visibility.Visible : Visibility.Collapsed;
@@ -78,6 +81,7 @@ public partial class MainWindow
         ToolHint.Text = ToolPicker.SelectedIndex switch
         {
             9 => "Click or drag to sample visible colors · Alt with Brush/Eraser",
+            11 => "Shift: constrain · Alt: center · Esc: cancel",
             0 => "Drag to move layer · Esc to cancel",
             3 => "Drag to pan · Wheel to zoom",
             2 => "Erase pixels · Wheel to zoom",
@@ -87,7 +91,7 @@ public partial class MainWindow
 
     private void PickBrushColor(object sender, RoutedEventArgs e)
     {
-        if (busy || (session.InTransaction && !Canvas.HasGradient) || session.EditMask) return;
+        if (busy || (session.InTransaction && !Canvas.HasGradient) || (session.EditMask&&ToolPicker.SelectedIndex!=11)) return;
         if (!ColorPickerWindow.TryHex(BrushColor.Text, out var color)) color = Colors.Black;
         var dialog = new ColorPickerWindow(color) { Owner = this };
         if (dialog.ShowDialog() == true) BrushColor.Text = ColorPickerWindow.Hex(dialog.SelectedColor);
