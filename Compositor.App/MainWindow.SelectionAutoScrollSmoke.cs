@@ -38,7 +38,9 @@ public partial class MainWindow
         Check(!Canvas.SelectionAutoScrollRunning,"Freehand unexpectedly auto-scrolled.");Canvas.CancelInteraction();
         ToolPicker.SelectedIndex=5;Canvas.BeginInteraction(MouseButton.Left,start);Canvas.MoveInteraction(edge);
         Check(Canvas.SelectionAutoScrollRunning,"Ellipse did not auto-scroll.");
-        await Task.Delay(50);Check(!Canvas.SelectionAutoScrollRunning,"Dispatcher timer did not stop without a captured pointer.");
+        await Task.Delay(50);
+        await Dispatcher.InvokeAsync(()=>{},System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        Check(!Canvas.SelectionAutoScrollRunning,"Dispatcher timer did not stop without a captured pointer.");
         Canvas.MoveInteraction(edge);ToolPicker.SelectedIndex=1;
         Check(!Canvas.SelectionAutoScrollRunning&&!Canvas.HasInteraction,"Tool switch retained auto-scroll.");
     }

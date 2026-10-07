@@ -18,3 +18,5 @@ WPF에서는 실제 캔버스/세션에 결정적인 틱을 주입하여 끝점 
 실행 패키지: artifacts/publish-selection-scroll/Compositor.Windows.exe.
 
 ./build.ps1 -Test: 경고/오류 0, 코어 468개 및 실제 WPF 검사 통과. verify-portable.ps1 -Runs 1 격리 실행 통과. 개발 PC의 공백 경로·제한 PATH·공유 런타임 미사용 검사이며 별도 Windows PC 검증을 대체하지 않는다.
+
+2026-10-07: 새 문서 드롭 회귀 실행 중 기존 50ms 대기 후 Dispatcher 타이머 종료 검사가 한 번 실패했다. Task.Delay 완료와 Input 우선순위 타이머 처리 순서를 동일하게 가정하지 않도록 대기 후 ApplicationIdle Dispatcher 작업까지 처리한 다음 같은 종료 조건을 검사한다. 실제 StepSelectionAutoScroll의 종료 구현과 전체 WPF 30초 제한은 변경하지 않았다. 이 보완으로 다른 모든 간헐 실패 원인이 해결됐다고 판단하지 않는다.
