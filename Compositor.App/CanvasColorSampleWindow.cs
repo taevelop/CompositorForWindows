@@ -10,7 +10,9 @@ internal sealed class CanvasColorSampleWindow : Window
 {
     private readonly EditorCanvas editor;
 
-    private bool dragging;
+    private bool dragging,closed;
+    private long request;
+    internal Task SampleCompletion {get;private set;}=Task.CompletedTask;
     private readonly PickerSampleRing ring;
     internal Action<Color>? PreviewColor { get; set; }
     internal Color? Sampled { get; private set; }
@@ -27,21 +29,25 @@ internal sealed class CanvasColorSampleWindow : Window
         WindowStartupLocation=WindowStartupLocation.Manual;
         MouseLeftButtonDown+=(_,e)=>{dragging=true;CaptureMouse();Sample(e.GetPosition(this));e.Handled=true;};
         MouseMove+=(_,e)=>{if(dragging)Sample(e.GetPosition(this));};
-        MouseLeftButtonUp+=(_,e)=>{if(!dragging)return;Sample(e.GetPosition(this));dragging=false;ReleaseMouseCapture();DialogResult=Sampled.HasValue;e.Handled=true;};
+        MouseLeftButtonUp+=async (_,e)=>{if(!dragging)return;Sample(e.GetPosition(this));dragging=false;ReleaseMouseCapture();e.Handled=true;var finalRequest=request;await SampleCompletion;if(!closed&&request==finalRequest)DialogResult=Sampled.HasValue;};
+        Closed+=(_,_)=>{closed=true;request++;};
         PreviewKeyDown+=(_,e)=>{if(e.Key==Key.Escape){e.Handled=true;DialogResult=false;}};
         LostMouseCapture+=(_,_)=>{if(dragging){dragging=false;DialogResult=false;}};
 
     }
-    internal void Sample(Point point)
+    internal void Sample(Point point)=>SampleCompletion=SampleAsync(point,++request);
+    private async Task SampleAsync(Point point,long generation)
     {
-        if(editor.SampleComposite(editor.DocumentPoint(point)) is {} color)
+        try
         {
-            Sampled=Color.FromRgb(color.Red,color.Green,color.Blue);PreviewColor?.Invoke(Sampled.Value);
+            var color=await editor.SampleCompositeAsync(editor.DocumentPoint(point));
+            if(closed||generation!=request)return;
+            if(color is {} value){Sampled=Color.FromRgb(value.Red,value.Green,value.Blue);PreviewColor?.Invoke(Sampled.Value);}
+            ring.Update(point,Sampled,editor.ShowSampleRing);
         }
-        ring.Update(point,Sampled,editor.ShowSampleRing);
+        catch(Exception error){if(!closed){editor.ReportError?.Invoke(error.Message);DialogResult=false;}}
     }
 }
-
 internal sealed class PickerSampleRing : FrameworkElement
 {
     private Point position;

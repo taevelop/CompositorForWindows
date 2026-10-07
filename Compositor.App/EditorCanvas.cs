@@ -192,6 +192,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void CancelInteraction()
     {
+        sampleRequest++;
         StopSelectionAutoScroll();
         if(samplingColor)EndColorSampling();
         CancelTransformDrag();

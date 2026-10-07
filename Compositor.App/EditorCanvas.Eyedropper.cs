@@ -7,6 +7,15 @@ namespace Compositor.App;
 public sealed partial class EditorCanvas
 {
     internal SampledColor? SampleComposite(PointD point)=>EnsurePrepared(Session.Document)?renderer.Sample(Session.Document,point):null;
+    internal async Task<SampledColor?> SampleCompositeAsync(PointD point)
+    {
+        var targetSession=Session;var document=targetSession.Document;
+        if(!EnsurePrepared(document))await RenderPreparation;
+        if(canvasDisposed||!ReferenceEquals(Session,targetSession)||!ReferenceEquals(Session.Document,document)||!EnsurePrepared(document))return null;
+        return renderer.Sample(document,point);
+    }
+    private long sampleRequest;
+    internal Task SampleCompletion {get;private set;}=Task.CompletedTask;
     private bool samplingColor;
     public Action<SampledColor>? ColorSampled {get;set;}
     public Func<SampledColor> ReadSampleColor {get;set;}=()=>new(0,0,0);
@@ -19,9 +28,15 @@ public sealed partial class EditorCanvas
         samplingOriginal=samplingCurrent=ReadSampleColor();samplingColor=true;gestureButton=button;SampleAt(point);
     }
     internal bool IsSamplingColor=>samplingColor;
-    private void SampleDocumentColor(PointD point)
+    private void SampleDocumentColor(PointD point)=>SampleCompletion=ApplySampleAsync(point,++sampleRequest);
+    private async Task ApplySampleAsync(PointD point,long request)
     {
-        if(SampleComposite(point) is {} color){samplingCurrent=color;ColorSampled?.Invoke(color);}
+        try
+        {
+            var color=await SampleCompositeAsync(point);
+            if(request==sampleRequest&&color is {} value){samplingCurrent=value;ColorSampled?.Invoke(value);InvalidateVisual();}
+        }
+        catch(Exception error){if(request==sampleRequest&&!canvasDisposed)ReportError?.Invoke(error.Message);}
     }
     private void SampleAt(Point point){samplingPoint=point;Cursor=Cursors.Cross;SampleDocumentColor(DocumentPoint(point));InvalidateVisual();}
     private void EndColorSampling()
