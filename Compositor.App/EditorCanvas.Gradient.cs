@@ -32,11 +32,18 @@ public sealed partial class EditorCanvas
         try{await edit.UpdateAsync(ReadGradient(gradientStart,gradientEnd));InvalidateVisual();}
         catch(Exception error){if(ReferenceEquals(gradientEdit,edit)){CancelGradient();ReportError?.Invoke(error.Message);}}
     }
-    public async Task CommitGradientAsync()
+    private Task<bool>? gradientCommitTask;
+    public Task<bool> CommitGradientAsync()
     {
-        if(gradientEdit is not{} edit||gradientCommitting)return;gradientCommitting=true;
-        try{await edit.CommitAsync();}
-        catch(Exception error){edit.Dispose();ReportError?.Invoke(error.Message);}
+        if(gradientCommitting)return gradientCommitTask!;
+        if(gradientEdit is not{} edit)return Task.FromResult(true);
+        gradientCommitting=true;
+        return gradientCommitTask=CommitGradientCoreAsync(edit);
+    }
+    private async Task<bool> CommitGradientCoreAsync(GradientEdit edit)
+    {
+        try{await edit.CommitAsync();return true;}
+        catch(Exception error){edit.Dispose();ReportError?.Invoke(error.Message);return false;}
         finally{if(ReferenceEquals(gradientEdit,edit))gradientEdit=null;gradientCommitting=false;gradientDragging=false;InvalidateVisual();}
     }
     public void CancelGradient()

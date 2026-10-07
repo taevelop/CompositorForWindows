@@ -5,6 +5,14 @@ using Compositor.Imaging;
 namespace Compositor.App;
 public partial class MainWindow
 {
+    private async Task<bool> PrepareGradientForOutput()
+    {
+        if (busy) return false;
+        if (!Canvas.HasGradient) return true;
+        busy=true;Editor.IsEnabled=false;
+        try { return await Canvas.CommitGradientAsync(); }
+        finally { busy=false;Editor.IsEnabled=true;Refresh(); }
+    }
     private GradientFillSettings ReadGradient(PointD start,PointD end)
     {
         ColorPickerWindow.TryHex(BrushColor.Text,out var foreground);ColorPickerWindow.TryHex(backgroundColor,out var background);

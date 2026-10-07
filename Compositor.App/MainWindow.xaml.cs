@@ -189,6 +189,7 @@ public partial class MainWindow : Window
     }
     private async Task<bool> Save(bool saveAs)
     {
+        if (!await PrepareGradientForOutput()) return false;
         if (!busy && Canvas.IsTransforming) Canvas.CommitTransform();
         if (busy || session.InTransaction) return false;
         string? destination = projectPath;
@@ -215,6 +216,7 @@ public partial class MainWindow : Window
     private async void SaveProjectAs(object? sender, RoutedEventArgs e) => await Save(true);
     private async Task Export(bool jpeg)
     {
+        if (!await PrepareGradientForOutput()) return;
         if (!busy && Canvas.IsTransforming) Canvas.CommitTransform();
         if (busy || session.InTransaction) return;
         var dialog = new SaveFileDialog { Title = "Export flattened image", Filter = jpeg ? "JPEG image|*.jpg" : "PNG image|*.png", DefaultExt = jpeg ? ".jpg" : ".png", FileName = "Untitled" };
