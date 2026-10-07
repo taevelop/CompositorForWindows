@@ -6,6 +6,7 @@ namespace Compositor.App;
 public sealed partial class EditorCanvas
 {
     private GradientEdit? gradientEdit;
+    private Document? gradientRenderDocument;
     private PointD gradientStart,gradientEnd;
     private bool gradientDragging,gradientMovingStart,gradientCommitting;
     public bool HasGradient=>gradientEdit is not null;
@@ -37,7 +38,7 @@ public sealed partial class EditorCanvas
     public async void UpdateGradient()
     {
         if(gradientEdit is not{} edit||gradientCommitting)return;
-        try{var pending=edit.UpdateAsync(ReadGradient(gradientStart,gradientEnd));InvalidateVisual();await pending;InvalidateVisual();}
+        try{var pending=edit.UpdateAsync(ReadGradient(gradientStart,gradientEnd));InvalidateVisual();await pending;if(ReferenceEquals(gradientEdit,edit))gradientRenderDocument=Session.Document;InvalidateVisual();}
         catch(Exception error){if(ReferenceEquals(gradientEdit,edit)){CancelGradient();ReportError?.Invoke(error.Message);}}
     }
     private Task<bool>? gradientCommitTask;
@@ -51,7 +52,7 @@ public sealed partial class EditorCanvas
     }
     private async Task<bool> CommitGradientCoreAsync(GradientEdit edit)
     {
-        try{await edit.CommitAsync();return true;}
+        try{await edit.CommitAsync();gradientRenderDocument=Session.Document;return true;}
         catch(Exception error){edit.Dispose();ReportError?.Invoke(error.Message);return false;}
         finally{if(ReferenceEquals(gradientEdit,edit))gradientEdit=null;gradientCommitting=false;gradientDragging=false;InvalidateVisual();}
     }

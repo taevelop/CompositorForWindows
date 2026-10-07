@@ -6,6 +6,7 @@ public partial class MainWindow
 {
     private async Task RenderPreparationSmokeTest()
     {
+        await GradientViewportPreparationSmokeTest();
         var doc=Document.Create(1000,1000);var bytes=new byte[4_000_000];
         for(int i=0;i<bytes.Length;i+=4){bytes[i]=255;bytes[i+3]=255;}
         bytes[4]=0;bytes[6]=255;
@@ -38,5 +39,22 @@ public partial class MainWindow
             if(editor.EnsurePrepared(doc))throw new InvalidOperationException("Closed canvas accepted prepared result.");
         }
         finally{editor.Dispose();}
+    }
+    private async Task GradientViewportPreparationSmokeTest()
+    {
+        var doc=Document.Create(1000,1000);
+        using var editor=new EditorCanvas{Session=new EditorSession(doc),Tool=EditorTool.Gradient};
+        editor.Measure(new System.Windows.Size(400,300));editor.Arrange(new System.Windows.Rect(0,0,400,300));editor.RestoreView(.2,30,30);
+        editor.ReadGradient=(start,end)=>new(start,end,255,0,0,0,0,255,Style:GradientStyle.ForegroundToBackground);
+        editor.BeginInteraction(System.Windows.Input.MouseButton.Left,new(30.1,30.1));
+        editor.FinishInteraction(System.Windows.Input.MouseButton.Left,new(229.9,30.1));await editor.GradientPending;
+        if(!await editor.CommitGradientAsync())throw new InvalidOperationException("Preparation fixture commit failed.");
+        var filled=editor.Session.Document;
+        if(editor.EnsurePrepared(filled))throw new InvalidOperationException("Large gradient bypassed viewport preparation.");
+        editor.RestoreView(.4,-50,-20);editor.EnsurePrepared(filled);await editor.RenderPreparation;
+        if(!editor.EnsurePrepared(filled))throw new InvalidOperationException("Changed viewport was not prepared.");
+        editor.RestoreView(.6,-100,-70);editor.EnsurePrepared(filled);
+        var stale=editor.RenderPreparation;editor.Session.Load(doc);editor.EnsurePrepared(doc);await stale;
+        if(!editor.EnsurePrepared(doc)||!ReferenceEquals(editor.Session.Document,doc))throw new InvalidOperationException("Stale viewport replaced a new document.");
     }
 }

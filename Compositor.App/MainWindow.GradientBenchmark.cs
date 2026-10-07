@@ -38,6 +38,8 @@ public partial class MainWindow
                 await Canvas.GradientPending;double latestReadyMs=tail.Elapsed.TotalMilliseconds;
                 if(!await Canvas.CommitGradientAsync()||session.UndoCount!=1||Canvas.HasGradient)
                     throw new InvalidOperationException("Gradient burst did not commit once.");
+                Canvas.EnsurePrepared(session.Document);await Canvas.RenderPreparation;
+                if(!Canvas.EnsurePrepared(session.Document))throw new InvalidOperationException("Latest viewport preparation was not installed.");
                 await Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ApplicationIdle);
                 var first=session.Document.Layers[0].Pixels.Tiles[new(0,0)].Bytes;
                 var end=session.Document.Layers[0].Pixels.Tiles[new(15,0)].Bytes;
