@@ -347,6 +347,16 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
 
     private void Paint(object? sender, SKPaintSurfaceEventArgs e)
     {
+        if(PaintMeasured is null){PaintCore(sender,e);return;}
+        var document=Session?.Document;bool changed=!ReferenceEquals(lastMeasuredDocument,document);
+        long started=System.Diagnostics.Stopwatch.GetTimestamp();
+        try{PaintCore(sender,e);}
+        finally{lastMeasuredDocument=document;PaintMeasured?.Invoke(System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds,changed);}
+    }
+    private Document? lastMeasuredDocument;
+    internal Action<double,bool>? PaintMeasured {get;set;}
+    private void PaintCore(object? sender, SKPaintSurfaceEventArgs e)
+    {
         var c = e.Surface.Canvas; c.Clear(new SKColor(28, 30, 34));
         if (Session is null || ActualWidth <= 0) return;
         if(!EnsurePrepared(Session.Document))
