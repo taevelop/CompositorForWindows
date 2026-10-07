@@ -21,7 +21,7 @@ public sealed class ShapeProjectTests
         using(var edit=LayerTransformEdit.Begin(session))edit.Preview(result.Transform with {Width=24});
         Assert.Same(result.Pixels,session.Document.Layers[0].Pixels);
     }
-    [Fact] public void MaskedResizeFailureRestoresWholeTransactionAndUniformMaskIsPreserved()
+    [Fact] public void MaskedResizePreservesSourceGridPlacementUndoAndUniformMask()
     {
         var d=Document.Create(16,16);var style=new LayerShapeStyle(ShapeKind.Ellipse,0,1,0);
         var layer=d.Layers[0] with {Pixels=ShapeRaster.Create(style,16,16),Shape=style,Mask=LayerMask.Solid(16,16,128)};
@@ -29,9 +29,12 @@ public sealed class ShapeProjectTests
         using(var edit=LayerTransformEdit.Begin(session))
         {
             edit.Preview(layer.Transform with {Width=20});
-            Assert.Throws<NotSupportedException>(()=>edit.Complete());
+            edit.Complete();
         }
-        Assert.Same(d,session.Document);Assert.False(session.InTransaction);Assert.False(session.CanUndo);
+        var result=session.Document.Layers[0];Assert.Equal(20,result.Pixels.Width);
+        Assert.Same(layer.Mask!.Pixels,result.Mask!.Pixels);Assert.Equal(result.Transform,result.Mask.Placement);
+        Assert.False(session.InTransaction);session.Undo();Assert.Same(d,session.Document);Assert.False(session.CanUndo);
+        session.Redo();Assert.Same(result.Pixels,session.Document.Layers[0].Pixels);
         var uniform=layer with {Mask=LayerMask.Solid(1,1,128),Transform=layer.Transform with {Width=20}};
         Assert.Same(uniform.Mask,ShapeRedraw.Apply(uniform).Mask);
     }

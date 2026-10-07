@@ -20,8 +20,6 @@ public static class ImageResize
         options.Validate();cancellationToken.ThrowIfCancellationRequested();
         if(original.Width==options.Width&&original.Height==options.Height)
             return original.Resolution==options.Resolution?original:original with{Resolution=options.Resolution,Selection=null};
-        if(original.Layers.Any(l=>l.Mask is {Placement:not null} or {Linked:false}))
-            throw new NotSupportedException("Image Size for independent masks is not connected yet. The document has not changed.");
         double sx=(double)options.Width/original.Width,sy=(double)options.Height/original.Height;
         var plans=new List<Plan>();long used=0,usedMasks=0;
         // Preflight every transformed allocation before doing any raster work.
@@ -34,11 +32,11 @@ public static class ImageResize
             double width=Math.Ceiling(corners.Max(p=>p.X))-left,height=Math.Ceiling(corners.Max(p=>p.Y))-top;
             var next=new LayerTransform(left,top,width,height,Sampling:options.Sampling);next.Validate();
             bool image=!layer.IsAdjustment&&!layer.IsGroup&&(layer.Pixels.Tiles.Count!=0||layer.Mask is not null);
-            bool mask=layer.Mask is {} m&&(m.Pixels.Width!=1||m.Pixels.Height!=1);
+            bool mask=layer.Mask is {Placement:null} m&&(m.Pixels.Width!=1||m.Pixels.Height!=1);
             if(image||mask)Limits.CheckDimensions((int)width,(int)height);
             if(image)used+=(long)width*(int)height;
             if(mask)usedMasks+=(long)width*(int)height;
-            else if(layer.Mask is not null)usedMasks++;
+            else if(layer.Mask is {} retainedMask)usedMasks+=(long)retainedMask.Pixels.Width*retainedMask.Pixels.Height;
             if(used>Limits.MaxPixels||usedMasks>Limits.MaxPixels)throw new InvalidDataException("Resized layers exceed the 100 megapixel image or mask limit.");
             plans.Add(new(layer,next,image,mask,(int)width,(int)height));
         }
@@ -50,6 +48,8 @@ public static class ImageResize
             var pixels=plan.Image?Resample(layer.Pixels,layer.Transform,plan,sx,sy,options.Sampling,false,cancellationToken):
                 plan.Mask?new Raster(plan.Width,plan.Height):layer.Pixels;
             var mask=plan.Mask?layer.Mask!.WithPixels(Resample(layer.Mask.Pixels,layer.Transform,plan,sx,sy,options.Sampling,true,cancellationToken)):layer.Mask;
+            if(mask?.Placement is {} placement)
+                mask=mask with{Placement=GroupTransform.Following(placement,new(0,0,original.Width,original.Height),new(0,0,options.Width,options.Height))};
             layers.Add(layer with{Pixels=pixels,Mask=mask,Transform=plan.Transform});
         }
         var result=original with{Width=options.Width,Height=options.Height,Resolution=options.Resolution,Layers=layers.ToImmutable(),Selection=null};

@@ -118,3 +118,5 @@ Rectangle/Ellipse/Line의 shape 스타일과 PNG를 함께 읽고 저장한다. 
 
 ## 독립 마스크 저장 지원 (2026-10-07)
 maskPlacement 및 maskLinked를 보존해 저장/열기를 지원한다. 위 미지원 목록의 독립 배치/연결 해제 항목은 이 변경으로 대체한다. maskSourceID·그룹 마스크는 계속 미지원이다. Image Size의 독립 마스크는 아직 처리 전 거부하며 실제 Mac 왕복은 보류다.
+
+2026-10-07 후속: 독립 마스크 Image Size 및 도형 재생성 거부 제한을 제거하고 원본 격자/배치 보존을 연결했다. 위 Image Size 거부 설명은 이 변경으로 대체한다.

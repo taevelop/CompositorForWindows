@@ -12,12 +12,11 @@ public static class ShapeRedraw
         int height = checked((int)Math.Round(layer.Transform.Height, MidpointRounding.AwayFromZero));
         Limits.CheckDimensions(width,height);
         if (width == layer.Pixels.Width && height == layer.Pixels.Height) return layer;
-        // The source mask grid must remain intact. Independent mask placement is a separate
-        // document feature; refuse this case rather than resampling and changing coverage.
-        if (layer.Mask is {} mask && (mask.Pixels.Width != 1 || mask.Pixels.Height != 1))
-            throw new NotSupportedException("Resizing a shape with a pixel mask requires independent mask placement. Remove the mask or cancel the resize.");
+        var mask=layer.Mask;
+        if(mask is {Placement:null} && (mask.Pixels.Width!=1||mask.Pixels.Height!=1))
+            mask=mask with{Placement=layer.Transform};
         var pixels = ShapeRaster.Create(style,width,height,cancellationToken);
-        return layer with { Pixels=pixels, Shape=style };
+        return layer with { Pixels=pixels, Shape=style, Mask=mask };
     }
     public static Document Apply(Document document, CancellationToken cancellationToken = default)
     {

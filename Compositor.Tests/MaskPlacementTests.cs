@@ -22,15 +22,38 @@ public sealed class MaskPlacementTests
         }
         finally{if(Directory.Exists(root))Directory.Delete(root,true);File.Delete(root+".write-lock");}
     }
-    [Fact] public void CanvasCropMovesIndependentMaskAndImageResizeRejectsBeforeChangingSources()
+    [Fact] public void CanvasCropAndImageResizePreserveAndMoveIndependentMaskGrid()
     {
         var d=Document.Create(8,8);var mask=LayerMask.Solid(2,2) with{Placement=new(2,3,4,5),Linked=false};
         d=d.Replace(d.Layers[0] with{Mask=mask});
         var crop=CanvasCrop.Apply(d,new(1,2,4,4));
         Assert.Equal(mask.Placement! with{X=1,Y=1},crop.Layers[0].Mask!.Placement);
         Assert.Same(mask.Pixels,crop.Layers[0].Mask!.Pixels);
-        Assert.Throws<NotSupportedException>(()=>ImageResize.Apply(d,new(16,16,72)));
+        var resized=ImageResize.Apply(d,new(16,16,72));
+        Assert.Same(mask.Pixels,resized.Layers[0].Mask!.Pixels);
+        Assert.Equal(new LayerTransform(4,6,8,10),resized.Layers[0].Mask!.Placement);
         Assert.Equal(new LayerTransform(2,3,4,5),d.Layers[0].Mask!.Placement);
+    }
+    [Fact] public void RotatedMaskResizePreservesPixelsLinkStateAndProjectOutput()
+    {
+        string path=Path.Combine(Path.GetTempPath(),"Compositor-resized-mask-"+Guid.NewGuid().ToString("N")+".comp");
+        try
+        {
+            var d=Document.Create(8,8);var placement=new LayerTransform(1,2,4,3,29,true,false);
+            var mask=LayerMask.Solid(2,2,128) with{Placement=placement,Linked=false};
+            d=d.Replace(d.Layers[0] with{Pixels=ShapeRaster.Create(new(ShapeKind.Rectangle,.5,.5,.5),8,8),Mask=mask});
+            var resized=ImageResize.Apply(d,new(16,24,72));var result=resized.Layers[0].Mask!;
+            Assert.Same(mask.Pixels,result.Pixels);Assert.False(result.Linked);
+            var oldCenter=placement.ToDocument(new(.5,.5),1,1);var center=result.Placement!.ToDocument(new(.5,.5),1,1);
+            Assert.Equal(oldCenter.X*2,center.X,8);Assert.Equal(oldCenter.Y*3,center.Y,8);
+            ProjectStore.Save(resized,null,path);var loaded=ProjectStore.Load(path).Document;
+            Assert.Equal(result.Placement,loaded.Layers[0].Mask!.Placement);
+            using var a=new CanvasRenderer();using var b=new CanvasRenderer();Assert.Equal(Render(a,resized),Render(b,loaded));
+            using var cancelled=new CancellationTokenSource();cancelled.Cancel();
+            Assert.Throws<OperationCanceledException>(()=>ImageResize.Apply(d,new(16,24,72),cancelled.Token));
+            Assert.Same(mask.Pixels,d.Layers[0].Mask!.Pixels);
+        }
+        finally{if(Directory.Exists(path))Directory.Delete(path,true);File.Delete(path+".write-lock");}
     }
     [Fact] public void MaskBrushAndFillUseMaskPlacementAndKeepImageAndMetadata()
     {
