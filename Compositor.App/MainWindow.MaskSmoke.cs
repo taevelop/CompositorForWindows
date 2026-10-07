@@ -46,8 +46,27 @@ public partial class MainWindow
             string png = Path.Combine(root, "Masked.png"); ImageCodec.Export(session.Document, png, false);
             Check(expected.SequenceEqual(ImageCodec.Load(png).ToRgba()), "Masked export differs from UI composition.");
             EditTarget.SelectedIndex = 1; ToolPicker.SelectedIndex = 1; Canvas.Fit();
+            var placedMask=LayerMask.Solid(8,8,0) with{Placement=new(380,280,40,40),Linked=false};
+            session.Apply(d=>d.Replace(session.ActiveLayer! with{Mask=placedMask}));
+            EditTarget.SelectedIndex=1;ToolPicker.SelectedIndex=0;
+            var beforeMove=session.Document;
+            Canvas.BeginPointer(new(400,300));Canvas.MovePointer(new(412,308));Canvas.EndPointer(true);
+            Check(session.ActiveLayer!.Mask!.Placement==new LayerTransform(392,288,40,40),"Mask Move did not use its independent placement.");
+            Check(ReferenceEquals(beforeMove.Layers[0].Pixels,session.ActiveLayer.Pixels),"Mask Move changed the image.");
+            Undo(this,new());Check(ReferenceEquals(beforeMove,session.Document),"Mask Move Undo did not restore the original document.");
+            Canvas.BeginTransform();Check(Canvas.TransformInitial==placedMask.Placement,"Mask transform handles used image bounds.");
+            Canvas.PreviewTransform(placedMask.Placement! with{X=390});Canvas.CancelTransform();
+            Check(ReferenceEquals(beforeMove,session.Document),"Mask transform cancel changed its placement.");
+            ToolPicker.SelectedIndex=1;MaskGray.Text="100";BrushSize.Text="10";BrushHardness.Text="100";
+            Canvas.BeginPointer(new(400,300));Canvas.EndPointer(true);
+            Check(session.ActiveLayer.Mask!.Pixels.ToRgba()[(4*8+4)*4]>0,"Placed mask brush missed its own pixel grid.");
+            var sampled=await Canvas.SampleCompositeAsync(new(400,300));
+            Check(sampled is {} color&&color.Red==98&&color.Green==201&&color.Blue==181,"Composite sampling missed the placed mask.");
+            projectPath=Path.Combine(root,"Placed.comp");Check(await Save(false),"Placed mask UI save failed.");
+            var placedOutput=CompositePixels(session.Document);Check(await ReopenSavedProject(projectPath!),"Placed mask UI reopen failed.");
+            Check(placedOutput.SequenceEqual(CompositePixels(session.Document))&&session.ActiveLayer!.Mask!.Placement==placedMask.Placement,"Placed mask save changed placement or pixels.");
             File.WriteAllText(reportPath, JsonSerializer.Serialize(new { timeUtc = DateTimeOffset.UtcNow,
-                checks = new[] { "add/select mask", "black/white brush and eraser", "source pixels preserved", "cancel/undo/redo", "enable/remove/undo", "UI save/reopen", "PNG export equals composite" },
+                checks = new[] { "add/select mask", "black/white brush and eraser", "source pixels preserved", "cancel/undo/redo", "enable/remove/undo", "UI save/reopen", "PNG export equals composite", "independent mask Move/Undo", "mask transform handles/cancel", "placed brush/composite sampling", "placed UI save/reopen" },
                 note = "Hidden WPF routes; no physical mouse or real Mac application exercised." }, new JsonSerializerOptions { WriteIndented = true }));
         }
         finally

@@ -69,6 +69,8 @@ public sealed class ViewportRenderer : IDisposable
                 a.Pixels.Width != b.Pixels.Width || a.Pixels.Height != b.Pixels.Height) return full;
             var am = a.Mask is { Enabled: true } aMask ? aMask.Pixels : null;
             var bm = b.Mask is { Enabled: true } bMask ? bMask.Pixels : null;
+            if(a.Mask?.Placement!=b.Mask?.Placement)return full;
+            if(b.Mask?.Placement is not null && !ReferenceEquals(am,bm))return full;
             if (am?.Width != bm?.Width || am?.Height != bm?.Height) return full;
             if (bm?.Width == 1 && bm.Height == 1 && !ReferenceEquals(am, bm)) return full;
             if (!b.Visible || (ReferenceEquals(a.Pixels, b.Pixels) && ReferenceEquals(am, bm))) continue;

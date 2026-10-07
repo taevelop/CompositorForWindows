@@ -392,7 +392,8 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         {
             using var outline = new SKPaint { Color = new(108, 154, 224), Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };
             using var path = new SKPathBuilder();
-            var outlineTransform = layer.IsGroup ? LayerHierarchy.Bounds(doc, layer.Id) : layer.Transform;
+            var outlineTransform = layer.IsGroup ? LayerHierarchy.Bounds(doc, layer.Id) :
+                Session.EditMask ? layer.Mask?.Placement??layer.Transform : layer.Transform;
             if (Session.SelectedLayerIds.Count > 1)
             {
                 try { outlineTransform = new GroupTransform(doc, Session.SelectedLayerIds).Bounds; }
