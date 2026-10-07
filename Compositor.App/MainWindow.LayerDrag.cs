@@ -11,7 +11,7 @@ namespace Compositor.App;
 public partial class MainWindow
 {
     private const string LayerDragFormat="Compositor.InternalLayerMove";
-    private sealed record LayerDragPayload(Document Source,Guid[] Ids);
+    private sealed record LayerDragPayload(Document Source,Guid[] Ids,Guid? SourceTab=null,Guid? Anchor=null,Guid[]? Collapsed=null);
     private sealed record LayerDropSlot(Guid? Parent,Guid? Above,bool Bottom,Rect Mark,bool Into);
     private Point? layerDragStart;
     private Guid? layerDragPressed;
@@ -48,9 +48,9 @@ public partial class MainWindow
         if(layerDragPressSelection is {} selected&&layerDragPressed is {} primary)session.SelectLayers(selected,primary);
         layerDragStart=null;layerDragPressed=null;layerDragPreserved=false;layerDragPressSelection=null;
         if(session.SelectedLayerIds.Count==0)return;
-        var payload=new LayerDragPayload(session.Document,session.SelectedLayerIds.ToArray());layerDragPayload=payload;
+        var payload=new LayerDragPayload(session.Document,session.SelectedLayerIds.ToArray(),workspace.Current.Id,session.ActiveLayerId,collapsedGroups.ToArray());layerDragPayload=payload;
         try{DragDrop.DoDragDrop(Layers,new DataObject(LayerDragFormat,payload),DragDropEffects.Move|DragDropEffects.Copy);}
-        finally{StopLayerDragAssist();layerDragPayload=null;layerCopyPreview=null;ClearLayerDropMark();}
+        finally{StopTabHover();StopLayerDragAssist();layerDragPayload=null;layerCopyPreview=null;ClearLayerDropMark();}
         e.Handled=true;
     }
     private LayerDropSlot DropSlot(Point point)

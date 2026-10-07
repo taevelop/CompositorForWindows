@@ -13,14 +13,15 @@ public partial class MainWindow
         {
             e.Handled=true;
             bool valid=e.AllowedEffects.HasFlag(DragDropEffects.Copy)&&((CanDropTabFiles(target)&&e.Data.GetDataPresent(DataFormats.FileDrop))||CanTransferTabLayers(target,e.Data,System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt)));
+            if(valid)TrackTabHover(target,e.Data,Environment.TickCount64);else StopTabHover();
             e.Effects=valid?DragDropEffects.Copy:DragDropEffects.None;
             frame.BorderThickness=valid?new Thickness(2):new Thickness(0,0,0,2);
             if(valid)frame.BorderBrush=(Brush)FindResource("Accent");
         };
-        frame.DragLeave+=(_,e)=>{frame.BorderThickness=new(0,0,0,2);if(target is null)frame.BorderBrush=(Brush)FindResource("Divider");RefreshTabs();e.Handled=true;};
+        frame.DragLeave+=(_,e)=>{StopTabHover();frame.BorderThickness=new(0,0,0,2);if(target is null)frame.BorderBrush=(Brush)FindResource("Divider");RefreshTabs();e.Handled=true;};
         frame.Drop+=async(_,e)=>
         {
-            e.Handled=true;frame.BorderThickness=new(0,0,0,2);e.Effects=DragDropEffects.None;
+            StopTabHover();e.Handled=true;frame.BorderThickness=new(0,0,0,2);e.Effects=DragDropEffects.None;
             if(e.AllowedEffects.HasFlag(DragDropEffects.Copy)&&CanTransferTabLayers(target,e.Data,System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt)))
             {
                 try{TransferTabLayers(target,e.Data,false);e.Effects=DragDropEffects.Copy;}
