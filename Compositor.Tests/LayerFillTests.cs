@@ -27,6 +27,48 @@ public sealed class LayerFillTests
         Assert.Equal(0,pixels[3]);Assert.Equal(255,pixels[7]);Assert.Equal(0,pixels[11]);
         var empty=doc with{Selection=DocumentSelection.Empty};Assert.Same(empty,LayerFill.Apply(empty,empty.Layers[0].Id,90,80,70));
     }
+    [Fact] public void FeatherCrossesTileBoundaryAndKeepsPremultipliedChannels()
+    {
+        var doc=Document.Create(520,8);doc=doc with{Selection=SelectionGeometry.Box(250,1,12,6) with{Feather=4}};
+        var result=LayerFill.Apply(doc,doc.Layers[0].Id,255,128,64);var bytes=result.Layers[0].Pixels.ToRgba();
+        Assert.True(result.Layers[0].Pixels.Tiles.ContainsKey(new(0,0)));Assert.True(result.Layers[0].Pixels.Tiles.ContainsKey(new(1,0)));
+        int left=(4*520+255)*4,right=(4*520+256)*4;
+        Assert.Equal(bytes[left+3],bytes[right+3]);Assert.True(bytes[left+3]>0);
+        Assert.Contains(Enumerable.Range(0,520*8),i=>bytes[i*4+3]>0&&bytes[i*4+3]<255);
+        for(int i=0;i<bytes.Length;i+=4){Assert.True(bytes[i]<=bytes[i+3]);Assert.True(bytes[i+1]<=bytes[i+3]);Assert.True(bytes[i+2]<=bytes[i+3]);}
+        Assert.Equal(0,bytes[3]);
+    }
+    [Fact] public void RotatedFlippedFillKeepsMaskAtOriginalDocumentPosition()
+    {
+        var doc=Document.Create(8,8);var layer=doc.Layers[0] with{Pixels=Raster.FromRgba(2,2,new byte[16]),Transform=new(3,3,2,2,Rotation:90,FlipX:true),Mask=LayerMask.Solid(2,2,73)};
+        doc=doc.Replace(layer);var result=LayerFill.Apply(doc,layer.Id,200,100,50);var updated=result.Layers[0];
+        var originalPoint=layer.Transform.ToDocument(new(.5,.5),2,2);
+        var mapped=updated.Transform.ToPixels(originalPoint,updated.Pixels.Width,updated.Pixels.Height);
+        int x=(int)Math.Floor(mapped.X),y=(int)Math.Floor(mapped.Y);var mask=updated.Mask!.Pixels.ToRgba();
+        Assert.Equal(73,mask[(y*updated.Pixels.Width+x)*4]);
+        Assert.Equal(layer.Transform.Rotation,updated.Transform.Rotation);Assert.True(updated.Transform.FlipX);
+        Assert.Equal(new byte[]{200,100,50,255},updated.Pixels.ToRgba()[((y*updated.Pixels.Width+x)*4)..][..4]);
+    }
+    [Fact] public void FilledExpandedLayerRoundTripsPixelsMaskTransformAndOutput()
+    {
+        var doc=Document.Create(9,7);var layer=doc.Layers[0] with{Pixels=Raster.FromRgba(2,2,new byte[16]),Transform=new(4,2,2,2,Rotation:90,FlipY:true),Mask=LayerMask.Solid(2,2,128)};
+        doc=LayerFill.Apply(doc.Replace(layer),layer.Id,23,84,192);
+        var root=Path.Combine(Path.GetTempPath(),"CompositorFill-"+Guid.NewGuid().ToString("N")+".comp");
+        try
+        {
+            ProjectStore.Save(doc,layer.Id,root);var loaded=ProjectStore.Load(root).Document;
+            Assert.Equal(doc.Layers[0].Pixels.ToRgba(),loaded.Layers[0].Pixels.ToRgba());
+            Assert.Equal(doc.Layers[0].Mask!.Pixels.ToRgba(),loaded.Layers[0].Mask!.Pixels.ToRgba());Assert.Equal(doc.Layers[0].Transform,loaded.Layers[0].Transform);
+            using var first=new CanvasRenderer();using var second=new CanvasRenderer();using var a=first.Flatten(doc);using var b=second.Flatten(loaded);
+            using var aa=SkiaSharp.SKBitmap.FromImage(a);using var bb=SkiaSharp.SKBitmap.FromImage(b);Assert.Equal(aa.Bytes,bb.Bytes);
+        }
+        finally
+        {
+            var full=Path.GetFullPath(root);
+            if(!full.StartsWith(Path.GetFullPath(Path.GetTempPath()),StringComparison.OrdinalIgnoreCase)||!Path.GetFileName(full).StartsWith("CompositorFill-"))throw new IOException("Unsafe cleanup.");
+            if(Directory.Exists(full))Directory.Delete(full,true);
+        }
+    }
     [Fact] public void CancellationPreservesSource()
     {
         var doc=Document.Create(2,1);using var cancellation=new CancellationTokenSource();cancellation.Cancel();
