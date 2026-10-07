@@ -63,3 +63,12 @@ Color Balance 측정 구간의 누적 managed 할당은 약 183.9 MiB, 종료 �
 
 4K 재측정(`artifacts/eyedropper-shared-benchmark.json`): 이미 화면을 합성한 문서의 첫 샘플은 기본 0.133ms, 그림자 0.104ms, Color Balance 0.047ms. 같은 실행의 독립 Color Balance 최초 샘플은 3798.70ms였다. 단, 공유 경로의 화면 준비에 3909.95ms가 소요되므로 최초 합성/캐시 없는 문서의 지연 자체가 해결된 것은 아니다. 실제 UI 이벤트 지연과 별도 PC 결과로 일반화하지 않는다. 조정 합성 최적화와 캐시 없는 경우의 비동기 처리/취소는 후속 성능 범위다.
 배포 검증: artifacts/publish-shared-sampler 생성 및 격리 WPF 실행 1/1 통과. 원본 Mac/별도 PC 실기 보류 유지.
+
+## Color Balance 커널 병렬 실행
+
+2026-10-07: 262,144픽셀 이상인 색상 균형 조정을 최대 8개 작업으로 분할한다. 원본 C 계산식과 반올림을 변경하지 않고, 한 번 pin한 RGBA 배열의 겹치지 않는 픽셀 범위를 호출한다. 모든 작업이 종료된 후 pin을 해제한다. 작은 이미지와 단일 작업 환경은 기존 직렬 경로를 유지한다. 별도 이미지 복사나 native 런타임 의존성을 추가하지 않는다.
+
+검증: 코어 544개 및 WPF 회귀 통과. 무작위 유효 premultiplied RGBA 262,161픽셀을 3/8개 작업으로 분할하고 luminosity 보존 켜기/끄기 각각 원본 직렬 커널과 전체 바이트 일치를 검사했다.
+
+같은 4K 벤치마크 2회: Color Balance 최초 샘플 767.74–783.73ms, 화면 최초 합성 749.27–783.67ms, 준비된 화면의 샘플 0.022–0.027ms. 이전 직렬 화면 합성 3909.95ms 대비 이 PC에서 약 80% 감소했다. 파일: artifacts/eyedropper-parallel-benchmark.json 및 eyedropper-parallel-repeat.json. 프로세서 수/부하에 따라 달라지며 실제 WPF 표시 지연을 측정한 것은 아니다. 약 0.8초의 동기 최초 합성은 여전히 남아 있어 캐시 미존재 시 응답성/취소를 완료로 처리하지 않는다. 다른 조정 종류와 4K 브러시 전체 성능으로 일반화하지 않는다.
+배포: artifacts/publish-parallel-balance 생성, 격리 WPF 실행 1/1 통과. 실제 Mac 및 별도 Windows PC 실기 보류 유지.

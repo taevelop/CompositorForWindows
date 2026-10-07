@@ -47,7 +47,7 @@ internal static class AdjustmentProcessor
         }
         else if (layer.ColorBalance is { } cb)
         {
-            converted=original.ToArray(); NativePixels.ColorBalance(converted,bitmap.Width*bitmap.Height,cb.Shadows,cb.Midtones,cb.Highlights,cb.PreserveLuminosity?1:0);
+            converted=original.ToArray(); ColorBalanceProcessor.Apply(converted,cb);
         }
         else if (layer.Grain is { } grain)
         {
