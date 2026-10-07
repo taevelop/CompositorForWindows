@@ -29,6 +29,7 @@ public partial class MainWindow : Window
         InitializeToolControls();
         Canvas.Session = session; Canvas.ReadBrush = ReadBrush;
         defaultTabTools=CaptureTabTools();
+        AttachTabDrop(NewCanvasDropFrame,null);
         Canvas.ReportError = ShowError;
         Canvas.ViewportChanged = UpdateStatus;
         Canvas.CropChanged = RefreshCropControls;
