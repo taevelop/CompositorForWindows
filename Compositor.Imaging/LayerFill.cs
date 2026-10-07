@@ -33,10 +33,13 @@ public static class LayerFill
         void CheckBudget(){if(missing*PixelTile.ByteCount>undoBudget)throw new InvalidOperationException("Fill exceeds the Undo memory limit.");}
         CheckBudget();
         var tiles=pixels.Tiles.ToBuilder();bool changed=false;
+        // PixelTile copies its input. Reuse only this private scratch buffer;
+        // every published tile still owns immutable bytes independently.
+        var buffer=new byte[PixelTile.ByteCount];
         for(int ty=0;ty*256<pixels.Height;ty++)for(int tx=0;tx*256<pixels.Width;tx++)
         {
             cancellation.ThrowIfCancellationRequested();var key=new TileKey(tx,ty);tiles.TryGetValue(key,out var before);
-            var buffer=before is null?new byte[PixelTile.ByteCount]:before.Bytes.ToArray();
+            if(before is null)Array.Clear(buffer);else before.Bytes.CopyTo(buffer);
             for(int y=0;y<Math.Min(256,pixels.Height-ty*256);y++)for(int x=0;x<Math.Min(256,pixels.Width-tx*256);x++)
             {
                 if(x==0)cancellation.ThrowIfCancellationRequested();
