@@ -27,7 +27,7 @@ public partial class MainWindow
                 catch(Exception error){ShowError(error.Message);}
             }
             else if(e.AllowedEffects.HasFlag(DragDropEffects.Copy)&&e.Data.GetData(DataFormats.FileDrop) is string[] paths&&CanDropTabFiles(target))
-            {e.Effects=DragDropEffects.Copy;if(target is {} id)await ImportIntoTab(id,paths);else await OpenImagesInTabs(paths);}
+            {e.Effects=DragDropEffects.Copy;await RouteDroppedFiles(target,paths);}
             if(target is null)frame.BorderBrush=(Brush)FindResource("Divider");
             RefreshTabs();
         };

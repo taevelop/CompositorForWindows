@@ -182,7 +182,8 @@ public partial class MainWindow : Window
     }
     private async void DropFiles(object sender, DragEventArgs e)
     {
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] files && !busy && !session.InTransaction) await Import(files);
+        if (e.Data.GetData(DataFormats.FileDrop) is string[] files)
+        {e.Handled=true;await RouteDroppedFiles(workspace.Current.Id,files);}
     }
     private async Task<bool> Save(bool saveAs)
     {
@@ -393,6 +394,7 @@ public partial class MainWindow : Window
         await TabPresentationSmokeTest();
         await TabDropSmokeTest();
         TabLayerTransferSmokeTest();
+        await ProjectDropSmokeTest();
         LayerCopySmokeTest();
         ClipboardSmokeTest(Path.ChangeExtension(screenshot, ".clipboard.json"));
         await SelectionAutoScrollSmokeTest();
