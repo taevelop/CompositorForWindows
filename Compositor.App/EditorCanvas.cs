@@ -125,6 +125,9 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             { EndPointer(true); ReleaseGestureCapture(); return true; }
             AppendLassoPoint(p); polygonCursor = p; gestureButton = button; InvalidateVisual(); return true;
         }
+        if(Tool==EditorTool.Gradient&&!HasInteraction&&!gradientCommitting&&button==MouseButton.Left&&
+            (!Session.InTransaction||HasGradient)&&(modifiers??Keyboard.Modifiers).HasFlag(ModifierKeys.Alt))
+        {BeginColorSampling(button,point);return true;}
         if(Tool==EditorTool.Gradient&&!HasInteraction&&button==MouseButton.Left&&(!Session.InTransaction||HasGradient))
         {BeginGradient(DocumentPoint(point));return gradientDragging;}
         if (Session is null || HasInteraction || Session.InTransaction) return false;

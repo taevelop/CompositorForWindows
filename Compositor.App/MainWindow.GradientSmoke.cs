@@ -43,6 +43,7 @@ public partial class MainWindow
             await GradientSaveSmokeTest();
             await GradientTargetSmokeTest();
             await GradientPaletteSmokeTest();
+            await GradientEyedropperSmokeTest();
             await GradientTabSmokeTest();
             var shortcutDoc=Document.Create(3,1);session.Load(shortcutDoc);ToolPicker.SelectedIndex=10;Canvas.RestoreView(20,30,30);
             Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));
@@ -69,6 +70,25 @@ public partial class MainWindow
             session.Undo();if(!ReferenceEquals(shortcutDoc,session.Document))throw new InvalidOperationException("Tool shortcut gradient Undo failed.");
         }
         finally{Canvas.CancelGradient();session.Load(original);GradientTransparent.IsChecked=true;GradientOpacity.Value=100;RestoreTabTools(tools);Canvas.Fit();Refresh();}
+    }
+    private async Task GradientEyedropperSmokeTest()
+    {
+        var doc=Document.Create(3,1);doc=doc.Replace(doc.Layers[0] with{Pixels=Raster.FromRgba(3,1,[0,255,0,255,0,255,0,255,0,255,0,255])});
+        session.Load(doc);ToolPicker.SelectedIndex=10;Canvas.RestoreView(20,30,30);
+        if(!Canvas.BeginInteraction(MouseButton.Left,new(40,40),modifiers:ModifierKeys.Alt)||!Canvas.IsSamplingColor||Canvas.HasGradient)
+            throw new InvalidOperationException("Idle gradient Alt did not start sampling.");
+        Canvas.FinishInteraction(MouseButton.Left,new(40,40));await Canvas.SampleCompletion;
+        if(BrushColor.Text!="#00FF00"||!ReferenceEquals(doc,session.Document)||session.UndoCount!=0)
+            throw new InvalidOperationException("Idle gradient Alt changed document or missed color.");
+        BrushColor.Text="#FF0000";SetBackgroundColor("#0000FF");GradientTransparent.IsChecked=false;GradientReverse.IsChecked=false;GradientOpacity.Value=100;
+        Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));await Canvas.GradientPending;
+        Canvas.BeginInteraction(MouseButton.Left,new(80,40),modifiers:ModifierKeys.Alt);
+        if(!Canvas.IsSamplingColor||!Canvas.HasGradient)throw new InvalidOperationException("Pending gradient Alt replaced the endpoint edit.");
+        Canvas.FinishInteraction(MouseButton.Left,new(80,40));await Canvas.SampleCompletion;await Canvas.GradientPending;
+        if(BrushColor.Text!="#0000FF"||session.UndoCount!=0||session.Document.Layers[0].Pixels.ToRgba()[2]!=255)
+            throw new InvalidOperationException("Gradient sampled palette was not applied to pending preview.");
+        Canvas.CancelGradient();if(!ReferenceEquals(doc,session.Document)||session.InTransaction)
+            throw new InvalidOperationException("Sampled gradient cancel did not restore source.");
     }
     private async Task GradientPaletteSmokeTest()
     {
