@@ -33,8 +33,9 @@ internal static class AdjustmentProcessor
         return table;
     }
     internal static bool IsIdentity(Layer layer) => layer.Exposure?.IsIdentity ?? layer.Levels?.IsIdentity ?? layer.Curves?.IsIdentity ?? layer.ColorBalance?.IsIdentity ?? layer.Grain?.IsIdentity ?? layer.HueSaturation?.IsIdentity ?? (layer.Invert || layer.BlackWhite is not null || layer.GradientMap is not null ? false : throw new InvalidOperationException("No adjustment settings."));
-    public static void Apply(SKBitmap bitmap, Document document, Layer layer, double opacity)
+    public static void Apply(SKBitmap bitmap, Document document, Layer layer, double opacity,CancellationToken cancellationToken=default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         bool identity = IsIdentity(layer);
         if (identity && layer.Blend == BlendMode.Normal) return;
         var original = bitmap.GetPixelSpan();
@@ -47,7 +48,7 @@ internal static class AdjustmentProcessor
         }
         else if (layer.ColorBalance is { } cb)
         {
-            converted=original.ToArray(); ColorBalanceProcessor.Apply(converted,cb);
+            converted=original.ToArray(); ColorBalanceProcessor.Apply(converted,cb,cancellationToken:cancellationToken);
         }
         else if (layer.Grain is { } grain)
         {
@@ -83,6 +84,7 @@ internal static class AdjustmentProcessor
         ReadOnlySpan<byte> mask = coverage is null ? default : coverage.GetPixelSpan();
         for (int p = 0; p < original.Length; p += 4)
         {
+            if((p&262143)==0)cancellationToken.ThrowIfCancellationRequested();
             int alpha = original[p + 3]; if (alpha == 0) continue;
             double weight = opacity * (coverage is null ? 1 : mask[p] / 255.0);
             if (weight == 0) continue;

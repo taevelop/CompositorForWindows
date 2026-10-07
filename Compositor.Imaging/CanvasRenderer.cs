@@ -22,7 +22,14 @@ public sealed class CanvasRenderer : IDisposable
 
     private Document? compositeDocument;
     private SKImage? composite;
-    public void Draw(SKCanvas canvas, Document document)
+    public void Draw(SKCanvas canvas,Document document)=>DrawCancellable(canvas,document,CancellationToken.None);
+    internal void DrawCancellable(SKCanvas canvas,Document document,CancellationToken cancellationToken)
+    {
+        int count=canvas.SaveCount;
+        try{cancellationToken.ThrowIfCancellationRequested();DrawCore(canvas,document,cancellationToken);}
+        finally{canvas.RestoreToCount(count);}
+    }
+    private void DrawCore(SKCanvas canvas, Document document,CancellationToken cancellationToken)
     {
         if (!document.Layers.Any(l => HasSurfaceEffects(l))) ClearShadowSource();
         if (document.Layers.Any(l => l.IsAdjustment))
@@ -30,7 +37,7 @@ public sealed class CanvasRenderer : IDisposable
             if (!ReferenceEquals(compositeDocument, document))
             {
                 using var bitmap = new SKBitmap(Info(document.Width, document.Height));
-                using (var target = new SKCanvas(bitmap)) { target.Clear(); DrawLayers(target, document, bitmap); target.Flush(); }
+                using (var target = new SKCanvas(bitmap)) { target.Clear(); DrawLayers(target, document, bitmap,cancellationToken); target.Flush(); }
                 bitmap.SetImmutable();
                 var next = SKImage.FromBitmap(bitmap);
                 composite?.Dispose(); composite = next; compositeDocument = document;
@@ -39,19 +46,20 @@ public sealed class CanvasRenderer : IDisposable
             return;
         }
         composite?.Dispose(); composite = null; compositeDocument = null;
-        DrawLayers(canvas, document);
+        DrawLayers(canvas, document,null,cancellationToken);
     }
-    private void DrawLayers(SKCanvas canvas, Document document, SKBitmap? adjustmentSurface = null)
+    private void DrawLayers(SKCanvas canvas, Document document, SKBitmap? adjustmentSurface,CancellationToken cancellationToken)
     {
         var used = new HashSet<(Guid, TileKey)>();
         canvas.Save(); canvas.ClipRect(new(0, 0, document.Width, document.Height));
         foreach (var entry in LayerHierarchy.Entries(document))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var layer = entry.Layer;
             if (layer.IsGroup || !entry.Visible || entry.Opacity <= 0) continue;
             if (layer.IsAdjustment)
             {
-                canvas.Flush(); AdjustmentProcessor.Apply(adjustmentSurface!, document, layer, entry.Opacity); continue;
+                canvas.Flush(); AdjustmentProcessor.Apply(adjustmentSurface!, document, layer, entry.Opacity,cancellationToken); continue;
             }
             var t = layer.Transform;
             canvas.Save();
@@ -72,6 +80,7 @@ public sealed class CanvasRenderer : IDisposable
             byte[]? overlayTable = overlay is null ? null : OverlayTable(overlay);
             foreach (var (key, tile) in layer.Pixels.Tiles)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 float x = key.X * 256, y = key.Y * 256;
                 var bounds = new SKRect(x, y, Math.Min(x + 256, layer.Pixels.Width), Math.Min(y + 256, layer.Pixels.Height));
                 var cacheKey = (layer.Id, key); used.Add(cacheKey);

@@ -1,4 +1,4 @@
-﻿using Compositor.Core;
+using Compositor.Core;
 namespace Compositor.Imaging;
 
 /// <summary>A worker-owned canonical render cache. Transfer once to the UI renderer,
@@ -19,7 +19,8 @@ public sealed class PreparedDocumentRender : IDisposable
             {
                 // A canonical adjustment composite is prepared by the same path as
                 // screen/export, without retaining an additional full-size output.
-                using(var sampler=new CompositeColorSampler(renderer))sampler.Sample(document,new(0,0));
+                using(var bitmap=new SkiaSharp.SKBitmap(CanvasRenderer.Info(1,1)))
+                using(var canvas=new SkiaSharp.SKCanvas(bitmap))renderer.DrawCancellable(canvas,document,cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
                 return new PreparedDocumentRender(document,renderer);
             }

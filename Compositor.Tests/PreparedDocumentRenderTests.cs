@@ -23,6 +23,15 @@ public sealed class PreparedDocumentRenderTests
         using var frame=viewport.Render(doc,2,1,1,0,0);
         using var standalone=new CompositeColorSampler();Assert.Equal(standalone.Sample(doc,new(1,0)),viewport.Sample(doc,new(1,0)));
     }
+    [Fact] public void CancelledDrawRestoresCallerCanvasStateAndCanRenderAgain()
+    {
+        using var renderer=new CanvasRenderer();using var bitmap=new SkiaSharp.SKBitmap(CanvasRenderer.Info(2,1));
+        using var canvas=new SkiaSharp.SKCanvas(bitmap);canvas.Save();canvas.Translate(1,0);int count=canvas.SaveCount;var matrix=canvas.TotalMatrix;
+        using var cancellation=new CancellationTokenSource();cancellation.Cancel();
+        Assert.Throws<OperationCanceledException>(()=>renderer.DrawCancellable(canvas,Create(),cancellation.Token));
+        Assert.Equal(count,canvas.SaveCount);Assert.Equal(matrix,canvas.TotalMatrix);
+        renderer.Draw(canvas,Create());Assert.Equal(count,canvas.SaveCount);
+    }
     [Fact] public async Task CancelledOrDisposedPreparationCannotBeInstalled()
     {
         var doc=Create();using var cancellation=new CancellationTokenSource();cancellation.Cancel();

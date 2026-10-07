@@ -1,9 +1,16 @@
-﻿using Compositor.Core;
+using Compositor.Core;
 using Compositor.Imaging;
 using Xunit;
 namespace Compositor.Tests;
 public sealed class ColorBalanceParallelTests
 {
+    [Fact] public void CancelledKernelDoesNotTouchPixels()
+    {
+        byte[] pixels=[80,120,40,160];var original=(byte[])pixels.Clone();
+        using var cancellation=new CancellationTokenSource();cancellation.Cancel();
+        Assert.Throws<OperationCanceledException>(()=>ColorBalanceProcessor.Apply(pixels,new(MidCyanRed:20),cancellationToken:cancellation.Token));
+        Assert.Equal(original,pixels);
+    }
     [Theory]
     [InlineData(true,3)]
     [InlineData(false,8)]
