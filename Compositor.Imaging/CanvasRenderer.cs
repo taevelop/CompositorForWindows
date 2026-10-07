@@ -8,6 +8,9 @@ public sealed class CanvasRenderer : IDisposable
 {
     private sealed record Cached(PixelTile?[] Neighbors, ColorOverlayEffect? Overlay, SKImage Image);
     private readonly Dictionary<(Guid, TileKey), Cached> cache = [];
+    private readonly MaskPlacementCache maskPlacements = new();
+    internal LayerMask ResolvePlacedMask(LayerMask mask,LayerTransform placement,LayerTransform layer,int width,int height,
+        CancellationToken cancellationToken=default)=>maskPlacements.Resolve(mask,placement,layer,width,height,cancellationToken);
     internal int TileImageBuildCount {get;private set;}
     // Bounded independently of document layer count; tile images only retain the effect values.
     private readonly Dictionary<ColorOverlayEffect, byte[]> overlayTables = [];
@@ -288,5 +291,5 @@ public sealed class CanvasRenderer : IDisposable
         BlendMode.Darken => SKBlendMode.Darken, BlendMode.Lighten => SKBlendMode.Lighten,
         BlendMode.Difference => SKBlendMode.Difference, _ => throw new NotSupportedException("Unsupported blend mode.")
     };
-    public void Dispose() { ClearShadowSource(); overlayTables.Clear(); composite?.Dispose(); composite = null; compositeDocument = null; foreach (var item in cache.Values) item.Image.Dispose(); cache.Clear(); }
+    public void Dispose() { ClearShadowSource(); maskPlacements.Clear(); overlayTables.Clear(); composite?.Dispose(); composite = null; compositeDocument = null; foreach (var item in cache.Values) item.Image.Dispose(); cache.Clear(); }
 }
