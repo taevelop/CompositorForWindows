@@ -69,6 +69,16 @@ public sealed class LayerFillTests
             if(Directory.Exists(full))Directory.Delete(full,true);
         }
     }
+    [Fact] public void UndoBudgetRejectsBeforePublishingAndRespectsSharedTiles()
+    {
+        var doc=Document.Create(1,1);var layer=doc.Layers[0] with{Pixels=Raster.FromRgba(1,1,[20,30,40,255])};doc=doc.Replace(layer);
+        Assert.Throws<InvalidOperationException>(()=>LayerFill.ApplyWithUndoBudget(doc,layer.Id,1,2,3,false,default,0));
+        Assert.Equal(new byte[]{20,30,40,255},doc.Layers[0].Pixels.ToRgba());
+        Assert.Same(doc,LayerFill.ApplyWithUndoBudget(doc,layer.Id,20,30,40,false,default,0));
+        var shared=doc with{Layers=doc.Layers.Add(layer with{Id=Guid.NewGuid()})};
+        var result=LayerFill.ApplyWithUndoBudget(shared,layer.Id,1,2,3,false,default,0);
+        Assert.Equal(0,EditorSession.UndoBytesRequired(shared,result));Assert.Same(layer.Pixels,result.Layers[1].Pixels);
+    }
     [Fact] public void CancellationPreservesSource()
     {
         var doc=Document.Create(2,1);using var cancellation=new CancellationTokenSource();cancellation.Cancel();

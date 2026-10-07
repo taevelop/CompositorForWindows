@@ -1,10 +1,13 @@
-﻿using Compositor.Core;
+using Compositor.Core;
 namespace Compositor.Imaging;
 
 public static class LayerFill
 {
     public static Document Apply(Document document,Guid layerId,byte red,byte green,byte blue,bool editMask=false,CancellationToken cancellation=default)
+        =>ApplyWithUndoBudget(document,layerId,red,green,blue,editMask,cancellation,EditorSession.MaxHistoryBytes);
+    internal static Document ApplyWithUndoBudget(Document document,Guid layerId,byte red,byte green,byte blue,bool editMask,CancellationToken cancellation,long undoBudget)
     {
+        if(undoBudget<0)throw new ArgumentOutOfRangeException(nameof(undoBudget));
         cancellation.ThrowIfCancellationRequested();document.Validate();
         var source=document.Layers.First(layer=>layer.Id==layerId);
         if(source.IsGroup)throw new InvalidOperationException("Select an image or adjustment mask to fill.");
@@ -23,6 +26,12 @@ public static class LayerFill
         }
         var pixels=editMask?source.Mask!.EditingPixels(source.Pixels.Width,source.Pixels.Height):layer.Pixels;
         if(editMask)green=blue=red;
+        var initial=editMask?source with{Mask=source.Mask!.WithPixels(pixels)}:layer;
+        var originalTiles=document.Layers.SelectMany(item=>item.RetainedTiles).ToHashSet();
+        var retained=document.Replace(initial).Layers.SelectMany(item=>item.RetainedTiles).GroupBy(tile=>tile).ToDictionary(group=>group.Key,group=>group.Count());
+        long missing=originalTiles.Count(tile=>!retained.ContainsKey(tile));
+        void CheckBudget(){if(missing*PixelTile.ByteCount>undoBudget)throw new InvalidOperationException("Fill exceeds the Undo memory limit.");}
+        CheckBudget();
         var tiles=pixels.Tiles.ToBuilder();bool changed=false;
         for(int ty=0;ty*256<pixels.Height;ty++)for(int tx=0;tx*256<pixels.Width;tx++)
         {
@@ -30,6 +39,7 @@ public static class LayerFill
             var buffer=before is null?new byte[PixelTile.ByteCount]:before.Bytes.ToArray();
             for(int y=0;y<Math.Min(256,pixels.Height-ty*256);y++)for(int x=0;x<Math.Min(256,pixels.Width-tx*256);x++)
             {
+                if(x==0)cancellation.ThrowIfCancellationRequested();
                 var point=layer.Transform.ToDocument(new(tx*256+x+.5,ty*256+y+.5),pixels.Width,pixels.Height);
                 if(point.X<0||point.Y<0||point.X>=document.Width||point.Y>=document.Height)continue;
                 double weight=selection?.Sample(point)??1;if(weight<=0)continue;
@@ -39,13 +49,18 @@ public static class LayerFill
             }
             if(before is not null&&before.Bytes.SequenceEqual(buffer))continue;
             if(before is null&&buffer.AsSpan().IndexOfAnyExcept((byte)0)<0)continue;
+            // Count references across every layer and mask: shared old tiles do not
+            // become Undo-only until their last current-document reference is removed.
+            if(before is not null&&retained.TryGetValue(before,out int references))
+            {retained[before]=references-1;if(references==1&&originalTiles.Contains(before))missing++;}
+            CheckBudget();
             tiles[key]=new(buffer);changed=true;
         }
         if(!changed)return document;
         var filled=new Raster(pixels.Width,pixels.Height,tiles.ToImmutable());
         var result=document.Replace(editMask?source with{Mask=source.Mask!.WithPixels(filled)}:layer with{Pixels=filled});
         result.Validate();
-        if(EditorSession.UndoBytesRequired(document,result)>EditorSession.MaxHistoryBytes)throw new InvalidOperationException("Fill exceeds the Undo memory limit.");
+        if(EditorSession.UndoBytesRequired(document,result)>undoBudget)throw new InvalidOperationException("Fill exceeds the Undo memory limit.");
         cancellation.ThrowIfCancellationRequested();return result;
     }
 }
