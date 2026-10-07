@@ -132,7 +132,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         if (button != MouseButton.Left) return false;
         var keys=modifiers??Keyboard.Modifiers;
         if(Tool==EditorTool.Eyedropper||(keys.HasFlag(ModifierKeys.Alt)&&Tool is EditorTool.Brush or EditorTool.Eraser))
-        {samplingColor=true;gestureButton=button;SampleAt(point);return true;}
+        {BeginColorSampling(button,point);return true;}
         BeginPointer(DocumentPoint(point), modifiers);
         if (!Session.InTransaction && cropDrag is null) return false;
         gestureButton = button; return true;
@@ -395,6 +395,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         DrawCrop(c);
         DrawTransform(c);
         c.Restore();
+        c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);DrawSampleRing(c);c.Restore();
     }
     public void Dispose() { CancelTransform(); StopSelectionAutoScroll(); colorSampler.Dispose(); renderer.Dispose(); }
 }

@@ -66,7 +66,8 @@ public partial class MainWindow
         SelectionCenter.Visibility = ToolPicker.SelectedIndex is 4 or 5 ? Visibility.Visible : Visibility.Collapsed;
         SelectionHint.Text = ToolPicker.SelectedIndex == 7 ? "Enter: close · Backspace: point · Ctrl-drag: pixels" : ToolPicker.SelectedIndex == 6 ? "Draw · Ctrl-drag: pixels · Esc: cancel" : "Shift: square · Ctrl-drag: pixels · Esc: cancel";
         CropOptions.Visibility = ToolPicker.SelectedIndex == 8 ? Visibility.Visible : Visibility.Collapsed;
-        ToolHint.Visibility = transforming || painting || selecting || ToolPicker.SelectedIndex == 8 ? Visibility.Collapsed : Visibility.Visible;
+        ToolHint.Visibility = transforming || painting || selecting || ToolPicker.SelectedIndex is 8 or 9 ? Visibility.Collapsed : Visibility.Visible;
+        EyedropperOptions.Visibility=ToolPicker.SelectedIndex==9?Visibility.Visible:Visibility.Collapsed;
         BrushOptions.Visibility = painting ? Visibility.Visible : Visibility.Collapsed;
         ColorOptions.Visibility = !session.EditMask && ToolPicker.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
         MaskOptions.Visibility = session.EditMask && ToolPicker.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
@@ -90,4 +91,5 @@ public partial class MainWindow
     }
     private void MaskBlack(object sender, RoutedEventArgs e) => MaskSlider.Value = 0;
     private void MaskWhite(object sender, RoutedEventArgs e) => MaskSlider.Value = 100;
+    private void SampleRingChanged(object sender,RoutedEventArgs e){Canvas.ShowSampleRing=SampleRingToggle.IsChecked==true;Canvas.InvalidateVisual();}
 }

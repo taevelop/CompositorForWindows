@@ -31,6 +31,7 @@ public partial class MainWindow : Window
         defaultTabTools=CaptureTabTools();
         AttachTabDrop(NewCanvasDropFrame,null);
         Canvas.ReportError = ShowError;
+        Canvas.ReadSampleColor=()=>{ColorPickerWindow.TryHex(BrushColor.Text,out var color);return new(color.R,color.G,color.B);};
         Canvas.ColorSampled=color=>{BrushColor.Text=$"#{color.Red:X2}{color.Green:X2}{color.Blue:X2}";RefreshPaletteSwatches();};
         Canvas.ViewportChanged = UpdateStatus;
         Canvas.CropChanged = RefreshCropControls;

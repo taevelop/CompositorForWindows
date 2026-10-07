@@ -26,6 +26,7 @@ public partial class MainWindow
             Check(Canvas.IsSamplingColor&&BrushColor.Text=="#00FF00","Alt eraser did not sample.");
             ToolPicker.SelectedIndex=3;Check(!Canvas.IsSamplingColor&&!Canvas.HasInteraction,"Tool change retained sampling.");
             Check(ReferenceEquals(d,session.Document)&&session.UndoCount==0&&!session.IsModified,"Sampling painted pixels or changed history.");
+            SampleRingSmokeTest();
             ToolPicker.SelectedIndex=9;Canvas.RestoreView(2,-10,7);
             Canvas.BeginInteraction(MouseButton.Left,new(-7.8,7.2));Canvas.FinishInteraction(MouseButton.Left,new(-7.8,7.2));
             Check(BrushColor.Text=="#00FF00","Sampling ignored viewport zoom/pan.");

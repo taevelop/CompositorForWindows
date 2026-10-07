@@ -19,3 +19,10 @@ I 도구 또는 브러시/지우개에서 Alt+왼쪽 버튼으로 합성 색상�
 WPF 검사: 클릭/드래그, 투명/밖 영역의 이전 색상 보존, 버튼 조합, Alt 브러시/지우개, 취소/도구 전환, 확대/이동 좌표, 문서 스냅샷/Undo 불변성. Esc와 캡처 상실은 합성 WPF 이벤트로 검사한다. 실제 마우스·키보드 실기와 Mac 결과 비교는 대체하지 않는다.
 
 최종 검증: 코어 541개, 확장 WPF 검사 및 I 도구 화면 정렬 확인 통과. artifacts/publish-eyedropper/Compositor.Windows.exe 생성 및 verify-portable.ps1 -Runs 1 통과. 별도 Windows/Mac 검증 보류 유지.
+
+## 색상 비교 링
+
+2026-10-07: 원본 SampleRingOverlay의 116 DIP 영역, 반지름 43 DIP, 회색 24 DIP 외곽선과 16 DIP 색상 선을 연결했다. 위쪽은 현재 샘플이고 아래쪽은 드래그 시작 전 전경색이다. 확대 배율과 분리된 화면 좌표로 그리며 샘플링 합성에는 포함하지 않는다. Sample ring 체크박스와 탭별 설정 복원을 지원하고 해제/취소 시 제거한다.
+
+검증: 코어 541개와 WPF 회귀 통과. 두 반원 색상, 외곽선, 투명 중심, 표시 끄기, 설정 복원, 취소 후 제거를 검사하고 생성 이미지를 확인했다. 실제 다중 DPI 마우스 실기와 Mac 색상 비교는 미검증이다. 열린 색상 선택창 샘플링과 대형 문서 성능 측정은 계속 남아 있다.
+`artifacts/publish-sample-ring/Compositor.Windows.exe` 생성 및 verify-portable.ps1 -Runs 1 통과. 개발 PC 격리 실행 결과이며 별도 Windows PC 실기를 대체하지 않는다.
