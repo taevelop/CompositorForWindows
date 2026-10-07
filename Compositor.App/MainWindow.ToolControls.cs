@@ -57,7 +57,7 @@ public partial class MainWindow
         if (BrushOptions is null) return;
         bool transforming = Canvas?.IsTransforming == true;
         bool painting = ToolPicker.SelectedIndex is 1 or 2;
-        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", 6 => "Lasso", 7 => "Polygon", 8 => "Crop", _ => "Brush" };
+        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", 6 => "Lasso", 7 => "Polygon", 8 => "Crop", 9 => "Eyedropper", _ => "Brush" };
         if (transforming) ToolTitle.Text = "Transform";
         ColorButton.IsEnabled = ToolbarColorButton.IsEnabled = BackgroundColorButton.IsEnabled = !session.EditMask;
         RefreshPaletteSwatches();
@@ -72,6 +72,7 @@ public partial class MainWindow
         MaskOptions.Visibility = session.EditMask && ToolPicker.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
         ToolHint.Text = ToolPicker.SelectedIndex switch
         {
+            9 => "Click or drag to sample visible colors · Alt with Brush/Eraser",
             0 => "Drag to move layer · Esc to cancel",
             3 => "Drag to pan · Wheel to zoom",
             2 => "Erase pixels · Wheel to zoom",

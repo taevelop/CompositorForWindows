@@ -27,7 +27,7 @@ public partial class MainWindow
         UpdateLayout();
         var titleOrigin = ToolTitle.TranslatePoint(new Point(), this);
         double canvasTop = Canvas.TranslatePoint(new Point(), this).Y;
-        foreach (int tool in new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 })
+        foreach (int tool in new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 })
         {
             ToolPicker.SelectedIndex = tool; UpdateLayout();
             Check((ToolTitle.TranslatePoint(new Point(), this) - titleOrigin).Length < .1, "Tool title moves when switching tools.");

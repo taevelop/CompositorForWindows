@@ -8,7 +8,7 @@ using SkiaSharp.Views.WPF;
 
 namespace Compositor.App;
 
-public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection, Crop }
+public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection, Crop, Eyedropper }
 public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
@@ -130,12 +130,16 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             gestureButton = button; panOrigin = new(panX, panY); panStart = point; return true;
         }
         if (button != MouseButton.Left) return false;
+        var keys=modifiers??Keyboard.Modifiers;
+        if(Tool==EditorTool.Eyedropper||(keys.HasFlag(ModifierKeys.Alt)&&Tool is EditorTool.Brush or EditorTool.Eraser))
+        {samplingColor=true;gestureButton=button;SampleAt(point);return true;}
         BeginPointer(DocumentPoint(point), modifiers);
         if (!Session.InTransaction && cropDrag is null) return false;
         gestureButton = button; return true;
     }
     internal void MoveInteraction(Point point)
     {
+        if(samplingColor){SampleAt(point);return;}
         if (panStart is Point previous)
         {
             panX += point.X - previous.X; panY += point.Y - previous.Y; panStart = point; InvalidateVisual(); return;
@@ -147,6 +151,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     {
         if (gestureButton != button) return false;
         MoveInteraction(point);
+        if(samplingColor){EndColorSampling();return true;}
         if (panStart is not null) { panStart = null; gestureButton = null; }
         else if (PolygonActive) gestureButton = null;
         else EndPointer(true);
@@ -187,6 +192,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     public void CancelInteraction()
     {
         StopSelectionAutoScroll();
+        if(samplingColor)EndColorSampling();
         CancelTransformDrag();
         CancelCropDrag();
         bool editing = originalLayer is not null || selectionStart is not null;
@@ -201,6 +207,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     public void BeginPointer(PointD point, ModifierKeys? modifiers = null)
     {
         if (Session.InTransaction) return;
+        if(Tool==EditorTool.Eyedropper){SampleDocumentColor(point);return;}
         var keys = modifiers ?? Keyboard.Modifiers;
         if (Tool == EditorTool.Crop) { BeginCrop(point); return; }
         if (IsSelectionTool && keys.HasFlag(ModifierKeys.Control) && Session.Document.Selection is { IsEmpty: false } selectedPixels && SelectionGeometry.Contains(selectedPixels, point))
@@ -389,5 +396,5 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         DrawTransform(c);
         c.Restore();
     }
-    public void Dispose() { CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
+    public void Dispose() { CancelTransform(); StopSelectionAutoScroll(); colorSampler.Dispose(); renderer.Dispose(); }
 }

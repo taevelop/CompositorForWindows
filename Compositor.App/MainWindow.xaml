@@ -140,6 +140,7 @@
 <ListBoxItem ToolTip="Freehand lasso (L)" AutomationProperties.Name="Freehand lasso (L)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" Data="M8,17 C-3,17 0,2 12,2 C25,0 25,18 10,18 C3,17 5,12 9,14 C13,16 9,22 4,22"/></ListBoxItem>
 <ListBoxItem ToolTip="Polygonal lasso (Shift+L)" AutomationProperties.Name="Polygonal lasso (Shift+L)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" Data="M2,5 L19,2 22,17 6,20 2,5 M6,20 L3,24"/></ListBoxItem>
      <ListBoxItem ToolTip="Crop (C)" AutomationProperties.Name="Crop (C)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M6,1 L6,18 23,18 M1,6 L18,6 18,23 M6,6 L18,18"/></ListBoxItem>
+<ListBoxItem ToolTip="Eyedropper (I) · Alt with Brush/Eraser" AutomationProperties.Name="Eyedropper (I)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M14,3 L21,10 M16,1 L23,8 19,12 12,5 Z M13,7 L3,17 2,23 8,22 18,12 M4,17 L8,21"/></ListBoxItem>
 </ListBox>
      <Border Height="1" Background="{StaticResource Divider}" Margin="10,10"/>
      <Grid Width="46" Height="56">
