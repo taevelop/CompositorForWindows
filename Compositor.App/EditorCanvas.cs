@@ -13,13 +13,13 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
     private EditorSession session=null!;
-    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
+    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){CancelShapePreparation();if(shapeDrag is not null)EndShape(false);CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
     public EditorTool Tool { get; set; } = EditorTool.Brush;
     public Func<BrushSettings> ReadBrush { get; set; } = () => new(40, .7, 1, 32, 32, 32);
     public Action<string>? ReportError { get; set; }
     public Action? ViewportChanged { get; set; }
     public double Zoom { get; private set; } = 1;
-    public bool HasInteraction => shapeDrag is not null || transformDrag is not null || cropDrag is not null || pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
+    public bool HasInteraction => IsShapePreparing || shapeDrag is not null || transformDrag is not null || cropDrag is not null || pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
     private double panX = 30, panY = 30;
     private Point? panStart;
     private Point panOrigin;
@@ -199,6 +199,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void CancelInteraction()
     {
+        CancelShapePreparation();
         if(shapeDrag is not null)EndShape(false);
         sampleRequest++;
         if(gradientDragging)CancelGradient();
@@ -390,7 +391,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         if(!ready)
         {
             DrawShape(c);DrawGradient(c);c.Restore();c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);
-            DrawPreparation(c);DrawGradientStatus(c);c.Restore();return;
+            DrawPreparation(c);DrawShapeStatus(c);DrawGradientStatus(c);c.Restore();return;
         }
         if (Session.ActiveLayer is { } layer && Tool == EditorTool.Move && !IsTransforming)
         {
@@ -429,7 +430,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         DrawCrop(c);
         DrawTransform(c);
         c.Restore();
-        c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);DrawSampleRing(c);DrawGradientStatus(c);c.Restore();
+        c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);DrawSampleRing(c);DrawShapeStatus(c);DrawGradientStatus(c);c.Restore();
     }
-    public void Dispose() { canvasDisposed=true;CancelGradient();CancelRenderPreparation();CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
+    public void Dispose() { canvasDisposed=true;CancelShapePreparation();CancelGradient();CancelRenderPreparation();CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
 }

@@ -4,6 +4,16 @@ using Xunit;
 namespace Compositor.Tests;
 public sealed class ShapeDragTests
 {
+    [Fact] public async Task WorkerPreparationDoesNotMutateSessionAndGenerationsDistinguishNewTransactions()
+    {
+        var d=Document.Create(16,16);var session=new EditorSession(d);
+        var draft=new ShapeDrag(new(0,0),new(ShapeKind.Rectangle,1,0,0)).Update(new(8,8))!;
+        session.Begin();long owner=session.TransactionGeneration;
+        var prepared=await Task.Run(()=>ShapeInsert.Prepare(d,session.ActiveLayerId,draft));
+        Assert.Same(d,session.Document);Assert.True(session.InTransaction);Assert.False(session.CanUndo);
+        Assert.Equal(2,prepared.Document.Layers.Length);Assert.NotEqual(Guid.Empty,prepared.LayerId);
+        session.Cancel();session.Load(d);session.Begin();Assert.NotEqual(owner,session.TransactionGeneration);session.Cancel();
+    }
     [Fact] public void RectangleRoundsAndConstrainsAndCenteredDragMatchesOriginal()
     {
         var drag=new ShapeDrag(new(10.5,20.5),new(ShapeKind.Rectangle,1,0,0,3));

@@ -39,11 +39,18 @@ public sealed class ShapeDrag
 }
 public static class ShapeInsert
 {
+    public sealed record Prepared(Document Document,Guid LayerId);
     public static Guid Add(EditorSession session,ShapeDraft draft,CancellationToken cancellationToken=default)
     {
         if(session.InTransaction)throw new InvalidOperationException("Finish the current edit first.");
+        var prepared=Prepare(session.Document,session.ActiveLayerId,draft,cancellationToken);
+        session.Apply(_=>{session.ActiveLayerId=prepared.LayerId;session.EditMask=false;return prepared.Document;});return prepared.LayerId;
+    }
+    public static Prepared Prepare(Document document,Guid? activeLayerId,ShapeDraft draft,CancellationToken cancellationToken=default)
+    {
         cancellationToken.ThrowIfCancellationRequested();
-        draft.Transform.Validate();draft.Style.Validate();var document=session.Document;
+        draft.Transform.Validate();draft.Style.Validate();document.Validate();
+        var active=activeLayerId is {} id ? document.Layers.FirstOrDefault(l=>l.Id==id)??throw new InvalidOperationException("Active layer no longer exists.") : null;
         if(document.Layers.Length>=10000)throw new InvalidDataException("Too many layers.");
         int width=(int)draft.Transform.Width,height=(int)draft.Transform.Height;Limits.CheckDimensions(width,height);
         long existing=document.Layers.Where(l=>!l.IsAdjustment&&(l.Pixels.Tiles.Count!=0||l.Mask is not null)).Sum(l=>(long)l.Pixels.Width*l.Pixels.Height);
@@ -51,10 +58,10 @@ public static class ShapeInsert
         var pixels=ShapeRaster.Create(draft.Style,draft.Transform.Width,draft.Transform.Height,cancellationToken);
         string name;int number=1;
         do{name=$"{draft.Style.Kind} {number++}";}while(document.Layers.Any(l=>l.Name==name));
-        var active=session.ActiveLayer;var parent=active?.IsGroup==true?active.Id:active?.ParentId;
+        var parent=active?.IsGroup==true?active.Id:active?.ParentId;
         var layer=new Layer(Guid.NewGuid(),name,pixels,draft.Transform,ParentId:parent){Shape=draft.Style};
         var next=document with{Layers=document.Layers.Insert(active is null?document.Layers.Length:document.Layers.IndexOf(active)+1,layer)};
         next.Validate();cancellationToken.ThrowIfCancellationRequested();
-        session.Apply(_=>{session.ActiveLayerId=layer.Id;session.EditMask=false;return next;});return layer.Id;
+        return new(next,layer.Id);
     }
 }

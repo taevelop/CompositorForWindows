@@ -16,6 +16,7 @@ public sealed class EditorSession
     private readonly List<State> undo = [];
     private readonly List<State> redo = [];
     private State? transaction;
+    public long TransactionGeneration { get; private set; }
     private long revision, nextRevision, savedRevision;
     public Document Document { get; private set; }
     private Guid? activeLayerId;
@@ -72,6 +73,7 @@ public sealed class EditorSession
     {
         if (transaction is not null) throw new InvalidOperationException("An edit is already active.");
         transaction = Capture();
+        TransactionGeneration++;
     }
     public void Preview(Document next)
     {

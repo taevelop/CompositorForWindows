@@ -284,6 +284,7 @@ public partial class MainWindow : Window
     {
         gradientOpacityDigit=null;
         if (Canvas is null) return;
+        await Canvas.ShapeCompletion;
         await Canvas.CommitGradientAsync();
         Canvas.CommitTransform();
         Canvas.CancelInteraction();
@@ -297,7 +298,7 @@ public partial class MainWindow : Window
     private void ActualPixels(object? sender, RoutedEventArgs e) { Canvas.ActualPixels(); Refresh(); }
     private async void WindowKeyDown(object sender, KeyEventArgs e)
     {
-        if (busy){if(e.Key==Key.Escape&&fillCancellation is not null){CancelFill(null,e);e.Handled=true;}return;}
+        if (busy){if(e.Key==Key.Escape&&Canvas.IsShapePreparing){Canvas.CancelInteraction();e.Handled=true;}else if(e.Key==Key.Escape&&fillCancellation is not null){CancelFill(null,e);e.Handled=true;}return;}
         if (Canvas.IsTransforming && e.Key == Key.Escape) { CancelTransform(null, e); e.Handled = true; return; }
         if (Canvas.Tool == EditorTool.Crop && e.Key == Key.Escape) { CancelCrop(null, e); e.Handled = true; return; }
         if (e.Key == Key.Escape && Canvas.HasInteraction) { Canvas.CancelInteraction(); e.Handled = true; return; }

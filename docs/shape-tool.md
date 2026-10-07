@@ -38,3 +38,10 @@ ShapeDrag/ShapeDraft와 ShapeInsert.Add를 추가했다. 원본 DragBox의 앵�
 코어 592개/Release 경고·오류 0 및 실제 숨김 WPF 회귀 통과. artifacts/ui-smoke.shapes.json 및 .png에 도구/설정, 사각형 Shift/색상/선택, 단일 Undo/Redo/취소, 일반 마우스 라우팅, 타원 Shift+Alt, 선 두께/각도, 정밀 입력 및 UI 저장/재열기 픽셀/스타일 검사를 기록했다. ToolControlsSmoke에는 Shape도 포함해 제목/캔버스 위치 불변을 확인했다. 캡처를 직접 확인해 종류 버튼을 기존 블루 선택 스타일로 맞추고 아이콘 클리핑을 수정했다. 기본 사용자 도형 생성 경로는 연결됐지만 전체 원본/성능 검증 완료로 처리하지 않는다.
 
 배포본 artifacts/publish-shape-ui 생성 및 verify-portable.ps1 -Runs 1 통과. 개발 PC에서 PATH/공유 런타임을 분리한 self-contained WPF 실행이며 별도 PC 실기 검증은 아니다. NuGet 잠금 파일은 원래 바이트로 복원했다.
+
+## 큰 도형 비동기 확정 (2026-10-07)
+100만 픽셀 이상의 도형은 ShapeInsert.Prepare로 UI와 분리한 불변 문서 결과를 작업 스레드에서 만든다. 작은 도형은 기존 동기 경로다. 캔버스별 worker gate로 계산을 직렬화하고, UI 스레드에서 원래 세션·문서 참조·트랜잭션 세대가 맞는 결과만 단일 Undo로 게시한다. 세션 교체/해제·취소 시 결과를 폐기하며 새 트랜잭션을 취소하지 않는다. Creating shape 상태와 Esc 취소를 제공한다.
+저장·내보내기·문서 작업과 도구 전환은 진행 중 계산을 기다린다. 저장 대기 중에도 busy 가드보다 도형 Esc 취소를 우선하며 취소된 저장은 원본 파일을 유지한다. UI의 트랜잭션은 즉시 복원하지만 Skia 단일 그리기·타일화의 중간 취소는 여전히 제공하지 않아 worker 종료/대기 완료는 다음 취소 체크까지 지연될 수 있다.
+코어 593개 및 확장 WPF 회귀: worker 준비의 세션 불변, 1024×1024 계산 중 Dispatcher 실행·단일 Undo·직후 저장에 도형 포함·Esc 취소와 기존 manifest 보존·같은 문서를 다시 로드한 뒤 시작한 새 트랜잭션 보호. 이 검사는 4K/100MP 지연 수치나 피크 메모리·최종 화면 캐시 준비 성능을 증명하지 않는다. 원본 둥근 모서리 변형 미리보기와 대형 종단 성능 측정은 다음 범위다.
+
+artifacts/publish-shape-ui를 비동기 확정 버전으로 갱신하고 공유 런타임 분리 WPF 실행 1회 통과. 별도 PC 실기 보류는 유지한다.

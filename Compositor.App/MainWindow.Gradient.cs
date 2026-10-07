@@ -23,7 +23,7 @@ public partial class MainWindow
                 GradientOpacity.Value=percent;return true;
             }
         }
-        if(!Canvas.HasGradient)return false;
+        if(!Canvas.HasGradient&&!Canvas.IsShapePreparing)return false;
         if(key==Key.S&&modifiers is ModifierKeys.Control or (ModifierKeys.Control|ModifierKeys.Shift))
         {await Save(modifiers.HasFlag(ModifierKeys.Shift));return true;}
         if(modifiers is not (ModifierKeys.None or ModifierKeys.Shift))return false;
@@ -42,6 +42,12 @@ public partial class MainWindow
     private async Task<bool> ResolveGradientBeforeAction()
     {
         if (busy) return false;
+        if(Canvas.IsShapePreparing)
+        {
+            busy=true;Editor.IsEnabled=false;
+            try{return await Canvas.ShapeCompletion;}
+            finally{busy=false;Editor.IsEnabled=true;Refresh();}
+        }
         if (!Canvas.HasGradient) return true;
         busy=true;Editor.IsEnabled=false;
         try { return await Canvas.CommitGradientAsync(); }

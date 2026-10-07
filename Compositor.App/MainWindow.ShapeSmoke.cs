@@ -42,10 +42,31 @@ public partial class MainWindow
             projectPath=Path.Combine(root,"Shapes.comp");Check(await Save(false),"Shape UI save failed.");var output=CompositePixels(session.Document);
             Check(await ReopenSavedProject(projectPath!),"Shape UI reopen failed.");Check(output.SequenceEqual(CompositePixels(session.Document))&&session.Document.Layers.Count(l=>l.Shape is not null)==4,"Shape UI round trip changed pixels/style.");
             ToolPicker.SelectedIndex=11;ShapeLine.IsChecked=true;BrushColor.Text="#1266AA";
+            var smallDocument=session.Document;var smallActive=session.ActiveLayerId;
+            session.Load(Document.Create(1024,1024));ShapeRectangle.IsChecked=true;
+            var largeOriginal=session.Document;
+            Canvas.BeginPointer(new(0,0));Canvas.MovePointer(new(1024,1024));Canvas.EndPointer(true);
+            Check(Canvas.IsShapePreparing&&session.InTransaction&&ReferenceEquals(largeOriginal,session.Document),"Large shape did not prepare off the UI transaction.");
+            bool dispatcherRan=false;var dispatched=Dispatcher.InvokeAsync(()=>dispatcherRan=true,DispatcherPriority.Input).Task;
+            projectPath=Path.Combine(root,"Large.comp");var savingLarge=Save(false);
+            await dispatched;Check(dispatcherRan&&await savingLarge,"Save did not await the large shape worker.");
+            Check(ProjectStore.Load(projectPath!).Document.Layers.Count(l=>l.Shape is not null)==1,"Pending shape was omitted from saved project.");
+            Check(session.ActiveLayer!.Pixels.Width==1024&&session.UndoCount==1&&!session.InTransaction,"Large shape did not commit one edit.");
+            Undo(this,new());Check(ReferenceEquals(largeOriginal,session.Document),"Large shape Undo changed original.");
+            Canvas.BeginPointer(new(0,0));Canvas.MovePointer(new(1024,1024));Canvas.EndPointer(true);
+            var cancelled=Canvas.ShapeCompletion;var savedManifest=File.ReadAllBytes(Path.Combine(projectPath!,"manifest.json"));var cancelledSave=Save(false);
+            var escape=new KeyEventArgs(Keyboard.PrimaryDevice,PresentationSource.FromVisual(this)!,0,Key.Escape){RoutedEvent=Keyboard.PreviewKeyDownEvent};
+            WindowKeyDown(this,escape);Check(escape.Handled&&!await cancelledSave,"Escape did not cancel a save waiting for shape creation.");
+            Check(savedManifest.SequenceEqual(File.ReadAllBytes(Path.Combine(projectPath!,"manifest.json"))),"Cancelled pending save changed the project.");
+            Check(!await cancelled&&ReferenceEquals(largeOriginal,session.Document)&&!session.InTransaction&&!session.CanUndo,"Cancelled large shape was published.");
+            Canvas.BeginPointer(new(0,0));Canvas.MovePointer(new(1024,1024));Canvas.EndPointer(true);
+            var stale=Canvas.ShapeCompletion;session.Load(largeOriginal);session.Begin();
+            Check(!await stale&&session.InTransaction&&ReferenceEquals(largeOriginal,session.Document),"Stale shape result cancelled a newer transaction.");session.Cancel();
+            session.Load(smallDocument,smallActive);ShapeLine.IsChecked=true;
             await Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ApplicationIdle);UpdateLayout();
             var bitmap=new RenderTargetBitmap((int)Math.Ceiling(ActualWidth),(int)Math.Ceiling(ActualHeight),96,96,PixelFormats.Pbgra32);bitmap.Render(this);
             var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(bitmap));using(var file=File.Create(Path.ChangeExtension(reportPath,".png")))png.Save(file);
-            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"shape rail/options","rectangle Shift/palette/selection","single Undo/Redo","cancel","ellipse Shift/Alt","line thickness/angle","precise input","UI save/reopen pixels/style"},note="Hidden WPF routes; physical mouse and actual Mac comparison deferred."}));
+            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"shape rail/options","rectangle Shift/palette/selection","single Undo/Redo","cancel","ellipse Shift/Alt","line thickness/angle","precise input","UI save/reopen pixels/style","large worker/Dispatcher","large cancel/Undo","stale result preserves newer transaction"},note="Hidden WPF routes; physical mouse and actual Mac comparison deferred."}));
         }
         finally
         {
