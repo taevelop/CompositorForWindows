@@ -24,8 +24,40 @@ public partial class MainWindow
             if(!ReferenceEquals(doc,session.Document)||session.InTransaction)throw new InvalidOperationException("Gradient cancel failed.");
             await GradientSaveSmokeTest();
             await GradientTargetSmokeTest();
+            await GradientTabSmokeTest();
         }
         finally{Canvas.CancelGradient();session.Load(original);GradientTransparent.IsChecked=true;GradientOpacity.Value=100;RestoreTabTools(tools);Canvas.Fit();Refresh();}
+    }
+    private async Task GradientTabSmokeTest()
+    {
+        var original=workspace.Current;var savedPrompts=prompts;RememberTab();
+        var tab=workspace.New(Document.Create(3,1));BindCurrentTab();
+        try
+        {
+            ToolPicker.SelectedIndex=10;Canvas.RestoreView(20,30,30);
+            BrushColor.Text="#FF0000";SetBackgroundColor("#0000FF");GradientTransparent.IsChecked=false;
+            Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));
+            await SelectTabAsync(original.Id);
+            if(workspace.Current!=original||tab.Session.InTransaction||tab.Session.UndoCount!=1||Canvas.HasGradient||tab.Session.Document.Layers[0].Pixels.ToRgba()[0]!=255)
+                throw new InvalidOperationException("Tab switch lost the pending gradient.");
+            await SelectTabAsync(tab.Id);
+            Canvas.RestoreView(20,30,30);GradientReverse.IsChecked=true;
+            Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));
+            prompts=new(()=>MessageBoxResult.Cancel,message=>throw new InvalidOperationException(message));
+            await CloseTab(tab.Id);
+            if(workspace.Current!=tab||tab.Session.InTransaction||tab.Session.UndoCount!=2||!tab.Session.IsModified||Canvas.HasGradient)
+                throw new InvalidOperationException("Cancelled tab close did not retain the committed gradient.");
+            GradientReverse.IsChecked=false;
+            Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));
+            await HandleDocumentShortcut(Key.Tab,ModifierKeys.Control);
+            if(workspace.Current==tab||tab.Session.InTransaction||tab.Session.UndoCount!=3)
+                throw new InvalidOperationException("Ctrl+Tab did not commit the gradient.");
+        }
+        finally
+        {
+            Canvas.CancelGradient();prompts=savedPrompts;workspace.Close(tab.Id,true);tabViews.Remove(tab.Id);
+            workspace.Select(original.Id);BindCurrentTab();GradientReverse.IsChecked=false;
+        }
     }
     private async Task GradientTargetSmokeTest()
     {

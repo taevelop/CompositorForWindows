@@ -25,17 +25,17 @@ public partial class MainWindow
         Canvas.CancelCrop();RefreshToolControls();
     }
     private async void CloseDocument(object sender,RoutedEventArgs e)=>await CloseTab(workspace.Current.Id);
-    private void NextDocument(object sender,RoutedEventArgs e)=>CycleDocumentTab(false);
-    private void PreviousDocument(object sender,RoutedEventArgs e)=>CycleDocumentTab(true);
-    private void CycleDocumentTab(bool backwards)
+    private async void NextDocument(object sender,RoutedEventArgs e)=>await CycleDocumentTab(false);
+    private async void PreviousDocument(object sender,RoutedEventArgs e)=>await CycleDocumentTab(true);
+    private async Task CycleDocumentTab(bool backwards)
     {
         var tabs=workspace.Documents;int index=tabs.IndexOf(workspace.Current);
-        SelectTab(tabs[(index+(backwards?-1:1)+tabs.Count)%tabs.Count].Id);
+        await SelectTabAsync(tabs[(index+(backwards?-1:1)+tabs.Count)%tabs.Count].Id);
     }
     private async Task<bool> HandleDocumentShortcut(Key key,ModifierKeys modifiers)
     {
         if(modifiers is not (ModifierKeys.Control or (ModifierKeys.Control|ModifierKeys.Shift)))return false;
-        if(key==Key.Tab){if(!busy)CycleDocumentTab(modifiers.HasFlag(ModifierKeys.Shift));return true;}
+        if(key==Key.Tab){if(!busy)await CycleDocumentTab(modifiers.HasFlag(ModifierKeys.Shift));return true;}
         if(key==Key.W&&modifiers==ModifierKeys.Control){if(!busy)await CloseTab(workspace.Current.Id);return true;}
         return false;
     }

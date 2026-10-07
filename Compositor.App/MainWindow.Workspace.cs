@@ -41,6 +41,11 @@ public partial class MainWindow
         if(id==workspace.Current.Id||!PrepareTabChange())return;
         if(workspace.Select(id))BindCurrentTab();
     }
+    private async Task SelectTabAsync(Guid id)
+    {
+        if(id==workspace.Current.Id||!await ResolveGradientBeforeAction())return;
+        SelectTab(id);
+    }
     private void AddDocumentTab(Document document)
     {
         if(!PrepareTabChange())return;
@@ -48,6 +53,7 @@ public partial class MainWindow
     }
     private async Task CloseTab(Guid id)
     {
+        if(!await ResolveGradientBeforeAction())return;
         if(!PrepareTabChange())return;
         if(!workspace.Select(id))return;
         BindCurrentTab();
@@ -56,10 +62,10 @@ public partial class MainWindow
     }
     private async Task<bool> ConfirmWorkspaceClose()
     {
-        if(busy)return false;
+        if(!await ResolveGradientBeforeAction())return false;
         foreach(var tab in workspace.QuitOrder())
         {
-            SelectTab(tab.Id);
+            await SelectTabAsync(tab.Id);
             if(workspace.Current!=tab || !await ConfirmDiscard())return false;
         }
         return true;
@@ -79,7 +85,7 @@ public partial class MainWindow
                 var row=new StackPanel{Orientation=Orientation.Horizontal};
                 var label=new TextBlock{TextTrimming=TextTrimming.CharacterEllipsis,MaxWidth=190};
                 var button=new Button{Content=label,MaxWidth=220,Style=(Style)FindResource("CompactButton")};
-                button.Click+=(_,_)=>SelectTab(tab.Id);
+                button.Click+=async(_,_)=>await SelectTabAsync(tab.Id);
                 var close=new Button{Content="×",Style=(Style)FindResource("CompactButton")};
                 close.Click+=async(_,_)=>await CloseTab(tab.Id);
                 row.Children.Add(button);row.Children.Add(close);

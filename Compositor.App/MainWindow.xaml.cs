@@ -116,8 +116,9 @@ public partial class MainWindow : Window
         var response = prompts.ConfirmSaveChanges();
         return response == MessageBoxResult.No || (response == MessageBoxResult.Yes && await Save(false));
     }
-    private void NewDocument(object? sender, RoutedEventArgs e)
+    private async void NewDocument(object? sender, RoutedEventArgs e)
     {
+        if (!await ResolveGradientBeforeAction()) return;
         if (busy || (session.InTransaction && !Canvas.IsTransforming)) return;
         string? value = Prompt("New canvas", "Width × height in pixels", "1400 x 900");
         if (value is null) return;
@@ -135,6 +136,7 @@ public partial class MainWindow : Window
     private async void OpenRecovery(object? sender, RoutedEventArgs e) => await OpenProjectFolder(true);
     private async Task OpenProjectFolder(bool recoveryOnly)
     {
+        if (!await ResolveGradientBeforeAction()) return;
         if (busy || (session.InTransaction && !Canvas.IsTransforming)) return;
         var dialog = new OpenFolderDialog { Title = recoveryOnly ? "Select a .comp.recovery folder" : "Select a .comp project folder" };
         if (dialog.ShowDialog(this) != true) return;
@@ -143,8 +145,9 @@ public partial class MainWindow : Window
     }
     private async Task<bool> LoadProject(string source, bool recovery)
     {
+        if (!await ResolveGradientBeforeAction()) return false;
         if (!recovery && workspace.FindPath(source) is {} existing)
-        { SelectTab(existing.Id); return workspace.Current == existing; }
+        { await SelectTabAsync(existing.Id); return workspace.Current == existing; }
         LoadedProject? loaded = null;
         if (!await Work("Opening project…", () => loaded = recovery ? ProjectStore.LoadRecovery(source) : ProjectStore.Load(source))) return false;
         OpenLoadedProject(loaded!, source, recovery); return true;
