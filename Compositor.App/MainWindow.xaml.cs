@@ -397,6 +397,7 @@ public partial class MainWindow : Window
         TransformSmokeTest(Path.ChangeExtension(screenshot, ".transform.png"));
         PaletteSmokeTest();
         EyedropperSmokeTest();
+        await RenderPreparationSmokeTest();
         await WorkspaceSmokeTest(Path.ChangeExtension(screenshot, ".workspace.png"));
         await TabPresentationSmokeTest();
         await TabDropSmokeTest();

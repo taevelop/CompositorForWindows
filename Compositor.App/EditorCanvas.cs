@@ -12,7 +12,8 @@ public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseS
 public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
-    public EditorSession Session { get; set; } = null!;
+    private EditorSession session=null!;
+    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value))CancelRenderPreparation();session=value;} }
     public EditorTool Tool { get; set; } = EditorTool.Brush;
     public Func<BrushSettings> ReadBrush { get; set; } = () => new(40, .7, 1, 32, 32, 32);
     public Action<string>? ReportError { get; set; }
@@ -342,6 +343,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     {
         var c = e.Surface.Canvas; c.Clear(new SKColor(28, 30, 34));
         if (Session is null || ActualWidth <= 0) return;
+        if(!EnsurePrepared(Session.Document)){DrawPreparation(c);return;}
         c.Save(); c.Scale(e.Info.Width / (float)ActualWidth, e.Info.Height / (float)ActualHeight);
         c.Translate((float)panX, (float)panY); c.Scale((float)Zoom);
         var doc = Session.Document;
@@ -397,5 +399,5 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         c.Restore();
         c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);DrawSampleRing(c);c.Restore();
     }
-    public void Dispose() { CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
+    public void Dispose() { canvasDisposed=true;CancelRenderPreparation();CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
 }

@@ -6,7 +6,7 @@ using SkiaSharp;
 namespace Compositor.App;
 public sealed partial class EditorCanvas
 {
-    internal SampledColor? SampleComposite(PointD point)=>renderer.Sample(Session.Document,point);
+    internal SampledColor? SampleComposite(PointD point)=>EnsurePrepared(Session.Document)?renderer.Sample(Session.Document,point):null;
     private bool samplingColor;
     public Action<SampledColor>? ColorSampled {get;set;}
     public Func<SampledColor> ReadSampleColor {get;set;}=()=>new(0,0,0);
