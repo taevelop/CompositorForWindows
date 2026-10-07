@@ -1,4 +1,4 @@
-﻿# 문서 탭 구현 현황
+# 문서 탭 구현 현황
 
 2026-10-07: 작업 공간 모델과 MainWindow 탭 UI, 새 문서/열기/저장/복구/닫기를 연결했다.
 
@@ -21,10 +21,20 @@ artifacts/ui-smoke.workspace.png에서 활성 탭의 블루 표시, 문서명/�
 
 ## 잔여
 
-- 탭 전환/닫기 단축키, 탭 재정렬 및 여러 탭의 접근성/오버플로 품질.
-- 브러시/색상/선택 도구 설정은 현재 창 공통이다. 원본의 탭별 도구 설정 범위 대조 및 분리.
+- 탭 재정렬 및 여러 탭의 접근성/오버플로 품질.
+- 추가 도구가 구현될 때 해당 도구 설정도 탭별 상태에 포함해야 한다. 전경/배경 팔레트 등 미구현 도구는 별도 잔여 범위다.
 - 링크/정션의 실제 파일 동일성 비교, 여러 대형 문서를 연 상태의 메모리/렌더링 성능.
 - 그룹 접힘 복원의 복합 실기와 다양한 DPI에서의 탭 조작.
 - 실제 Mac 왕복과 별도 Windows PC 검증은 사용자 보류 유지.
 
 배포 확인: artifacts/publish-document-tabs/Compositor.Windows.exe 생성 및 verify-portable.ps1 -Runs 1 통과. 개발 PC의 공유 런타임 차단/공백 경로 검사이며 별도 PC 검증은 아니다.
+
+## 탭별 도구 설정과 단축키
+
+원본 macOS/Compositor/Document/EditorSession.swift의 brushSettings, selectionModeChoice, cropRatioChoice 등 세션별 설정을 대조했다. Windows에서 구현된 도구 선택, 브러시 크기/경도/불투명도/색상, 마스크 농도, 선택 연산/안티앨리어싱/중심 기준, 크롭 비율/스냅을 탭마다 보관한다. 새 탭은 Windows 앱의 초기 기본값으로 시작한다. 이 UI 상태는 문서 수정이나 Undo를 생성하지 않고 .comp에 저장하지 않는다. 크롭 초안은 이전과 같이 전환 시 취소한다.
+
+Ctrl+Tab / Ctrl+Shift+Tab은 다음/이전 탭을 순환하고 Ctrl+W는 현재 문서 닫기를 요청한다. View 메뉴에도 표시했다. 문서 단축키는 텍스트 입력의 일반 편집 단축키보다 먼저 처리한다. 텍스트의 Undo/Delete 처리는 유지한다.
+
+코어 533개 및 확장 WPF 검사 통과. 서로 다른 도구 설정의 복원, 새 문서 기본값, 크롭 초안 비전파, 다음/이전 탭 명령, Ctrl+W 명령의 미저장 취소를 검사했다. 단축키 검사는 실제 창의 명령 처리 함수를 제어된 키/수정키 인자로 호출한 것이며 물리 키보드 입력 검증은 아니다.
+
+배포본 artifacts/publish-tab-tools/Compositor.Windows.exe 및 verify-portable.ps1 -Runs 1 통과. 별도 Windows/Mac 실기는 보류다.

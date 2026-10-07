@@ -6,12 +6,12 @@ namespace Compositor.App;
 public partial class MainWindow
 {
     private readonly DocumentWorkspace workspace = new(Document.Create(1400,900));
-    private sealed record TabView(double Zoom,double X,double Y,Guid? DocumentId,Guid[] Collapsed,string? Path);
+    private sealed record TabView(double Zoom,double X,double Y,Guid? DocumentId,Guid[] Collapsed,string? Path,TabTools Tools);
     private readonly Dictionary<Guid,TabView> tabViews=[];
     private void RememberTab()
     {
         var view=Canvas.CaptureView();
-        tabViews[workspace.Current.Id]=new(view.Zoom,view.X,view.Y,panelDocumentId,collapsedGroups.ToArray(),projectPath);
+        tabViews[workspace.Current.Id]=new(view.Zoom,view.X,view.Y,panelDocumentId,collapsedGroups.ToArray(),projectPath,CaptureTabTools());
     }
     private bool PrepareTabChange()
     {
@@ -30,9 +30,10 @@ public partial class MainWindow
         {
             projectPath=view.Path;
             if(view.DocumentId==session.Document.Id)collapsedGroups.UnionWith(view.Collapsed);
+            RestoreTabTools(view.Tools);
             Canvas.RestoreView(view.Zoom,view.X,view.Y);
         }
-        else Canvas.Fit();
+        else { RestoreTabTools(defaultTabTools);Canvas.Fit(); }
         Refresh();
     }
     private void SelectTab(Guid id)

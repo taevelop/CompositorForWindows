@@ -28,6 +28,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         InitializeToolControls();
         Canvas.Session = session; Canvas.ReadBrush = ReadBrush;
+        defaultTabTools=CaptureTabTools();
         Canvas.ReportError = ShowError;
         Canvas.ViewportChanged = UpdateStatus;
         Canvas.CropChanged = RefreshCropControls;
@@ -277,12 +278,13 @@ public partial class MainWindow : Window
     private void Redo(object? sender, RoutedEventArgs e) => Safe(session.Redo);
     private void Fit(object? sender, RoutedEventArgs e) { if (Canvas?.Session is not null) { Canvas.Fit(); Refresh(); } }
     private void ActualPixels(object? sender, RoutedEventArgs e) { Canvas.ActualPixels(); Refresh(); }
-    private void WindowKeyDown(object sender, KeyEventArgs e)
+    private async void WindowKeyDown(object sender, KeyEventArgs e)
     {
         if (busy) return;
         if (Canvas.IsTransforming && e.Key == Key.Escape) { CancelTransform(null, e); e.Handled = true; return; }
         if (Canvas.Tool == EditorTool.Crop && e.Key == Key.Escape) { CancelCrop(null, e); e.Handled = true; return; }
         if (e.Key == Key.Escape && Canvas.HasInteraction) { Canvas.CancelInteraction(); e.Handled = true; return; }
+        if(await HandleDocumentShortcut(e.Key,Keyboard.Modifiers)){e.Handled=true;return;}
         // Text editing owns its own shortcuts, including Undo and Delete.
         if (Keyboard.FocusedElement is TextBox) return;
         if (Canvas.IsTransforming && e.Key == Key.Enter) { ApplyTransform(null, e); e.Handled = true; return; }
