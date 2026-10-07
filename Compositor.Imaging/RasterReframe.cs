@@ -63,7 +63,9 @@ public static class RasterReframe
         var pixels=Apply(source.Pixels,frame,cancellation:cancellation);
         LayerMask? mask=source.Mask;
         if(mask is not null&&(frame.Left!=0||frame.Top!=0||frame.Width!=source.Pixels.Width||frame.Height!=source.Pixels.Height))
-            mask=mask.WithPixels(Apply(mask.EditingPixels(source.Pixels.Width,source.Pixels.Height),frame,true,cancellation));
+            mask=mask.Placement is not null || !mask.Linked
+                ? mask with{Placement=mask.Placement??source.Transform}
+                : mask.WithPixels(Apply(mask.EditingPixels(source.Pixels.Width,source.Pixels.Height),frame,true,cancellation));
         return ReferenceEquals(pixels,source.Pixels)&&ReferenceEquals(mask,source.Mask)&&transform==source.Transform
             ?source:source with{Pixels=pixels,Mask=mask,Transform=transform};
     }

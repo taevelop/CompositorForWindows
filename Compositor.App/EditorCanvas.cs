@@ -312,7 +312,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             }
             var t = originalLayer.Transform;
             var transform = t with { X = t.X + point.X - anchor.X, Y = t.Y + point.Y - anchor.Y };
-            if (Session.ActiveLayer?.Transform != transform) Session.Preview(Session.Document.Replace(originalLayer with { Transform = transform }));
+            if (Session.ActiveLayer?.Transform != transform) Session.Preview(Session.Document.Replace(LayerPlacement.Change(originalLayer,transform)));
         }
     }
     public void EndPointer(bool commit)

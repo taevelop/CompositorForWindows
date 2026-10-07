@@ -36,7 +36,7 @@ public sealed class GroupTransform
     public Document Apply(LayerTransform placement)
     {
         placement.Validate();if(placement==Bounds)return original;
-        var layers=original.Layers.Select(l=>members.Contains(l.Id)?l with{Transform=Following(l.Transform,Bounds,placement)}:l).ToImmutableArray();
+        var layers=original.Layers.Select(l=>members.Contains(l.Id)?LayerPlacement.Change(l,Following(l.Transform,Bounds,placement)):l).ToImmutableArray();
         var next=original with{Layers=layers};next.Validate();return next;
     }
 }

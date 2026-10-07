@@ -9,6 +9,7 @@ public sealed class LayerTransformEdit:IDisposable
     private readonly Layer layer;
     private readonly SelectionTransformPixels? selected;
     private readonly GroupTransform? group;
+    private readonly bool maskAlone;
     private bool finished;
     public LayerTransform InitialTransform {get;}
     public LayerTransform Draft {get;private set;}
@@ -17,12 +18,14 @@ public sealed class LayerTransformEdit:IDisposable
     {
         this.session=session;this.layer=layer;this.selected=selected;original=session.Document;
         group=session.SelectedLayerIds.Count>1||layer.IsGroup?new GroupTransform(original,session.SelectedLayerIds):null;
-        InitialTransform=Draft=group?.Bounds??selected?.InitialTransform??layer.Transform;session.Begin();
+        maskAlone=group is null&&session.EditMask;
+        if(maskAlone&&layer.Mask is null)throw new InvalidOperationException("Select a mask to transform.");
+        InitialTransform=Draft=group?.Bounds??selected?.InitialTransform??(maskAlone?layer.Mask!.Placement??layer.Transform:layer.Transform);session.Begin();
     }
     public static LayerTransformEdit Begin(EditorSession session)
     {
         if(session.InTransaction)throw new InvalidOperationException("Finish the active edit first.");
-        if(session.ActiveLayer is not {} layer || (layer.IsAdjustment && session.SelectedLayerIds.Count<=1))
+        if(session.ActiveLayer is not {} layer || (layer.IsAdjustment && !session.EditMask && session.SelectedLayerIds.Count<=1))
             throw new InvalidOperationException("Select an image layer or group to transform.");
         if(session.SelectedLayerIds.Count<=1&&!LayerHierarchy.Entries(session.Document).First(e=>e.Layer.Id==layer.Id).Visible)
             throw new InvalidOperationException("Show the layer and its parents before transforming.");
@@ -37,7 +40,9 @@ public sealed class LayerTransformEdit:IDisposable
         try
         {
             value.Validate();
-            var next=value==InitialTransform?original:group?.Apply(value)??selected?.Apply(value)??original.Replace(layer with{Transform=value});
+            var next=value==InitialTransform?original:maskAlone?
+                original.Replace(layer with{Mask=layer.Mask! with{Placement=value==layer.Transform?null:value}}):
+                group?.Apply(value)??selected?.Apply(value)??original.Replace(LayerPlacement.Change(layer,value));
             next.Validate();session.Preview(next);Draft=value;
         }
         catch{Dispose();throw;}
@@ -47,7 +52,7 @@ public sealed class LayerTransformEdit:IDisposable
         if(finished)return;
         try
         {
-            if(selected is null && Draft != InitialTransform)
+            if(selected is null && !maskAlone && Draft != InitialTransform)
             {
                 var next=session.Document;
                 foreach(var current in next.Layers)

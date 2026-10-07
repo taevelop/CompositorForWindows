@@ -25,6 +25,7 @@ public static class LayerFill
             layer=RasterReframe.Apply(source,new(left,top,checked(right-left),checked(bottom-top)),cancellation);
         }
         var pixels=editMask?source.Mask!.EditingPixels(source.Pixels.Width,source.Pixels.Height):layer.Pixels;
+        var pixelTransform=editMask?source.Mask!.Placement??source.Transform:layer.Transform;
         if(editMask)green=blue=red;
         var initial=editMask?source with{Mask=source.Mask!.WithPixels(pixels)}:layer;
         var originalTiles=document.Layers.SelectMany(item=>item.RetainedTiles).ToHashSet();
@@ -43,7 +44,7 @@ public static class LayerFill
             for(int y=0;y<Math.Min(256,pixels.Height-ty*256);y++)for(int x=0;x<Math.Min(256,pixels.Width-tx*256);x++)
             {
                 if(x==0)cancellation.ThrowIfCancellationRequested();
-                var point=layer.Transform.ToDocument(new(tx*256+x+.5,ty*256+y+.5),pixels.Width,pixels.Height);
+                var point=pixelTransform.ToDocument(new(tx*256+x+.5,ty*256+y+.5),pixels.Width,pixels.Height);
                 if(point.X<0||point.Y<0||point.X>=document.Width||point.Y>=document.Height)continue;
                 double weight=selection?.Sample(point)??1;if(weight<=0)continue;
                 var colorAtPoint=gradient?.Sample(point)??((double)red,(double)green,(double)blue,1d);

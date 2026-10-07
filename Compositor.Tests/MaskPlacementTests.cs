@@ -5,6 +5,36 @@ using SkiaSharp;
 namespace Compositor.Tests;
 public sealed class MaskPlacementTests
 {
+    [Fact] public void MaskBrushAndFillUseMaskPlacementAndKeepImageAndMetadata()
+    {
+        var d=Document.Create(16,16);var mask=LayerMask.Solid(8,8,0) with{Placement=new(4,4,8,8),Linked=false};
+        var layer=d.Layers[0] with{Mask=mask};var settings=new BrushSettings(2,1,1,255,255,255);
+        var actual=new MaskStroke(layer,settings,16,16);
+        var expected=new MaskStroke(layer with{Transform=mask.Placement!},settings,16,16);
+        actual.Append(new(5,5));expected.Append(new(5,5));
+        Assert.Equal(expected.Mask.Pixels.ToRgba(),actual.Mask.Pixels.ToRgba());
+        Assert.Equal(mask.Placement,actual.Mask.Placement);Assert.False(actual.Mask.Linked);
+        var selection=SelectionGeometry.Box(4,4,2,2);
+        var original=d.Replace(layer) with{Selection=selection};
+        var filled=LayerFill.Apply(original,layer.Id,255,255,255,true);
+        Assert.Same(layer.Pixels,filled.Layers[0].Pixels);Assert.Equal(mask.Placement,filled.Layers[0].Mask!.Placement);
+        var bytes=filled.Layers[0].Mask!.Pixels.ToRgba();Assert.Equal(255,bytes[0]);Assert.Equal(0,bytes[7*4]);
+    }
+    [Fact] public void MaskOnlyTransformAndLinkedLayerTransformHaveOneReversibleEdit()
+    {
+        var d=Document.Create(8,8);var mask=LayerMask.Solid(8,8,128) with{Placement=new(1,2,8,8)};
+        var layer=d.Layers[0] with{Mask=mask};d=d.Replace(layer);var session=new EditorSession(d){EditMask=true};
+        using(var edit=LayerTransformEdit.Begin(session))
+        {Assert.Equal(mask.Placement,edit.InitialTransform);edit.Preview(edit.InitialTransform with{X=4});edit.Complete();}
+        Assert.Equal(layer.Transform,session.Document.Layers[0].Transform);Assert.Equal(4,session.Document.Layers[0].Mask!.Placement!.X);
+        session.Undo();Assert.Same(d,session.Document);Assert.False(session.CanUndo);
+        session.EditMask=false;
+        using(var edit=LayerTransformEdit.Begin(session))
+        {edit.Preview(layer.Transform with{X=3});edit.Complete();}
+        Assert.Equal(4,session.Document.Layers[0].Mask!.Placement!.X);
+        var unlinked=LayerPlacement.Change(layer with{Mask=mask with{Linked=false}},layer.Transform with{X=3});
+        Assert.Equal(mask.Placement,unlinked.Mask!.Placement);
+    }
     private static byte[] Render(CanvasRenderer renderer,Document document)
     {
         using var image=renderer.Flatten(document);using var bitmap=new SKBitmap(CanvasRenderer.Info(image.Width,image.Height));
