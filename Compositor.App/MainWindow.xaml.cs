@@ -324,6 +324,8 @@ public partial class MainWindow : Window
             e.Handled=true;return;
         }
         if (Canvas.IsTransforming && ((ctrl && e.Key is Key.S or Key.Z or Key.Y) || (!ctrl && e.Key is Key.V or Key.B or Key.E or Key.H or Key.M or Key.L or Key.C))) Canvas.CommitTransform();
+        if(Canvas.HasGradient&&Keyboard.Modifiers==ModifierKeys.None&&e.Key is Key.X or Key.D)
+        {if(e.Key==Key.X)SwapPalette(null,e);else ResetPalette(null,e);e.Handled=true;return;}
         if (session.InTransaction) return;
         if (ctrl && Canvas.IsSelectionTool && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
         { NudgeSelectedPixels(e.Key, shift ? 10 : 1); e.Handled = true; return; }

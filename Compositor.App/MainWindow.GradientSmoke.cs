@@ -32,9 +32,33 @@ public partial class MainWindow
             if(!ReferenceEquals(doc,session.Document)||session.InTransaction)throw new InvalidOperationException("Gradient cancel failed.");
             await GradientSaveSmokeTest();
             await GradientTargetSmokeTest();
+            await GradientPaletteSmokeTest();
             await GradientTabSmokeTest();
         }
         finally{Canvas.CancelGradient();session.Load(original);GradientTransparent.IsChecked=true;GradientOpacity.Value=100;RestoreTabTools(tools);Canvas.Fit();Refresh();}
+    }
+    private async Task GradientPaletteSmokeTest()
+    {
+        var doc=Document.Create(3,1);session.Load(doc);Refresh();ToolPicker.SelectedIndex=10;Canvas.RestoreView(20,30,30);
+        GradientLinear.IsChecked=true;GradientTransparent.IsChecked=false;GradientReverse.IsChecked=false;GradientOpacity.Value=100;
+        BrushColor.Text="#FF0000";SetBackgroundColor("#0000FF");
+        Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));
+        BrushColor.Text="#00FF00";SetBackgroundColor("#FFFFFF");await Canvas.GradientPending;
+        if(!session.Document.Layers[0].Pixels.ToRgba().SequenceEqual(new byte[]{0,255,0,255,128,255,128,255,255,255,255,255})||session.UndoCount!=0)
+            throw new InvalidOperationException("Pending gradient palette did not replace the original preview.");
+        var brush=(System.Windows.Media.LinearGradientBrush)GradientSwatch.Background;
+        if(brush.GradientStops[0].Color!=System.Windows.Media.Colors.Lime||brush.GradientStops[1].Color!=System.Windows.Media.Colors.White)
+            throw new InvalidOperationException("Gradient swatch palette mismatch.");
+        SwapPalette(null,new());await Canvas.GradientPending;
+        if(session.Document.Layers[0].Pixels.ToRgba()[0]!=255||session.Document.Layers[0].Pixels.ToRgba()[8]!=0)
+            throw new InvalidOperationException("Pending gradient palette swap failed.");
+        GradientTransparent.IsChecked=true;GradientReverse.IsChecked=true;GradientChanged(this,new());await Canvas.GradientPending;
+        brush=(System.Windows.Media.LinearGradientBrush)GradientSwatch.Background;
+        if(brush.GradientStops[0].Color.A!=0||brush.GradientStops[1].Color.A!=255||session.Document.Layers[0].Pixels.ToRgba()[3]!=0)
+            throw new InvalidOperationException("Transparent reversed gradient swatch mismatch.");
+        Canvas.CancelGradient();if(!ReferenceEquals(doc,session.Document)||session.UndoCount!=0)
+            throw new InvalidOperationException("Palette-edited gradient cancellation lost the original document.");
+        GradientTransparent.IsChecked=false;GradientReverse.IsChecked=false;
     }
     private async Task GradientTabSmokeTest()
     {

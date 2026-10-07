@@ -23,9 +23,11 @@ public partial class MainWindow
             {
                 ColorSwatch.Background = ToolbarColorSwatch.Background = new SolidColorBrush(color);
                 ToolbarColorButton.ToolTip = $"Choose brush color · {ColorPickerWindow.Hex(color)}";
+                GradientPaletteChanged();
             }
         };
         MaskGray.TextChanged+=(_,_)=>RefreshPaletteSwatches();
+        MaskSlider.ValueChanged+=(_,_)=>GradientPaletteChanged();
         RefreshToolControls();
     }
 
@@ -85,7 +87,7 @@ public partial class MainWindow
 
     private void PickBrushColor(object sender, RoutedEventArgs e)
     {
-        if (busy || session.InTransaction || session.EditMask) return;
+        if (busy || (session.InTransaction && !Canvas.HasGradient) || session.EditMask) return;
         if (!ColorPickerWindow.TryHex(BrushColor.Text, out var color)) color = Colors.Black;
         var dialog = new ColorPickerWindow(color) { Owner = this };
         if (dialog.ShowDialog() == true) BrushColor.Text = ColorPickerWindow.Hex(dialog.SelectedColor);

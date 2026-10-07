@@ -10,9 +10,11 @@ public partial class MainWindow
         backgroundColor=ColorPickerWindow.Hex(color);
         BackgroundColorSwatch.Background=new SolidColorBrush(color);
         BackgroundColorButton.ToolTip="Background color · "+backgroundColor;RefreshPaletteSwatches();
+        GradientPaletteChanged();
     }
     private void RefreshPaletteSwatches()
     {
+        RefreshGradientSwatch();
         if(session.EditMask)
         {
             byte value=(byte)Math.Round(MaskSlider.Value*255/100);
@@ -26,7 +28,7 @@ public partial class MainWindow
         }
     }    private void PickBackgroundColor(object sender,RoutedEventArgs e)
     {
-        if(busy||session.InTransaction||session.EditMask)return;
+        if(busy||(session.InTransaction&&!Canvas.HasGradient)||session.EditMask)return;
         ColorPickerWindow.TryHex(backgroundColor,out var color);
         var dialog=new ColorPickerWindow(color){Owner=this};
         if(dialog.ShowDialog()==true)SetBackgroundColor(ColorPickerWindow.Hex(dialog.SelectedColor));
@@ -34,13 +36,13 @@ public partial class MainWindow
     }
     private void SwapPalette(object? sender,RoutedEventArgs e)
     {
-        if(busy||session.InTransaction)return;
+        if(busy||(session.InTransaction&&!Canvas.HasGradient))return;
         if(session.EditMask){MaskSlider.Value=100-MaskSlider.Value;return;}
         var foreground=BrushColor.Text;BrushColor.Text=backgroundColor;SetBackgroundColor(foreground);
     }
     private void ResetPalette(object? sender,RoutedEventArgs e)
     {
-        if(busy||session.InTransaction)return;
+        if(busy||(session.InTransaction&&!Canvas.HasGradient))return;
         if(session.EditMask){MaskSlider.Value=0;return;}
         BrushColor.Text="#000000";SetBackgroundColor("#FFFFFF");
     }
