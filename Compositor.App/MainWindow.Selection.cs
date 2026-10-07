@@ -53,7 +53,7 @@ public partial class MainWindow
         {
             if (layer.Mask is not { Enabled: true } mask) throw new InvalidOperationException("Select an enabled mask to clear coverage.");
             var source = mask.EditingPixels(layer.Pixels.Width, layer.Pixels.Height);
-            var result = SelectionPixels.Blend(source, LayerMask.Solid(source.Width, source.Height, 0).Pixels, layer.Transform, coverage);
+            var result = SelectionPixels.Blend(source, LayerMask.Solid(source.Width, source.Height, 0).Pixels, mask.Placement??layer.Transform, coverage);
             if (ReferenceEquals(source, result)) return;
             updated = layer with { Mask = mask.WithPixels(result) };
         }

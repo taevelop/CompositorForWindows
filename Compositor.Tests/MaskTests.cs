@@ -174,12 +174,12 @@ public sealed class MaskTests : IDisposable
     }
 
     [Theory]
-    [InlineData("maskLinked")][InlineData("maskPlacement")][InlineData("maskSourceID")]
+    [InlineData("maskPlacement")][InlineData("maskSourceID")]
     public void UnsupportedMaskSemanticsAreRejected(string field)
     {
         var doc = Sample(16, 16); string path = Path.Combine(root, "Unsupported.comp"); ProjectStore.Save(doc, null, path);
         string manifest = Path.Combine(path, "manifest.json"); var json = JsonNode.Parse(File.ReadAllText(manifest))!;
-        json["layers"]![0]![field] = field == "maskLinked" ? JsonValue.Create(false) : new JsonObject();
+        json["layers"]![0]![field] = field == "maskPlacement" ? new JsonObject { ["futurePlacement"] = true } : new JsonObject();
         File.WriteAllText(manifest, json.ToJsonString()); Assert.Throws<NotSupportedException>(() => ProjectStore.Load(path));
     }
 

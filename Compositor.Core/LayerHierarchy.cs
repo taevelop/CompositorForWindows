@@ -210,7 +210,14 @@ public static class LayerHierarchy
         if (!double.IsFinite(dx) || !double.IsFinite(dy)) throw new InvalidDataException("Invalid movement.");
         if (dx == 0 && dy == 0) return doc;
         var ids = Subtree(doc, id);
-        var result = doc with { Layers = doc.Layers.Select(l => ids.Contains(l.Id) ? l with { Transform = l.Transform with { X = l.Transform.X + dx, Y = l.Transform.Y + dy } } : l).ToImmutableArray() };
+        Layer Move(Layer l)
+        {
+            var mask=l.Mask;
+            if(mask is {Linked:true,Placement:{} p})mask=mask with{Placement=p with{X=p.X+dx,Y=p.Y+dy}};
+            else if(mask is {Linked:false,Placement:null} && (mask.Pixels.Width!=1||mask.Pixels.Height!=1))mask=mask with{Placement=l.Transform};
+            return l with{Transform=l.Transform with{X=l.Transform.X+dx,Y=l.Transform.Y+dy},Mask=mask};
+        }
+        var result = doc with { Layers = doc.Layers.Select(l => ids.Contains(l.Id) ? Move(l) : l).ToImmutableArray() };
         result.Validate(); return result;
     }
     public static LayerTransform Bounds(Document doc, Guid id)

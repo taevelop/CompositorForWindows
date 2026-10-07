@@ -13,7 +13,7 @@ public static class ProjectStore
     private static readonly string[] RootFields = ["format", "version", "colorSpace", "resolution", "documentID", "width", "height", "activeLayerID", "layers", "guides"];
     private static readonly string[] LayerFields = ["id", "name", "isVisible", "transform", "imageFile", "parentID", "isGroup", "opacity", "blendMode",
         "maskFile", "maskEnabled", "maskSourceID", "adjustment", "maskPlacement", "maskLinked", "shape", "effects", "text"];
-    private static readonly string[] UnsupportedFields = ["maskSourceID", "maskPlacement", "text"];
+    private static readonly string[] UnsupportedFields = ["maskSourceID", "text"];
 
     public static LoadedProject LoadRecovery(string path)
     {
@@ -60,9 +60,10 @@ public static class ProjectStore
                     throw new InvalidDataException("Adjustments require version 7 or later and a non-group layer without imageFile.");
                 string? maskFile = OptionalString(l, "maskFile");
                 bool? enabled = OptionalBool(l, "maskEnabled"), linked = OptionalBool(l, "maskLinked");
-                if (maskFile is null && (enabled is not null || linked is not null)) throw new InvalidDataException("Mask metadata requires a mask file.");
+                var maskPlacement = MaskPlacementJson.Read(l);
+                if (maskFile is null && (enabled is not null || linked is not null || maskPlacement is not null)) throw new InvalidDataException("Mask metadata requires a mask file.");
                 if (maskFile is not null && version < 4) throw new InvalidDataException("Masks require project version 4 or later.");
-                if (linked == false) throw new NotSupportedException("Unlinked masks are not supported in this Windows build.");
+
                 bool isGroup = OptionalBool(l, "isGroup") ?? false;
                 Guid? parent = OptionalGuid(l, "parentID");
                 if (version < 2 && (isGroup || parent is not null)) throw new InvalidDataException("Groups require version 2 or later.");
@@ -125,7 +126,7 @@ public static class ProjectStore
                     if (maskAsset != id.ToString().ToUpperInvariant() + ".mask.png" && maskAsset != id.ToString() + ".mask.png")
                         throw new InvalidDataException("Invalid or unsafe mask asset path.");
                     string file = Path.Combine(root, "images", maskAsset); CheckFile(file, ImageCodec.MaxEncodedBytes);
-                    mask = MaskCodec.Load(file, Limits.MaxPixels - usedMaskPixels) with { Enabled = OptionalBool(l, "maskEnabled") ?? true };
+                    mask = MaskCodec.Load(file, Limits.MaxPixels - usedMaskPixels) with { Enabled = OptionalBool(l, "maskEnabled") ?? true, Placement=MaskPlacementJson.Read(l), Linked=OptionalBool(l,"maskLinked")??true };
                     usedMaskPixels += (long)mask.Pixels.Width * mask.Pixels.Height;
                 }
                 if (adjustment is not null && mask is not null && (mask.Pixels.Width > 1 || mask.Pixels.Height > 1)) raster = new(mask.Pixels.Width, mask.Pixels.Height);
@@ -147,8 +148,6 @@ public static class ProjectStore
         Action<SaveCheckpoint>? checkpoint = null)
     {
         document.Validate();
-        if(document.Layers.Any(l=>l.Mask is { Placement:not null } or { Linked:false }))
-            throw new NotSupportedException("Independent mask serialization is not connected yet. Nothing was saved or changed.");
         if (active is not null && !document.Layers.Any(l => l.Id == active)) throw new InvalidDataException("Invalid active layer.");
         string destination = Path.GetFullPath(path);
         if (!destination.EndsWith(".comp", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Projects must use the .comp extension.");
@@ -177,7 +176,8 @@ public static class ProjectStore
                     ["id"] = id, ["name"] = l.Name, ["isVisible"] = l.Visible, ["imageFile"] = file,
                     ["parentID"] = l.ParentId?.ToString().ToUpperInvariant(), ["isGroup"] = l.IsGroup,
                     ["maskFile"] = maskFile, ["maskEnabled"] = l.Mask is null ? null : JsonValue.Create(l.Mask.Enabled),
-                    ["maskLinked"] = l.Mask is null ? null : JsonValue.Create(true),
+                    ["maskLinked"] = l.Mask is null ? null : JsonValue.Create(l.Mask.Linked),
+                    ["maskPlacement"] = l.Mask?.Placement is {} placement ? MaskPlacementJson.Write(placement) : null,
                     ["opacity"] = l.Opacity, ["blendMode"] = l.Blend.ToString(),
                     ["transform"] = new JsonObject
                     {

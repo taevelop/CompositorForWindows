@@ -69,7 +69,8 @@ public static class CanvasCrop
         frame.Validate();
         if(frame.X==0&&frame.Y==0&&frame.Width==document.Width&&frame.Height==document.Height&&document.Selection is null)return document;
         var layers=document.Layers.Select(layer=>frame.X==0&&frame.Y==0?layer:
-            layer with{Transform=layer.Transform with{X=layer.Transform.X-frame.X,Y=layer.Transform.Y-frame.Y}}).ToImmutableArray();
+            layer with{Transform=layer.Transform with{X=layer.Transform.X-frame.X,Y=layer.Transform.Y-frame.Y},
+                Mask=layer.Mask?.Placement is {} placement ? layer.Mask with{Placement=placement with{X=placement.X-frame.X,Y=placement.Y-frame.Y}} : layer.Mask}).ToImmutableArray();
         var next=document with{Width=frame.Width,Height=frame.Height,Layers=layers,Selection=null};
         next.Validate();return next;
     }

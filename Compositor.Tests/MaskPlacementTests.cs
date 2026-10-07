@@ -2,9 +2,36 @@ using Compositor.Core;
 using Compositor.Imaging;
 using Xunit;
 using SkiaSharp;
+using System.Text.Json.Nodes;
 namespace Compositor.Tests;
 public sealed class MaskPlacementTests
 {
+    [Fact] public void InvalidPlacementIsRejectedBeforeDecodingAndEnabledRoundTripMatchesOutput()
+    {
+        string root=Path.Combine(Path.GetTempPath(),"Compositor-placed-roundtrip-"+Guid.NewGuid().ToString("N")+".comp");
+        try
+        {
+            var d=Document.Create(8,8);var layer=d.Layers[0] with{Pixels=ShapeRaster.Create(new(ShapeKind.Rectangle,1,0,0),8,8),
+                Mask=LayerMask.Solid(2,2,128) with{Placement=new(1,2,4,5,17),Linked=false}};
+            d=d.Replace(layer);ProjectStore.Save(d,layer.Id,root);var loaded=ProjectStore.Load(root).Document;
+            using var a=new CanvasRenderer();using var b=new CanvasRenderer();Assert.Equal(Render(a,d),Render(b,loaded));
+            string file=Path.Combine(root,"manifest.json");var json=JsonNode.Parse(File.ReadAllText(file))!;
+            json["layers"]![0]!["maskPlacement"]!["size"]=new JsonArray(0,4);File.WriteAllText(file,json.ToJsonString());
+            File.Delete(Path.Combine(root,"images",layer.Id.ToString().ToUpperInvariant()+".png"));
+            Assert.Throws<InvalidDataException>(()=>ProjectStore.Load(root));
+        }
+        finally{if(Directory.Exists(root))Directory.Delete(root,true);File.Delete(root+".write-lock");}
+    }
+    [Fact] public void CanvasCropMovesIndependentMaskAndImageResizeRejectsBeforeChangingSources()
+    {
+        var d=Document.Create(8,8);var mask=LayerMask.Solid(2,2) with{Placement=new(2,3,4,5),Linked=false};
+        d=d.Replace(d.Layers[0] with{Mask=mask});
+        var crop=CanvasCrop.Apply(d,new(1,2,4,4));
+        Assert.Equal(mask.Placement! with{X=1,Y=1},crop.Layers[0].Mask!.Placement);
+        Assert.Same(mask.Pixels,crop.Layers[0].Mask!.Pixels);
+        Assert.Throws<NotSupportedException>(()=>ImageResize.Apply(d,new(16,16,72)));
+        Assert.Equal(new LayerTransform(2,3,4,5),d.Layers[0].Mask!.Placement);
+    }
     [Fact] public void MaskBrushAndFillUseMaskPlacementAndKeepImageAndMetadata()
     {
         var d=Document.Create(16,16);var mask=LayerMask.Solid(8,8,0) with{Placement=new(4,4,8,8),Linked=false};
@@ -60,7 +87,7 @@ public sealed class MaskPlacementTests
         Assert.NotEqual(Render(actualRenderer,d),Render(actualRenderer,actualAdjustment));
         Assert.Same(mask.Pixels,d.Layers[0].Mask!.Pixels);Assert.Equal(mask.Placement,d.Layers[0].Mask!.Placement);
     }
-    [Fact] public void PixelReplacementKeepsPlacementAndSaveRefusesUnserializedMetadataBeforeTouchingFiles()
+    [Fact] public void PixelReplacementAndProjectRoundTripKeepPlacementAndLinkState()
     {
         var mask=LayerMask.Solid(2,2,128) with{Placement=new(2,3,4,5),Linked=false,Enabled=false};
         var changed=mask.WithPixels(LayerMask.Solid(2,2,255).Pixels);
@@ -71,11 +98,10 @@ public sealed class MaskPlacementTests
         {
             string path=Path.Combine(root,"Mask.comp");var d=Document.Create(8,8);ProjectStore.Save(d,null,path);
             var before=File.ReadAllBytes(Path.Combine(path,"manifest.json"));
-            Assert.Throws<NotSupportedException>(()=>ProjectStore.Save(d.Replace(d.Layers[0] with{Mask=mask}),null,path));
-            Assert.Equal(before,File.ReadAllBytes(Path.Combine(path,"manifest.json")));
-            string fresh=Path.Combine(root,"Rejected.comp");
-            Assert.Throws<NotSupportedException>(()=>ProjectStore.Save(d.Replace(d.Layers[0] with{Mask=mask}),null,fresh));
-            Assert.False(Directory.Exists(fresh));Assert.False(File.Exists(fresh+".write-lock"));
+            var placed=d.Replace(d.Layers[0] with{Mask=mask});ProjectStore.Save(placed,null,path);
+            var loaded=ProjectStore.Load(path).Document.Layers[0].Mask!;
+            Assert.Equal(mask.Placement,loaded.Placement);Assert.False(loaded.Linked);Assert.False(loaded.Enabled);
+            Assert.Equal(mask.Pixels.ToRgba(),loaded.Pixels.ToRgba());
         }
         finally{Directory.Delete(root,true);}
     }

@@ -115,3 +115,6 @@ Invert, Black & White, Color Balance, Grain을 지원한다. 필드와 범위는
 
 ## 도형 메타데이터 지원 (2026-10-07)
 Rectangle/Ellipse/Line의 shape 스타일과 PNG를 함께 읽고 저장한다. 위 미지원 목록의 도형 항목은 이 변경으로 대체한다. 픽셀 편집 후에는 shape를 제거한다. 도형 편집 UI와 크기 변경 시 재래스터화는 후속 작업이며 실제 Mac 왕복은 보류다.
+
+## 독립 마스크 저장 지원 (2026-10-07)
+maskPlacement 및 maskLinked를 보존해 저장/열기를 지원한다. 위 미지원 목록의 독립 배치/연결 해제 항목은 이 변경으로 대체한다. maskSourceID·그룹 마스크는 계속 미지원이다. Image Size의 독립 마스크는 아직 처리 전 거부하며 실제 Mac 왕복은 보류다.

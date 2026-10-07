@@ -20,6 +20,8 @@ public static class ImageResize
         options.Validate();cancellationToken.ThrowIfCancellationRequested();
         if(original.Width==options.Width&&original.Height==options.Height)
             return original.Resolution==options.Resolution?original:original with{Resolution=options.Resolution,Selection=null};
+        if(original.Layers.Any(l=>l.Mask is {Placement:not null} or {Linked:false}))
+            throw new NotSupportedException("Image Size for independent masks is not connected yet. The document has not changed.");
         double sx=(double)options.Width/original.Width,sy=(double)options.Height/original.Height;
         var plans=new List<Plan>();long used=0,usedMasks=0;
         // Preflight every transformed allocation before doing any raster work.

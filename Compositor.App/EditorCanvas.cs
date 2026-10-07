@@ -310,9 +310,11 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
                 Session.Preview(LayerHierarchy.Translate(groupMoveDocument, originalLayer.Id, point.X - anchor.X, point.Y - anchor.Y));
                 return;
             }
-            var t = originalLayer.Transform;
+            var t = Session.EditMask ? originalLayer.Mask?.Placement??originalLayer.Transform : originalLayer.Transform;
             var transform = t with { X = t.X + point.X - anchor.X, Y = t.Y + point.Y - anchor.Y };
-            if (Session.ActiveLayer?.Transform != transform) Session.Preview(Session.Document.Replace(LayerPlacement.Change(originalLayer,transform)));
+            if(Session.EditMask && originalLayer.Mask is {} movingMask)
+                Session.Preview(Session.Document.Replace(originalLayer with{Mask=movingMask with{Placement=transform==originalLayer.Transform?null:transform}}));
+            else if (Session.ActiveLayer?.Transform != transform) Session.Preview(Session.Document.Replace(LayerPlacement.Change(originalLayer,transform)));
         }
     }
     public void EndPointer(bool commit)

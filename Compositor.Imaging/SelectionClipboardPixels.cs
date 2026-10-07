@@ -29,7 +29,7 @@ public static class SelectionClipboardPixels
             if(mask)
             {
                 if(source.Mask is not { } owned)throw new InvalidOperationException("Select a layer mask to copy.");
-                var raw=Layer.Blank(source.Name,source.Pixels.Width,source.Pixels.Height) with{Pixels=owned.EditingPixels(source.Pixels.Width,source.Pixels.Height),Transform=source.Transform};
+                var raw=Layer.Blank(source.Name,source.Pixels.Width,source.Pixels.Height) with{Pixels=owned.EditingPixels(source.Pixels.Width,source.Pixels.Height),Transform=owned.Placement??source.Transform};
                 draw=document with{Layers=[raw],Selection=null};
             }
             else
@@ -66,7 +66,7 @@ public static class SelectionClipboardPixels
         {
             if(layer.Mask is not {Enabled:true} mask)throw new InvalidOperationException("Enable the mask before cutting pixels.");
             var source=mask.EditingPixels(layer.Pixels.Width,layer.Pixels.Height);
-            updated=layer with{Mask=mask.WithPixels(SelectionPixels.Blend(source,LayerMask.Solid(source.Width,source.Height,0).Pixels,layer.Transform,coverage))};
+            updated=layer with{Mask=mask.WithPixels(SelectionPixels.Blend(source,LayerMask.Solid(source.Width,source.Height,0).Pixels,mask.Placement??layer.Transform,coverage))};
         }
         else updated=layer with{Pixels=SelectionPixels.Blend(layer.Pixels,new(layer.Pixels.Width,layer.Pixels.Height),layer.Transform,coverage)};
         var next=original.Replace(updated);next.Validate();
