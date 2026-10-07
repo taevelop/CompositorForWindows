@@ -18,6 +18,7 @@ if (args.Length > 0 && args[0] == "--soak")
 }
 
 if (args.Length > 0 && args[0] == "--fill") { FillBenchmark.Run(args.Length > 1 ? args[1] : "fill-benchmark.json"); return; }
+if (args.Length > 0 && args[0] == "--gradient") { GradientBenchmark.Run(args.Length > 1 ? args[1] : "gradient-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--eyedropper") { EyedropperBenchmark.Run(args.Length > 1 ? args[1] : "eyedropper-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--pixel-adjustments") { PixelAdjustmentBenchmark.Run(args.Length > 1 ? args[1] : "pixel-adjustments-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--hue-layers") { HueLayerBenchmark.Run(args.Length > 1 ? args[1] : "hue-layers-benchmark.json"); return; }

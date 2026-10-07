@@ -349,7 +349,13 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     {
         var c = e.Surface.Canvas; c.Clear(new SKColor(28, 30, 34));
         if (Session is null || ActualWidth <= 0) return;
-        if(!EnsurePrepared(Session.Document)){DrawPreparation(c);return;}
+        if(!EnsurePrepared(Session.Document))
+        {
+            DrawPreparation(c);
+            c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);
+            c.Save();c.Translate((float)panX,(float)panY);c.Scale((float)Zoom);DrawGradient(c);c.Restore();
+            DrawGradientStatus(c);c.Restore();return;
+        }
         c.Save(); c.Scale(e.Info.Width / (float)ActualWidth, e.Info.Height / (float)ActualHeight);
         c.Translate((float)panX, (float)panY); c.Scale((float)Zoom);
         var doc = Session.Document;
@@ -404,7 +410,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         DrawCrop(c);
         DrawTransform(c);
         c.Restore();
-        c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);DrawSampleRing(c);c.Restore();
+        c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);DrawSampleRing(c);DrawGradientStatus(c);c.Restore();
     }
     public void Dispose() { canvasDisposed=true;CancelGradient();CancelRenderPreparation();CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
 }

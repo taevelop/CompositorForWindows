@@ -11,6 +11,7 @@ public sealed partial class EditorCanvas
     public bool HasGradient=>gradientEdit is not null;
     public Func<PointD,PointD,GradientFillSettings> ReadGradient {get;set;}=(start,end)=>new(start,end,0,0,0,255,255,255);
     internal Task GradientPending=>gradientEdit?.Pending??Task.CompletedTask;
+    internal bool IsGradientPreparing=>gradientCommitting||gradientEdit is {} edit&&!edit.Pending.IsCompleted;
     private void BeginGradient(PointD point)
     {
         if(gradientCommitting)return;
@@ -36,7 +37,7 @@ public sealed partial class EditorCanvas
     public async void UpdateGradient()
     {
         if(gradientEdit is not{} edit||gradientCommitting)return;
-        try{await edit.UpdateAsync(ReadGradient(gradientStart,gradientEnd));InvalidateVisual();}
+        try{var pending=edit.UpdateAsync(ReadGradient(gradientStart,gradientEnd));InvalidateVisual();await pending;InvalidateVisual();}
         catch(Exception error){if(ReferenceEquals(gradientEdit,edit)){CancelGradient();ReportError?.Invoke(error.Message);}}
     }
     private Task<bool>? gradientCommitTask;
@@ -45,6 +46,7 @@ public sealed partial class EditorCanvas
         if(gradientCommitting)return gradientCommitTask!;
         if(gradientEdit is not{} edit)return Task.FromResult(true);
         gradientCommitting=true;
+        InvalidateVisual();
         return gradientCommitTask=CommitGradientCoreAsync(edit);
     }
     private async Task<bool> CommitGradientCoreAsync(GradientEdit edit)
@@ -64,5 +66,14 @@ public sealed partial class EditorCanvas
         canvas.DrawLine(a,b,outline);canvas.DrawLine(a,b,line);
         canvas.DrawCircle(a,(float)(5/Zoom),outline);canvas.DrawCircle(a,(float)(5/Zoom),line);
         canvas.DrawCircle(b,(float)(5/Zoom),outline);canvas.DrawCircle(b,(float)(5/Zoom),line);
+    }
+    internal void DrawGradientStatus(SKCanvas canvas)
+    {
+        if(!IsGradientPreparing)return;
+        using var background=new SKPaint{Color=new SKColor(28,30,34,230)};
+        using var ink=new SKPaint{Color=new SKColor(220,230,245),IsAntialias=true};
+        using var font=new SKFont{Size=13};
+        canvas.DrawRoundRect(new SKRect(12,12,290,44),4,4,background);
+        canvas.DrawText(gradientCommitting?"Applying gradient…":"Updating gradient… · Esc to cancel",22,33,SKTextAlign.Left,font,ink);
     }
 }

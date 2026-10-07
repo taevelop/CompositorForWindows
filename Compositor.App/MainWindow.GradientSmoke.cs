@@ -22,7 +22,17 @@ public partial class MainWindow
             var doc=Document.Create(3,1);session.Load(doc);ToolPicker.SelectedIndex=10;Canvas.RestoreView(20,30,30);
             BrushColor.Text="#FF0000";SetBackgroundColor("#0000FF");GradientTransparent.IsChecked=false;GradientOpacity.Value=100;
             if(Canvas.Tool!=EditorTool.Gradient||ToolTitle.Text!="Gradient"||GradientOptions.Visibility!=Visibility.Visible)throw new InvalidOperationException("Gradient tool UI failed.");
-            Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.MoveInteraction(new(80,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));await Canvas.GradientPending;
+            Canvas.BeginInteraction(MouseButton.Left,new(40,40));Canvas.MoveInteraction(new(80,40));Canvas.FinishInteraction(MouseButton.Left,new(80,40));
+            if(!Canvas.IsGradientPreparing)throw new InvalidOperationException("Gradient preparation state was not exposed.");
+            using(var bitmap=new SkiaSharp.SKBitmap(320,60))
+            using(var canvas=new SkiaSharp.SKCanvas(bitmap))
+            {
+                canvas.Clear(SkiaSharp.SKColors.Transparent);Canvas.DrawGradientStatus(canvas);
+                using var image=SkiaSharp.SKImage.FromBitmap(bitmap);using var png=image.Encode(SkiaSharp.SKEncodedImageFormat.Png,100);
+                Directory.CreateDirectory("artifacts");File.WriteAllBytes(Path.Combine("artifacts","gradient-status.png"),png.ToArray());
+            }
+            await Canvas.GradientPending;
+            if(Canvas.IsGradientPreparing)throw new InvalidOperationException("Completed gradient remained busy.");
             if(!Canvas.HasGradient||session.UndoCount!=0||!session.Document.Layers[0].Pixels.ToRgba().SequenceEqual(new byte[]{255,0,0,255,128,0,128,255,0,0,255,255}))throw new InvalidOperationException("Gradient drag preview failed.");
             Canvas.BeginInteraction(MouseButton.Left,new(80,40));Canvas.MoveInteraction(new(120,40));Canvas.FinishInteraction(MouseButton.Left,new(120,40));await Canvas.GradientPending;
             if(session.Document.Layers[0].Pixels.ToRgba()[8]!=128)throw new InvalidOperationException("Gradient endpoint handle failed.");
