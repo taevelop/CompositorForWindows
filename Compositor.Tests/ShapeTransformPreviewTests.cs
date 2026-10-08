@@ -4,6 +4,22 @@ using Xunit;
 namespace Compositor.Tests;
 public sealed class ShapeTransformPreviewTests
 {
+    [Fact] public void ReusesPixelsForMovementAndRotationAndBoundsRetainedCache()
+    {
+        var style=new LayerShapeStyle(ShapeKind.Rectangle,1,0,0,CornerRadius:10);
+        var layer=new Layer(Guid.NewGuid(),"Shape",ShapeRaster.Create(style,40,40),new(0,0,40,40)){Shape=style};
+        var original=Document.Create(200,200) with{Layers=[layer]};
+        var resized=original.Replace(layer with{Transform=new(0,0,100,60)});
+        var cache=new ShapeTransformPreview(1,PixelTile.ByteCount);
+        var first=cache.Create(resized,original).Layers[0].Pixels;
+        var moved=resized.Replace(resized.Layers[0] with{Transform=new(20,20,100,60,Rotation:45)});
+        Assert.Same(first,cache.Create(moved,original).Layers[0].Pixels);
+        var another=resized.Replace(resized.Layers[0] with{Transform=new(0,0,101,60)});
+        Assert.NotSame(first,cache.Create(another,original).Layers[0].Pixels);
+        Assert.Equal(PixelTile.ByteCount,cache.CachedBytes);
+        Assert.NotSame(first,cache.Create(resized,original).Layers[0].Pixels);
+        cache.Clear();Assert.Equal(0,cache.CachedBytes);
+    }
     [Fact] public void KeepsDocumentRadiusAndOriginalPixelsAndMaskImmutable()
     {
         var style=new LayerShapeStyle(ShapeKind.Rectangle,1,0,0,CornerRadius:10);

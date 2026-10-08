@@ -32,12 +32,13 @@ public sealed partial class EditorCanvas
     public void PreviewTransform(LayerTransform value)
     {
         try{transformEdit?.Preview(value);TransformChanged?.Invoke();InvalidateVisual();}
-        catch{transformEdit?.Dispose();transformEdit=null;transformDrag=null;gestureButton=null;ReleaseGestureCapture();TransformChanged?.Invoke();throw;}
+        catch{transformEdit?.Dispose();transformEdit=null;transformOriginal=null;shapeTransformPreview.Clear();transformDrag=null;gestureButton=null;ReleaseGestureCapture();TransformChanged?.Invoke();throw;}
     }
     public void CommitTransform()
     {
         if(transformEdit is not {} edit)return;
         transformEdit=null;transformDrag=null;gestureButton=null;ReleaseGestureCapture();
+        transformOriginal=null;shapeTransformPreview.Clear();
         Cursor=null;
         try { edit.Complete(); }
         finally { edit.Dispose();TransformChanged?.Invoke();InvalidateVisual(); }
@@ -45,6 +46,7 @@ public sealed partial class EditorCanvas
     public void CancelTransform()
     {
         var edit=transformEdit;transformEdit=null;transformDrag=null;gestureButton=null;ReleaseGestureCapture();
+        transformOriginal=null;shapeTransformPreview.Clear();
         Cursor=null;edit?.Dispose();TransformChanged?.Invoke();InvalidateVisual();
     }
     private void CancelTransformDrag()
