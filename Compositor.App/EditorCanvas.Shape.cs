@@ -52,6 +52,7 @@ public sealed partial class EditorCanvas
             });
             if(canvasDisposed||!ReferenceEquals(shapePreparation,owner)||!ReferenceEquals(Session,owner.Session)||!Owns(owner)||token.IsCancellationRequested)return false;
             owner.Session.ActiveLayerId=prepared.LayerId;owner.Session.EditMask=false;
+            shapeRenderDocument=prepared.Document;
             owner.Session.Preview(prepared.Document);owner.Session.Commit();return true;
         }
         catch(OperationCanceledException) when(token.IsCancellationRequested){return false;}

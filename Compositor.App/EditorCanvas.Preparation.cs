@@ -5,8 +5,9 @@ namespace Compositor.App;
 public sealed partial class EditorCanvas
 {
     private Document? requestedRender,preparedRender,failedRender;
+    private Document? shapeRenderDocument;
     private RenderPreparationViewport? requestedViewport,preparedViewport,failedViewport;
-    private RenderPreparationViewport? GradientViewport(Document document)=>ReferenceEquals(gradientRenderDocument,document)&&ActualWidth>0&&ActualHeight>0
+    private RenderPreparationViewport? GradientViewport(Document document)=>(ReferenceEquals(gradientRenderDocument,document)||ReferenceEquals(shapeRenderDocument,document))&&ActualWidth>0&&ActualHeight>0
         ?new((int)Math.Ceiling(ActualWidth),(int)Math.Ceiling(ActualHeight),(float)Zoom,(float)panX,(float)panY):null;
     private CancellationTokenSource? renderCancellation;
     private bool renderWorkerActive,canvasDisposed;
@@ -14,6 +15,7 @@ public sealed partial class EditorCanvas
     internal bool EnsurePrepared(Document document)
     {
         if(canvasDisposed)return false;
+        if(!ReferenceEquals(shapeRenderDocument,Session.Document))shapeRenderDocument=null;
         if(!HasGradient&&!ReferenceEquals(gradientRenderDocument,document))gradientRenderDocument=null;
         var viewport=GradientViewport(document);
         bool large=(long)document.Width*document.Height>=1_000_000&&(viewport is not null||document.Layers.Any(layer=>layer.IsAdjustment));

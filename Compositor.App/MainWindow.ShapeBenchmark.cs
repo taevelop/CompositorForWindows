@@ -33,6 +33,8 @@ public partial class MainWindow
                 Canvas.BeginPointer(new(0,0));Canvas.MovePointer(new(size,size));Canvas.EndPointer(true);
                 if(!await Canvas.ShapeCompletion||session.UndoCount!=1)throw new InvalidOperationException("Shape did not commit once.");
                 double creationMs=watch.Elapsed.TotalMilliseconds;
+                Canvas.EnsurePrepared(session.Document);await Canvas.RenderPreparation;
+                if(!Canvas.EnsurePrepared(session.Document))throw new InvalidOperationException("Shape viewport preparation was not installed.");
                 frame=new(TaskCreationOptions.RunContinuationsAsynchronously);Canvas.InvalidateVisual();
                 if(await Task.WhenAny(frame.Task,Task.Delay(10000))!=frame.Task)throw new TimeoutException("Shape frame did not paint.");
                 double firstPaintCompleteMs=watch.Elapsed.TotalMilliseconds;frame=null;
@@ -52,7 +54,7 @@ public partial class MainWindow
             timer.Stop();var sorted=gaps.Order().ToArray();
             if(sorted.Length==0||paints.Count==0)throw new InvalidOperationException("No WPF measurements collected.");
             System.IO.File.WriteAllText(path,JsonSerializer.Serialize(new{timeUtc=DateTimeOffset.UtcNow,
-                description="Hidden actual WPF, two runs per shape, 4000x4000 canvas without background layer. Line bounds include stroke margins. Commit-to-first-Paint completion includes UI renderer work; it is not physical display latency. Working set is sampled after Paint, not peak memory. Independent pixels, single Undo and cancellation checked. 100MP, complex documents and transform redraw remain unmeasured.",
+                description="Hidden actual WPF, two runs per shape, 4000x4000 canvas without background layer. Line bounds include stroke margins. Pointer-start-to-first-ready-Paint completion includes viewport preparation and UI renderer work; it is not physical display latency. Working set is sampled after Paint, not peak memory. Independent pixels, single Undo and cancellation checked. 100MP, complex documents and transform redraw remain unmeasured.",
                 p95DispatcherGapMs=sorted[(int)Math.Ceiling(sorted.Length*.95)-1],maxDispatcherGapMs=sorted[^1],maxPaintMs=paints.Max(),
                 immediateCancelMs,workerFinishedMs,rows},new JsonSerializerOptions{WriteIndented=true}));
         }
