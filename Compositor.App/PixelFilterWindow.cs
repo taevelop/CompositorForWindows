@@ -6,13 +6,16 @@ using Compositor.Core;
 using Compositor.Imaging;
 namespace Compositor.App;
 
-public sealed class GaussianBlurWindow:Window
+public enum PixelFilterKind {GaussianBlur,MotionBlur,AddNoise}
+public sealed class PixelFilterWindow:Window
 {
     private readonly EditorSession session;
     private readonly Document original;
     private readonly Guid layerId;
     private readonly Action<Document?> display;
-    private readonly bool motion;
+    private readonly PixelFilterKind kind;
+    private bool motion=>kind==PixelFilterKind.MotionBlur;
+    private bool noise=>kind==PixelFilterKind.AddNoise;
     private readonly long generation;
     private readonly SemaphoreSlim gate=new(1,1);
     private CancellationTokenSource? cancellation;
@@ -27,26 +30,36 @@ public sealed class GaussianBlurWindow:Window
     private readonly Button reset=new(){Content="Reset"};
     internal readonly Slider Angle=new(){Minimum=-90,Maximum=90,Value=0,SmallChange=1,LargeChange=15};
     internal readonly TextBox AngleValue=new(){Text="0",Width=70};
+    internal readonly CheckBox GaussianNoise=new(){Content="Gaussian distribution",Margin=new(0,10,0,6)};
+    internal readonly CheckBox Monochromatic=new(){Content="Monochromatic",Margin=new(0,4,0,6)};
+    internal uint NoiseSeed {get;}=(uint)Random.Shared.NextInt64(1L<<32);
     internal Task Pending {get;private set;}=Task.CompletedTask;
-    public GaussianBlurWindow(EditorSession session,Action<Document?> display,bool motion=false)
+    public PixelFilterWindow(EditorSession session,Action<Document?> display,PixelFilterKind kind=PixelFilterKind.GaussianBlur)
     {
+        if(!Enum.IsDefined(kind))throw new ArgumentOutOfRangeException(nameof(kind));
         if(session.InTransaction)throw new InvalidOperationException("Finish the active edit first.");
         if(session.ActiveLayer is not {IsGroup:false,IsAdjustment:false} layer||session.EditMask)
             throw new InvalidOperationException("Select image pixels, not a group, adjustment or mask.");
         if(!LayerHierarchy.Entries(session.Document).First(e=>e.Layer.Id==layer.Id).Visible)throw new InvalidOperationException("Show the image and its parents first.");
-        this.session=session;this.display=display;this.motion=motion;original=session.Document;layerId=layer.Id;
+        this.session=session;this.display=display;this.kind=kind;original=session.Document;layerId=layer.Id;
         if(motion){Radius.Minimum=1;Radius.Maximum=2000;Radius.Value=10;Radius.SmallChange=1;Radius.LargeChange=50;RadiusValue.Text="10";}
-        Title=motion?"Motion Blur":"Gaussian Blur";Width=430;SizeToContent=SizeToContent.Height;ResizeMode=ResizeMode.NoResize;
+        if(noise){Radius.Maximum=400;Radius.Value=10;RadiusValue.Text="10";}
+        Title=noise?"Add Noise":motion?"Motion Blur":"Gaussian Blur";Width=430;SizeToContent=SizeToContent.Height;ResizeMode=ResizeMode.NoResize;
         Style=(Style)Application.Current.FindResource(typeof(Window));ShowInTaskbar=false;WindowStartupLocation=WindowStartupLocation.CenterOwner;
         var body=new StackPanel{Margin=new(22)};Content=body;
         body.Children.Add(new TextBlock{Text=Title,FontSize=20,FontWeight=FontWeights.SemiBold});
-        body.Children.Add(new TextBlock{Text=motion?"Distance in layer pixels · positive angles point up-right":"Radius in layer pixels · edges spread into transparency",TextWrapping=TextWrapping.Wrap,Foreground=(Brush)FindResource("MutedInk"),Margin=new(0,8,0,18)});
-        var row=new DockPanel();body.Children.Add(row);DockPanel.SetDock(RadiusValue,Dock.Right);row.Children.Add(RadiusValue);row.Children.Add(new TextBlock{Text=motion?"Distance":"Radius",VerticalAlignment=VerticalAlignment.Center});
+        body.Children.Add(new TextBlock{Text=noise?"Amount (%) · changes image colors while preserving alpha":motion?"Distance in layer pixels · positive angles point up-right":"Radius in layer pixels · edges spread into transparency",TextWrapping=TextWrapping.Wrap,Foreground=(Brush)FindResource("MutedInk"),Margin=new(0,8,0,18)});
+        var row=new DockPanel();body.Children.Add(row);DockPanel.SetDock(RadiusValue,Dock.Right);row.Children.Add(RadiusValue);row.Children.Add(new TextBlock{Text=noise?"Amount (%)":motion?"Distance":"Radius",VerticalAlignment=VerticalAlignment.Center});
         Radius.Style=(Style)FindResource("EditorSlider");body.Children.Add(Radius);
         if(motion)
         {
             var angleRow=new DockPanel{Margin=new(0,14,0,0)};body.Children.Add(angleRow);DockPanel.SetDock(AngleValue,Dock.Right);angleRow.Children.Add(AngleValue);angleRow.Children.Add(new TextBlock{Text="Angle (degrees)",VerticalAlignment=VerticalAlignment.Center});
             Angle.Style=(Style)FindResource("EditorSlider");body.Children.Add(Angle);
+        }
+        if(noise)
+        {
+            GaussianNoise.Foreground=Monochromatic.Foreground=(Brush)FindResource("Ink");body.Children.Add(GaussianNoise);
+            body.Children.Add(new TextBlock{Text="Unchecked: uniform distribution",Foreground=(Brush)FindResource("MutedInk")});body.Children.Add(Monochromatic);
         }
         body.Children.Add(PreviewEnabled);body.Children.Add(Feedback);
         var buttons=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right};body.Children.Add(buttons);
@@ -58,7 +71,7 @@ public sealed class GaussianBlurWindow:Window
         {
             if(double.TryParse(RadiusValue.Text,NumberStyles.Float,CultureInfo.InvariantCulture,out double value)&&double.IsFinite(value)&&value>=Radius.Minimum&&value<=Radius.Maximum)
             {if(Radius.Value!=value)Radius.Value=value;}
-            else{RadiusValue.Text=Radius.Value.ToString("0.##",CultureInfo.InvariantCulture);Feedback.Text=motion?"Distance must be 1–2000 pixels.":"Radius must be 0.1–250 pixels.";}
+            else{RadiusValue.Text=Radius.Value.ToString("0.##",CultureInfo.InvariantCulture);Feedback.Text=noise?"Amount must be 0.1–400%.":motion?"Distance must be 1–2000 pixels.":"Radius must be 0.1–250 pixels.";}
         }
         RadiusValue.LostKeyboardFocus+=(_,_)=>ReadValue();RadiusValue.KeyDown+=(_,e)=>{if(e.Key==System.Windows.Input.Key.Enter){ReadValue();e.Handled=true;}};
         Angle.ValueChanged+=(_,_)=>{AngleValue.Text=Angle.Value.ToString("0.##",CultureInfo.InvariantCulture);if(ready)Queue();};
@@ -69,7 +82,8 @@ public sealed class GaussianBlurWindow:Window
         }
         AngleValue.LostKeyboardFocus+=(_,_)=>ReadAngle();AngleValue.KeyDown+=(_,e)=>{if(e.Key==System.Windows.Input.Key.Enter){ReadAngle();e.Handled=true;}};
         PreviewEnabled.Checked+=(_,_)=>ShowPreview();PreviewEnabled.Unchecked+=(_,_)=>ShowPreview();
-        reset.Click+=(_,_)=>{Radius.Value=motion?10:1;Angle.Value=0;};cancel.Click+=(_,_)=>Close();ApplyButton.Click+=async(_,_)=>await ApplyEditAsync();
+        GaussianNoise.Checked+=(_,_)=>{if(ready)Queue();};GaussianNoise.Unchecked+=(_,_)=>{if(ready)Queue();};Monochromatic.Checked+=(_,_)=>{if(ready)Queue();};Monochromatic.Unchecked+=(_,_)=>{if(ready)Queue();};
+        reset.Click+=(_,_)=>{Radius.Value=motion||noise?10:1;Angle.Value=0;GaussianNoise.IsChecked=false;Monochromatic.IsChecked=false;};cancel.Click+=(_,_)=>Close();ApplyButton.Click+=async(_,_)=>await ApplyEditAsync();
         Closed+=(_,_)=>{closed=true;cancellation?.Cancel();display(null);if(!finished&&Owns)session.Cancel();};
         session.Begin();generation=session.TransactionGeneration;ready=true;Queue();
     }
@@ -79,17 +93,18 @@ public sealed class GaussianBlurWindow:Window
     {
         if(committing)return;
         cancellation?.Cancel();var owner=new CancellationTokenSource();cancellation=owner;
-        var settings=ReadSettings();margin=Math.Max(margin,settings.Margin);int padding=margin;
-        ApplyButton.IsEnabled=false;Feedback.Text="Calculating blur…";Pending=Calculate(owner,settings,padding);
+        var settings=ReadSettings();if(!noise)margin=Math.Max(margin,settings.Margin);int padding=margin;var noiseSettings=ReadNoise();
+        ApplyButton.IsEnabled=false;Feedback.Text="Calculating filter…";Pending=Calculate(owner,settings,noiseSettings,padding);
     }
     private BlurSettings ReadSettings()=>new(motion?BlurKind.Motion:BlurKind.Gaussian,Radius.Value,Angle.Value);
-    private async Task Calculate(CancellationTokenSource owner,BlurSettings settings,int padding)
+    private NoiseSettings ReadNoise()=>new(Radius.Value,GaussianNoise.IsChecked==true?NoiseDistribution.Gaussian:NoiseDistribution.Uniform,Monochromatic.IsChecked==true,NoiseSeed);
+    private async Task Calculate(CancellationTokenSource owner,BlurSettings settings,NoiseSettings noiseSettings,int padding)
     {
         var token=owner.Token;
         try
         {
             await Task.Delay(40,token);
-            var result=await Task.Run(async()=>{await gate.WaitAsync(token);try{return SpatialBlur.Preview(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
+            var result=await Task.Run(async()=>{await gate.WaitAsync(token);try{return noise?AddNoise.Apply(original,layerId,noiseSettings,token):SpatialBlur.Preview(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
             if(closed||token.IsCancellationRequested||!ReferenceEquals(cancellation,owner)||!Owns)return;
             prepared=result;ShowPreview();ApplyButton.IsEnabled=true;Feedback.Text="Ready · one Undo when applied";
         }
@@ -101,13 +116,14 @@ public sealed class GaussianBlurWindow:Window
     {
         if(committing||closed)return;committing=true;
         Radius.IsEnabled=false;RadiusValue.IsEnabled=false;Angle.IsEnabled=false;AngleValue.IsEnabled=false;reset.IsEnabled=false;ApplyButton.IsEnabled=false;
+        GaussianNoise.IsEnabled=false;Monochromatic.IsEnabled=false;
         await Pending;
-        if(closed||prepared is null||!Owns){committing=false;if(!closed){Radius.IsEnabled=true;RadiusValue.IsEnabled=true;Angle.IsEnabled=true;AngleValue.IsEnabled=true;reset.IsEnabled=true;}return;}
+        if(closed||prepared is null||!Owns){committing=false;if(!closed){Radius.IsEnabled=true;RadiusValue.IsEnabled=true;Angle.IsEnabled=true;AngleValue.IsEnabled=true;reset.IsEnabled=true;GaussianNoise.IsEnabled=true;Monochromatic.IsEnabled=true;}return;}
         var owner=new CancellationTokenSource();cancellation=owner;var token=owner.Token;
-        var settings=ReadSettings();int padding=margin;Feedback.Text="Applying full-size blur…";
+        var settings=ReadSettings();int padding=margin;Feedback.Text="Applying full-size filter…";
         try
         {
-            var result=await Task.Run(async()=>{await gate.WaitAsync(token);try{return SpatialBlur.Apply(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
+            var result=noise?prepared:await Task.Run(async()=>{await gate.WaitAsync(token);try{return SpatialBlur.Apply(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
             if(!closed&&!token.IsCancellationRequested&&Owns){session.Preview(result);session.Commit();finished=true;Close();}
         }
         catch(OperationCanceledException) when(token.IsCancellationRequested){}
@@ -115,7 +131,7 @@ public sealed class GaussianBlurWindow:Window
         finally
         {
             if(ReferenceEquals(cancellation,owner))cancellation=null;owner.Dispose();committing=false;
-            if(!closed){Radius.IsEnabled=true;RadiusValue.IsEnabled=true;Angle.IsEnabled=true;AngleValue.IsEnabled=true;reset.IsEnabled=true;ApplyButton.IsEnabled=prepared is not null;}
+            if(!closed){Radius.IsEnabled=true;RadiusValue.IsEnabled=true;Angle.IsEnabled=true;AngleValue.IsEnabled=true;reset.IsEnabled=true;GaussianNoise.IsEnabled=true;Monochromatic.IsEnabled=true;ApplyButton.IsEnabled=prepared is not null;}
         }
     }
 }

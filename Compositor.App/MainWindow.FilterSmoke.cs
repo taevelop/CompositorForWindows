@@ -13,7 +13,7 @@ public partial class MainWindow
         void Check(bool ok,string message){if(!ok)throw new InvalidOperationException(message);}
         var saved=session.Document;var active=session.ActiveLayerId;bool editMask=session.EditMask;
         string root=Path.Combine(Path.GetDirectoryName(Path.GetFullPath(reportPath))!,"filter-smoke-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);
-        GaussianBlurWindow? dialog=null;
+        PixelFilterWindow? dialog=null;
         try
         {
             var document=Document.Create(64,64);var layer=document.Layers[0] with{Pixels=ShapeRaster.Create(new(ShapeKind.Rectangle,.2,.4,.7),32,32),Transform=new(8,8,32,32),Mask=LayerMask.Solid(32,32)};
@@ -44,7 +44,7 @@ public partial class MainWindow
             session.Load(large);dialog=new(session,Canvas.ShowFilterPreview){Owner=this};dialog.Show();dialog.Radius.Value=4;await dialog.Pending;
             var applying=dialog.ApplyEditAsync();dialog.Close();dialog=null;await applying;
             Check(ReferenceEquals(session.Document,large)&&!session.InTransaction&&!session.CanUndo&&ReferenceEquals(Canvas.DisplayDocument,large),"Closing during full-size Apply published pixels or retained preview.");
-            session.Load(document);dialog=new(session,Canvas.ShowFilterPreview,true){Owner=this};dialog.Show();
+            session.Load(document);dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.MotionBlur){Owner=this};dialog.Show();
             Check(dialog.Title=="Motion Blur"&&dialog.Radius.Minimum==1&&dialog.Radius.Maximum==2000,"Motion distance controls have wrong range.");
             dialog.Radius.Value=16;dialog.Angle.Value=45;await dialog.Pending;
             var motionExpected=await Task.Run(()=>MotionBlur.Apply(document,layer.Id,16,45));
@@ -54,9 +54,26 @@ public partial class MainWindow
             await dialog.ApplyEditAsync();dialog=null;Check(session.UndoCount==1&&!session.InTransaction,"Motion blur did not commit one edit.");
             var motionOutput=CompositePixels(session.Document);Undo(this,new());Check(ReferenceEquals(session.Document,document),"Motion Undo failed.");Redo(this,new());
             projectPath=Path.Combine(root,"Motion.comp");Check(await Save(false)&&await ReopenSavedProject(projectPath)&&motionOutput.SequenceEqual(CompositePixels(session.Document)),"Motion save/reopen changed pixels.");
-            var motionBefore=session.Document;dialog=new(session,Canvas.ShowFilterPreview,true){Owner=this};dialog.Show();dialog.Radius.Value=100;dialog.Angle.Value=-45;var motionCancel=dialog.Pending;dialog.Close();dialog=null;await motionCancel;
+            var motionBefore=session.Document;dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.MotionBlur){Owner=this};dialog.Show();dialog.Radius.Value=100;dialog.Angle.Value=-45;var motionCancel=dialog.Pending;dialog.Close();dialog=null;await motionCancel;
             Check(ReferenceEquals(session.Document,motionBefore)&&!session.InTransaction&&ReferenceEquals(Canvas.DisplayDocument,motionBefore),"Motion cancellation retained pixels or preview.");
-            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo","Motion distance/angle preview","Motion Apply/Undo/Redo/save","Motion close cancellation"},note="Hidden WPF; original Mac pixel comparison deferred."}));
+            var noiseDocument=Document.Create(64,64);var gray=noiseDocument.Layers[0] with{Pixels=ShapeRaster.Create(new(ShapeKind.Rectangle,.5,.5,.5),32,32),Transform=new(8,8,32,32),Mask=LayerMask.Solid(32,32)};
+            noiseDocument=noiseDocument.Replace(gray);session.Load(noiseDocument);dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.AddNoise){Owner=this};dialog.Show();
+            Check(dialog.Title=="Add Noise"&&dialog.Radius.Maximum==400,"Noise amount controls have wrong range.");
+            dialog.Radius.Value=20;dialog.GaussianNoise.IsChecked=true;dialog.Monochromatic.IsChecked=true;await dialog.Pending;
+            var noiseExpected=AddNoise.Apply(noiseDocument,gray.Id,new(20,NoiseDistribution.Gaussian,true,dialog.NoiseSeed));
+            var firstNoise=CompositePixels(Canvas.DisplayDocument);
+            Check(ReferenceEquals(session.Document,noiseDocument)&&firstNoise.SequenceEqual(CompositePixels(noiseExpected)),"Noise preview used wrong settings or mutated document.");
+            dialog.Radius.Value=30;await dialog.Pending;dialog.Radius.Value=20;await dialog.Pending;
+            Check(firstNoise.SequenceEqual(CompositePixels(Canvas.DisplayDocument)),"Changing amount reshuffled the noise seed.");
+            dialog.PreviewEnabled.IsChecked=false;Check(ReferenceEquals(Canvas.DisplayDocument,noiseDocument),"Noise comparison did not restore source.");dialog.PreviewEnabled.IsChecked=true;
+            UpdateLayout();var noiseBitmap=new RenderTargetBitmap((int)Math.Ceiling(dialog.ActualWidth),(int)Math.Ceiling(dialog.ActualHeight),96,96,PixelFormats.Pbgra32);noiseBitmap.Render(dialog);
+            var noisePng=new PngBitmapEncoder();noisePng.Frames.Add(BitmapFrame.Create(noiseBitmap));using(var file=File.Create(Path.ChangeExtension(reportPath,".noise.png")))noisePng.Save(file);
+            await dialog.ApplyEditAsync();dialog=null;Check(session.UndoCount==1&&!session.InTransaction&&firstNoise.SequenceEqual(CompositePixels(session.Document)),"Noise Apply did not publish the prepared full-resolution result once.");
+            Undo(this,new());Check(ReferenceEquals(session.Document,noiseDocument),"Noise Undo lost source.");Redo(this,new());
+            projectPath=Path.Combine(root,"Noise.comp");Check(await Save(false)&&await ReopenSavedProject(projectPath)&&firstNoise.SequenceEqual(CompositePixels(session.Document)),"Noise save/reopen changed pixels.");
+            var noiseBefore=session.Document;dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.AddNoise){Owner=this};dialog.Show();dialog.GaussianNoise.IsChecked=true;var noiseCancel=dialog.Pending;dialog.Close();dialog=null;await noiseCancel;
+            Check(ReferenceEquals(session.Document,noiseBefore)&&!session.InTransaction&&ReferenceEquals(Canvas.DisplayDocument,noiseBefore),"Noise cancel retained a preview or pixels.");
+            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo","Motion distance/angle preview","Motion Apply/Undo/Redo/save","Motion close cancellation","Noise settings and stable seed","Noise full-resolution Apply/Undo/Redo/save","Noise comparison/cancel"},note="Hidden WPF; original Mac pixel comparison deferred."}));
         }
         finally
         {

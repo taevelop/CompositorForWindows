@@ -3,6 +3,11 @@
 #include "BrushPixels.h"
 #include "AdjustPixels.h"
 #include "LevelsPixels.h"
+#include "NoisePixels.h"
+
+__declspec(dllexport) void compositor_add_noise(uint8_t *p,int32_t w,int32_t h,float amount,int32_t gaussian,int32_t monochromatic,uint32_t seed) {
+    noise_add(p,(size_t)w,(size_t)h,(size_t)w*4,amount,gaussian,monochromatic,seed);
+}
 
 __declspec(dllexport) void compositor_levels(uint8_t *pixels, int32_t count, const float *tables) {
     levels_apply(pixels, (size_t)count, tables);

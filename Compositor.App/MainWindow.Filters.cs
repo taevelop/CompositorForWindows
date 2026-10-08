@@ -2,14 +2,19 @@ using System.Windows;
 namespace Compositor.App;
 public partial class MainWindow
 {
+    private void EditAddNoise(object sender,RoutedEventArgs e)=>Safe(()=>
+    {
+        var dialog=new PixelFilterWindow(session,Canvas.ShowFilterPreview,PixelFilterKind.AddNoise){Owner=this};
+        try{dialog.ShowDialog();}finally{if(dialog.IsVisible)dialog.Close();Refresh();Canvas.Focus();}
+    });
     private void EditMotionBlur(object sender,RoutedEventArgs e)=>Safe(()=>
     {
-        var dialog=new GaussianBlurWindow(session,Canvas.ShowFilterPreview,true){Owner=this};
+        var dialog=new PixelFilterWindow(session,Canvas.ShowFilterPreview,PixelFilterKind.MotionBlur){Owner=this};
         try{dialog.ShowDialog();}finally{if(dialog.IsVisible)dialog.Close();Refresh();Canvas.Focus();}
     });
     private void EditGaussianBlur(object sender,RoutedEventArgs e)=>Safe(()=>
     {
-        var dialog=new GaussianBlurWindow(session,Canvas.ShowFilterPreview){Owner=this};
+        var dialog=new PixelFilterWindow(session,Canvas.ShowFilterPreview){Owner=this};
         try{dialog.ShowDialog();}finally{if(dialog.IsVisible)dialog.Close();Refresh();Canvas.Focus();}
     });
 }
