@@ -2,16 +2,24 @@ using Compositor.Core;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using SkiaSharp;
+using System.Security.Cryptography;
 
 namespace Compositor.Imaging;
 
 /// <summary>Local U2Net CPU inference; caller supplies a verified model file.</summary>
 public sealed class U2NetPredictor : IDisposable
 {
+    public const string ModelSha256 = "309C8469258DDA742793DCE0EBEA8E6DD393174F89934733ECC8B14C76F4DDD8";
     private readonly InferenceSession session;
     public U2NetPredictor(string modelPath)
     {
-        session = new InferenceSession(modelPath);
+        var file = new FileInfo(modelPath);
+        if (file.Length > 16 * 1024 * 1024) throw new InvalidDataException("Unexpected U2Netp model size.");
+        var model = File.ReadAllBytes(modelPath);
+        if (!Convert.ToHexString(SHA256.HashData(model)).Equals(ModelSha256, StringComparison.Ordinal))
+            throw new InvalidDataException("The U2Netp model checksum does not match the verified release.");
+        // Load the bytes that were verified, avoiding a file replacement between hash and load.
+        session = new InferenceSession(model);
         var shape = session.InputMetadata.Values.First().Dimensions;
         if (shape.Length != 4 || shape[0] != 1 || shape[1] != 3 || shape[2] != 320 || shape[3] != 320)
         { session.Dispose(); throw new InvalidDataException("Expected a U2Net 1×3×320×320 model input."); }
