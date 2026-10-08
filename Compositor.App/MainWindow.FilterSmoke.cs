@@ -44,7 +44,19 @@ public partial class MainWindow
             session.Load(large);dialog=new(session,Canvas.ShowFilterPreview){Owner=this};dialog.Show();dialog.Radius.Value=4;await dialog.Pending;
             var applying=dialog.ApplyEditAsync();dialog.Close();dialog=null;await applying;
             Check(ReferenceEquals(session.Document,large)&&!session.InTransaction&&!session.CanUndo&&ReferenceEquals(Canvas.DisplayDocument,large),"Closing during full-size Apply published pixels or retained preview.");
-            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo"},note="Hidden WPF; original Mac pixel comparison deferred."}));
+            session.Load(document);dialog=new(session,Canvas.ShowFilterPreview,true){Owner=this};dialog.Show();
+            Check(dialog.Title=="Motion Blur"&&dialog.Radius.Minimum==1&&dialog.Radius.Maximum==2000,"Motion distance controls have wrong range.");
+            dialog.Radius.Value=16;dialog.Angle.Value=45;await dialog.Pending;
+            var motionExpected=await Task.Run(()=>MotionBlur.Apply(document,layer.Id,16,45));
+            Check(dialog.ApplyButton.IsEnabled&&ReferenceEquals(session.Document,document)&&CompositePixels(motionExpected).SequenceEqual(CompositePixels(Canvas.DisplayDocument)),"Motion preview settings or document immutability failed.");
+            UpdateLayout();var motionBitmap=new RenderTargetBitmap((int)Math.Ceiling(dialog.ActualWidth),(int)Math.Ceiling(dialog.ActualHeight),96,96,PixelFormats.Pbgra32);motionBitmap.Render(dialog);
+            var motionPng=new PngBitmapEncoder();motionPng.Frames.Add(BitmapFrame.Create(motionBitmap));using(var file=File.Create(Path.ChangeExtension(reportPath,".motion.png")))motionPng.Save(file);
+            await dialog.ApplyEditAsync();dialog=null;Check(session.UndoCount==1&&!session.InTransaction,"Motion blur did not commit one edit.");
+            var motionOutput=CompositePixels(session.Document);Undo(this,new());Check(ReferenceEquals(session.Document,document),"Motion Undo failed.");Redo(this,new());
+            projectPath=Path.Combine(root,"Motion.comp");Check(await Save(false)&&await ReopenSavedProject(projectPath)&&motionOutput.SequenceEqual(CompositePixels(session.Document)),"Motion save/reopen changed pixels.");
+            var motionBefore=session.Document;dialog=new(session,Canvas.ShowFilterPreview,true){Owner=this};dialog.Show();dialog.Radius.Value=100;dialog.Angle.Value=-45;var motionCancel=dialog.Pending;dialog.Close();dialog=null;await motionCancel;
+            Check(ReferenceEquals(session.Document,motionBefore)&&!session.InTransaction&&ReferenceEquals(Canvas.DisplayDocument,motionBefore),"Motion cancellation retained pixels or preview.");
+            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo","Motion distance/angle preview","Motion Apply/Undo/Redo/save","Motion close cancellation"},note="Hidden WPF; original Mac pixel comparison deferred."}));
         }
         finally
         {

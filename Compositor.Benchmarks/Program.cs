@@ -18,6 +18,7 @@ if (args.Length > 0 && args[0] == "--soak")
 }
 
 if (args.Length > 0 && args[0] == "--gaussian") { GaussianBlurBenchmark.Run(args.Length > 1 ? args[1] : "gaussian-benchmark.json"); return; }
+if (args.Length > 0 && args[0] == "--motion-blur") { MotionBlurBenchmark.Run(args.Length > 1 ? args[1] : "motion-blur-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--fill") { FillBenchmark.Run(args.Length > 1 ? args[1] : "fill-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--gradient") { GradientBenchmark.Run(args.Length > 1 ? args[1] : "gradient-benchmark.json"); return; }
 if (args.Length > 0 && args[0] == "--eyedropper") { EyedropperBenchmark.Run(args.Length > 1 ? args[1] : "eyedropper-benchmark.json"); return; }

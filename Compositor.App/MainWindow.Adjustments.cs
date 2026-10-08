@@ -19,6 +19,7 @@ public partial class MainWindow
         EditGrainMenu.IsEnabled=session.ActiveLayer?.Grain is not null; EditGrainButton.Visibility=EditGrainMenu.IsEnabled?Visibility.Visible:Visibility.Collapsed;
         AdjustColorsMenu.IsEnabled = AdjustColorsButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false } && !session.EditMask;
         PixelAdjustmentsMenu.IsEnabled=AdjustColorsMenu.IsEnabled;
+        FilterMenu.IsEnabled=AdjustColorsMenu.IsEnabled;
         bool blackWhite = session.ActiveLayer?.BlackWhite is not null; EditBlackWhiteMenu.IsEnabled = blackWhite; EditBlackWhiteButton.Visibility = blackWhite ? Visibility.Visible : Visibility.Collapsed;
         bool exposure = session.ActiveLayer?.Exposure is not null;
         EditExposureMenu.IsEnabled = exposure;
