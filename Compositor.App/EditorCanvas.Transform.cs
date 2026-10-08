@@ -12,6 +12,7 @@ public sealed partial class EditorCanvas
     {
         get
         {
+            if(filterDisplay is {} display&&Session.InTransaction&&Session.TransactionGeneration==filterGeneration&&ReferenceEquals(Session.Document,filterOriginal))return display;
             if(transformEdit is not null&&transformOriginal is {} original)
                 return shapeTransformPreview.Create(Session.Document,original);
             transformOriginal=null;shapeTransformPreview.Clear();return Session.Document;

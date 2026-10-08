@@ -13,7 +13,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
     private EditorSession session=null!;
-    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){CancelShapePreparation();if(shapeDrag is not null)EndShape(false);CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
+    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){ShowFilterPreview(null);CancelShapePreparation();if(shapeDrag is not null)EndShape(false);CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
     public EditorTool Tool { get; set; } = EditorTool.Brush;
     public Func<BrushSettings> ReadBrush { get; set; } = () => new(40, .7, 1, 32, 32, 32);
     public Action<string>? ReportError { get; set; }

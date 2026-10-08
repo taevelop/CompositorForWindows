@@ -4,7 +4,7 @@ public partial class MainWindow
 {
     private void EditGaussianBlur(object sender,RoutedEventArgs e)=>Safe(()=>
     {
-        var dialog=new GaussianBlurWindow(session){Owner=this};
+        var dialog=new GaussianBlurWindow(session,Canvas.ShowFilterPreview){Owner=this};
         try{dialog.ShowDialog();}finally{if(dialog.IsVisible)dialog.Close();Refresh();Canvas.Focus();}
     });
 }

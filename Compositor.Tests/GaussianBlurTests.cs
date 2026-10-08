@@ -61,4 +61,19 @@ public sealed class GaussianBlurTests
         Assert.NotSame(doc,next);
         for(int i=1;i<doc.Layers.Length;i++)Assert.Same(doc.Layers[i],next.Layers[i]);
     }
+    [Fact] public void LargePreviewHasBoundedGridOriginalPlacementAndContinuousTileSampling()
+    {
+        var doc=Solid(2600,40);var layer=doc.Layers[0] with{Mask=LayerMask.Solid(2600,40)};doc=doc.Replace(layer);
+        var before=layer.Pixels.ToRgba();var preview=GaussianBlur.Preview(doc,layer.Id,4).Layers[0];
+        Assert.Equal(2048,preview.Pixels.Width);Assert.True(preview.Pixels.Height<2048);
+        Assert.Equal(-4,preview.Transform.X,6);Assert.Equal(-4,preview.Transform.Y,6);
+        Assert.Equal(2628,preview.Transform.Width);Assert.Equal(68,preview.Transform.Height);
+        Assert.Same(layer.Mask!.Pixels,preview.Mask!.Pixels);Assert.Equal(layer.Transform,preview.Mask.Placement);
+        Assert.InRange(Alpha(preview,new(265.5,30.5)),(byte)250,(byte)255);
+        Assert.InRange(Alpha(preview,new(266.5,30.5)),(byte)250,(byte)255);
+        foreach(var pixel in preview.Pixels.ToRgba().Chunk(4))Assert.Equal(pixel[3],pixel[0]);
+        Assert.Equal(before,layer.Pixels.ToRgba());
+        using var cancellation=new CancellationTokenSource();cancellation.Cancel();
+        Assert.Throws<OperationCanceledException>(()=>GaussianBlur.Preview(doc,layer.Id,4,cancellation:cancellation.Token));
+    }
 }

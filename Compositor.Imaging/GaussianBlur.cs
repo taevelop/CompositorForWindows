@@ -5,6 +5,61 @@ namespace Compositor.Imaging;
 /// <summary>Layer-pixel sigma, transparent edge spread, document-space selection and immutable results.</summary>
 public static class GaussianBlur
 {
+    public static Document Preview(Document document,Guid layerId,double radius,int padding=0,CancellationToken cancellation=default)
+    {
+        cancellation.ThrowIfCancellationRequested();document.Validate();
+        if(!double.IsFinite(radius)||radius<.1||radius>250||padding<0||padding>752)throw new ArgumentOutOfRangeException(nameof(radius));
+        var source=document.Layers.First(l=>l.Id==layerId);
+        if(source.IsGroup||source.IsAdjustment)throw new InvalidOperationException("Select image pixels to blur.");
+        int margin=Math.Max(padding,(int)Math.Ceiling(radius*3+2));
+        int width=checked(source.Pixels.Width+margin*2),height=checked(source.Pixels.Height+margin*2);Limits.CheckDimensions(width,height);
+        if(Math.Max(width,height)<=2048)return Apply(document,layerId,radius,padding,cancellation);
+        long other=document.Layers.Where(l=>l.Id!=layerId&&!l.IsAdjustment&&(l.Pixels.Tiles.Count!=0||l.Mask is not null)).Sum(l=>(long)l.Pixels.Width*l.Pixels.Height);
+        if(other+(long)width*height>Limits.MaxPixels)throw new InvalidDataException("Blur padding exceeds the document pixel budget.");
+        var selection=document.Selection is null?null:SelectionCoverage.Create(document.Selection,document.Width,document.Height);
+        if(selection?.IsEmpty==true||source.Pixels.Tiles.Count==0)return document;
+        double factor=2048d/Math.Max(width,height);int w=Math.Max(1,(int)(width*factor)),h=Math.Max(1,(int)(height*factor));
+        using var input=new SKBitmap(CanvasRenderer.Info(w,h));var bytes=input.GetPixelSpan();
+        for(int y=0;y<h;y++)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            double sy=(y+.5)*height/h-margin-.5;int top=(int)Math.Floor(sy);double fy=sy-top;
+            for(int x=0;x<w;x++)
+            {
+                double sx=(x+.5)*width/w-margin-.5;int left=(int)Math.Floor(sx);double fx=sx-left;
+                var a0=Sample(source.Pixels,left,top);var a1=Sample(source.Pixels,left+1,top);
+                var b0=Sample(source.Pixels,left,top+1);var b1=Sample(source.Pixels,left+1,top+1);
+                for(int c=0;c<4;c++)
+                {
+                    double a=a0[c]*(1-fx)+a1[c]*fx;
+                    double b=b0[c]*(1-fx)+b1[c]*fx;
+                    bytes[(y*w+x)*4+c]=(byte)Math.Clamp(Math.Round(a*(1-fy)+b*fy),0,255);
+                }
+            }
+        }
+        var small=Raster.FromRgba(w,h,bytes);var blurred=BlurPixels(input,radius*w/width,cancellation);
+        var center=source.Transform.ToDocument(new(source.Pixels.Width/2d,source.Pixels.Height/2d),source.Pixels.Width,source.Pixels.Height);
+        double placedWidth=source.Transform.Width*width/source.Pixels.Width,placedHeight=source.Transform.Height*height/source.Pixels.Height;
+        var transform=source.Transform with{X=center.X-placedWidth/2,Y=center.Y-placedHeight/2,Width=placedWidth,Height=placedHeight};transform.Validate();
+        var pixels=SelectionPixels.Blend(small,blurred,transform,selection,cancellation);
+        var mask=source.Mask;
+        if(mask is {Placement:null}&&(mask.Pixels.Width!=1||mask.Pixels.Height!=1))mask=mask with{Placement=source.Transform};
+        cancellation.ThrowIfCancellationRequested();return document.Replace(source with{Pixels=pixels,Transform=transform,Mask=mask});
+    }
+    private static readonly byte[] transparent=[0,0,0,0];
+    private static ReadOnlySpan<byte> Sample(Raster raster,int x,int y)=>x<0||y<0||x>=raster.Width||y>=raster.Height?transparent:
+        raster.Tiles.TryGetValue(new(x/256,y/256),out var tile)?tile.Bytes.Slice(((y%256)*256+x%256)*4,4):transparent;
+    private static Raster BlurPixels(SKBitmap input,double radius,CancellationToken cancellation)
+    {
+        cancellation.ThrowIfCancellationRequested();
+        using var output=new SKBitmap(input.Info);
+        using(var canvas=new SKCanvas(output))
+        using(var filter=SKImageFilter.CreateBlur((float)radius,(float)radius,SKShaderTileMode.Decal))
+        using(var paint=new SKPaint{ImageFilter=filter,BlendMode=SKBlendMode.Src})
+        {canvas.Clear(SKColors.Transparent);canvas.DrawBitmap(input,0,0,new SKSamplingOptions(SKFilterMode.Nearest),paint);}
+        cancellation.ThrowIfCancellationRequested();var result=Raster.FromRgba(input.Width,input.Height,output.GetPixelSpan());
+        cancellation.ThrowIfCancellationRequested();return result;
+    }
     public static Document Apply(Document document,Guid layerId,double radius,int padding=0,CancellationToken cancellation=default)
     {
         cancellation.ThrowIfCancellationRequested();document.Validate();
@@ -24,13 +79,7 @@ public static class GaussianBlur
         var grown=RasterReframe.Apply(anchored,new(-margin,-margin,width,height),cancellation);
         using var input=new SKBitmap(CanvasRenderer.Info(width,height));grown.Pixels.ToRgba().CopyTo(input.GetPixelSpan());
         cancellation.ThrowIfCancellationRequested();
-        using var output=new SKBitmap(CanvasRenderer.Info(width,height));
-        using(var canvas=new SKCanvas(output))
-        using(var filter=SKImageFilter.CreateBlur((float)radius,(float)radius,SKShaderTileMode.Decal))
-        using(var paint=new SKPaint{ImageFilter=filter,BlendMode=SKBlendMode.Src})
-        {canvas.Clear(SKColors.Transparent);canvas.DrawBitmap(input,0,0,new SKSamplingOptions(SKFilterMode.Nearest),paint);}
-        cancellation.ThrowIfCancellationRequested();
-        var pixels=Raster.FromRgba(width,height,output.GetPixelSpan());
+        var pixels=BlurPixels(input,radius,cancellation);
         pixels=SelectionPixels.Blend(grown.Pixels,pixels,grown.Transform,selection,cancellation);
         if(ReferenceEquals(pixels,grown.Pixels))return document;
         var result=grown with{Pixels=pixels};
