@@ -1,4 +1,4 @@
-# Lens Correction 전환
+﻿# Lens Correction 전환
 
 2026-10-08 연산 기반을 구현했다. native/kernels/LensPixels.c와 원본 macOS 커널 SHA-256이 같다. 고정 폭 int32 크기와 double 강도의 네이티브 ABI를 연결했다. 원본처럼 입력 범위는 -100–100, 실제 커널 강도는 distortion / 100 × 0.35다.
 
@@ -13,3 +13,8 @@ Release 빌드 경고/오류 0, 코어 616개 및 기존 실제 WPF 회귀 검�
 UI 1차 연결: Filter → Lens Correction, -100–100 슬라이더/정밀 입력, 기본값/Reset 0, 표시 전용 미리보기/비교, 직렬 worker 및 최신 요청 검사, 원본 전체 해상도 Apply/Cancel. 코어 616개와 WPF의 실제 패널 설정·비교·단일 Undo/Redo·.comp 저장 재열기·닫기 취소 검사를 통과했다. 현재 Lens 미리보기는 전체 해상도이며 2048px 축소 표시 전용 경로, 패널 시각 검토, 대형 성능 측정은 후속이다. 실제 Mac 왕복 및 별도 PC는 보류를 유지한다.
 
 대형 미리보기 분리: 최대 변 2048px, 전체 원본 버퍼 없이 불변 타일에서 bilinear 축소한다. 왜곡 강도는 이미지 상대 좌표이므로 그대로 사용하며, 레이어 변형은 보존하고 암묵적 마스크 배치를 원래 변형에 고정한다. 표시 전용 결과는 Session.Document/Undo에 들어가지 않는다. Apply는 원본 전체 해상도를 다시 계산한다. 코어 617개 및 실제 WPF 2600px → 2048px 표시/2600px 최종 적용·원본과 출력 일치·Undo 복원 검사가 통과했다. 4K 성능·실제 Mac 보간 비교·시각 검토는 아직 남아 있다.
+
+4K 측정 및 패널 검토: --lens 벤치마크(4000×4000, 불투명 사각형, ±80, 각 1회)에서 -80은 미리보기 479.9ms/누적 managed 112.0MiB, 적용 491.2ms/239.6MiB; +80은 미리보기 345.9ms/80.0MiB, 적용 528.6ms/122.1MiB였다. 피크 메모리·WPF 입력 지연·반복 안정성 측정은 아니다. artifacts/ui-smoke.filters.lens.png에서 블루 슬라이더·정밀 입력·비교/Reset/Cancel/Apply 배치를 시각 확인했다. 코어 617개 및 전체 WPF 회귀 통과. 남은 공간 필터는 Content-Aware Fill/Remove Background이며, 별도 모델/기술 검토와 함께 후속 작업한다.
+
+Lens를 포함한 artifacts/publish-shape-ui 갱신 및 verify-portable.ps1 -Runs 1 PASS 1/1. 개발 PC의 분리 런타임 실행이며 별도 Windows PC 실기를 대체하지 않는다.
+

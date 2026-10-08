@@ -76,6 +76,8 @@ public partial class MainWindow
             session.Load(document);dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.LensCorrection){Owner=this};dialog.Show();
             Check(dialog.Title=="Lens Correction"&&dialog.Radius.Minimum==-100&&dialog.Radius.Maximum==100&&dialog.Radius.Value==0,"Lens controls have wrong defaults.");
             dialog.Radius.Value=-80;await dialog.Pending;
+            UpdateLayout();var lensBitmap=new RenderTargetBitmap((int)Math.Ceiling(dialog.ActualWidth),(int)Math.Ceiling(dialog.ActualHeight),96,96,PixelFormats.Pbgra32);lensBitmap.Render(dialog);
+            var lensPng=new PngBitmapEncoder();lensPng.Frames.Add(BitmapFrame.Create(lensBitmap));using(var file=File.Create(Path.ChangeExtension(reportPath,".lens.png")))lensPng.Save(file);
             var lensExpected=LensCorrection.Apply(document,layer.Id,-80);
             Check(dialog.ApplyButton.IsEnabled&&ReferenceEquals(session.Document,document)&&CompositePixels(lensExpected).SequenceEqual(CompositePixels(Canvas.DisplayDocument)),"Lens preview mutated the document or used wrong settings.");
             dialog.PreviewEnabled.IsChecked=false;Check(ReferenceEquals(Canvas.DisplayDocument,document),"Lens comparison did not restore source.");dialog.PreviewEnabled.IsChecked=true;
@@ -99,5 +101,6 @@ public partial class MainWindow
         }
     }
 }
+
 
 
