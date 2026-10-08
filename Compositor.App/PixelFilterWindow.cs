@@ -106,7 +106,7 @@ public sealed class PixelFilterWindow:Window
         try
         {
             await Task.Delay(40,token);
-            var result=await Task.Run(async()=>{await gate.WaitAsync(token);try{return lens?LensCorrection.Apply(original,layerId,distortion,token):noise?AddNoise.Apply(original,layerId,noiseSettings,token):SpatialBlur.Preview(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
+            var result=await Task.Run(async()=>{await gate.WaitAsync(token);try{return lens?LensCorrection.Preview(original,layerId,distortion,token):noise?AddNoise.Apply(original,layerId,noiseSettings,token):SpatialBlur.Preview(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
             if(closed||token.IsCancellationRequested||!ReferenceEquals(cancellation,owner)||!Owns)return;
             prepared=result;ShowPreview();ApplyButton.IsEnabled=true;Feedback.Text="Ready · one Undo when applied";
         }
@@ -137,4 +137,5 @@ public sealed class PixelFilterWindow:Window
         }
     }
 }
+
 

@@ -6,6 +6,25 @@ namespace Compositor.Tests;
 
 public class LensCorrectionTests
 {
+    [Fact]
+    public void LargePreviewKeepsPlacementMaskAndOriginalWhileApplyKeepsFullResolution()
+    {
+        var doc = Document.Create(3000, 64);
+        var pixels = ShapeRaster.Create(new(ShapeKind.Rectangle, .3, .4, .5), 2600, 32);
+        var layer = doc.Layers[0] with { Pixels = pixels, Transform = new(10, 10, 2600, 32, Rotation: 15), Mask = LayerMask.Solid(2600, 32) };
+        doc = doc.Replace(layer);
+        var preview = LensCorrection.Preview(doc, layer.Id, -80).Layers[0];
+        Assert.Equal(2048, preview.Pixels.Width);
+        Assert.Equal(layer.Transform, preview.Transform);
+        Assert.Same(layer.Mask!.Pixels, preview.Mask!.Pixels);
+        Assert.Equal(layer.Transform, preview.Mask.Placement);
+        Assert.Same(pixels, doc.Layers[0].Pixels);
+        var full = LensCorrection.Apply(doc, layer.Id, -80);
+        Assert.Equal(2600, full.Layers[0].Pixels.Width);
+        Assert.Same(layer.Mask, full.Layers[0].Mask);
+        Assert.Same(doc, LensCorrection.Preview(doc, layer.Id, 0));
+    }
+
     [Theory]
     [InlineData(-100)]
     [InlineData(100)]

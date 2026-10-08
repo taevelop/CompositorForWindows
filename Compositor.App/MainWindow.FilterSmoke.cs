@@ -84,7 +84,12 @@ public partial class MainWindow
             projectPath=Path.Combine(root,"Lens.comp");Check(await Save(false)&&await ReopenSavedProject(projectPath)&&lensOutput.SequenceEqual(CompositePixels(session.Document)),"Lens save/reopen changed output.");
             var lensBefore=session.Document;dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.LensCorrection){Owner=this};dialog.Show();dialog.Radius.Value=90;var lensCancel=dialog.Pending;dialog.Close();dialog=null;await lensCancel;
             Check(ReferenceEquals(session.Document,lensBefore)&&!session.InTransaction&&ReferenceEquals(Canvas.DisplayDocument,lensBefore),"Lens cancel retained preview or pixels.");
-            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo","Motion distance/angle preview","Motion Apply/Undo/Redo/save","Motion close cancellation","Noise settings and stable seed","Noise full-resolution Apply/Undo/Redo/save","Noise comparison/cancel","Lens settings/comparison/Apply/Undo/Redo/save/cancel"},note="Hidden WPF; original Mac pixel comparison deferred."}));
+            session.Load(large);dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.LensCorrection){Owner=this};dialog.Show();dialog.Radius.Value=-80;await dialog.Pending;
+            Check(ReferenceEquals(session.Document,large)&&Canvas.DisplayDocument.Layers[0].Pixels.Width==2048,"Lens large preview exceeded cap or mutated source.");
+            var fullLens=LensCorrection.Apply(large,wide.Id,-80);await dialog.ApplyEditAsync();dialog=null;
+            Check(session.ActiveLayer!.Pixels.Width==2600&&session.UndoCount==1&&CompositePixels(fullLens).SequenceEqual(CompositePixels(session.Document)),"Lens Apply used reduced pixels.");
+            Undo(this,new());Check(ReferenceEquals(session.Document,large)&&ReferenceEquals(Canvas.DisplayDocument,large),"Lens full Apply Undo retained preview.");
+            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo","Motion distance/angle preview","Motion Apply/Undo/Redo/save","Motion close cancellation","Noise settings and stable seed","Noise full-resolution Apply/Undo/Redo/save","Noise comparison/cancel","Lens settings/comparison/Apply/Undo/Redo/save/cancel","Lens bounded preview and full-resolution Apply"},note="Hidden WPF; original Mac pixel comparison deferred."}));
         }
         finally
         {
@@ -94,4 +99,5 @@ public partial class MainWindow
         }
     }
 }
+
 
