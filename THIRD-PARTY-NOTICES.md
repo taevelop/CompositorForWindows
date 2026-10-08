@@ -10,3 +10,6 @@ The Windows build uses these packages (full resolved versions are recorded in `p
 - .NET runtime (included in self-contained output): Microsoft and contributors. Runtime distribution includes its license and third-party notices. https://github.com/dotnet/runtime/blob/main/LICENSE.TXT
 
 Upstream native binaries include additional third-party components. Preserve their distribution notices when packaging. xUnit and Microsoft.NET.Test.Sdk are build/test dependencies and are not shipped with the application.
+
+## ONNX Runtime
+Microsoft.ML.OnnxRuntime 1.30.0 / Microsoft.ML.OnnxRuntime.Managed — MIT license. Source and license: https://github.com/microsoft/onnxruntime . Native CPU inference dependency. U2Net weights are currently development verification artifacts and are not included in the distributed package.

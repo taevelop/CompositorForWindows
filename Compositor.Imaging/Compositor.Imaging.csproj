@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.30.0" />
     <ProjectReference Include="../Compositor.Core/Compositor.Core.csproj" />
     <PackageReference Include="SkiaSharp" Version="4.152.1" />
     <None Include="../artifacts/native/Compositor.Native.dll" Link="Compositor.Native.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
