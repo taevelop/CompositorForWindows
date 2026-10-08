@@ -1,0 +1,11 @@
+# Content-Aware Fill 전환
+
+2026-10-08 원본 ContentFill.swift/ContentFill.c를 대조했다. Windows 커널과 원본 C 파일의 SHA-256은 D2E7164EA407E0B911D1CDBA7F990051E33E08BFE7810A4E66E64768A3192E06으로 동일하다.
+
+원본은 AI 모델이 아니라 패치 기반 합성이다. 선택 마스크의 0이 아닌 픽셀을 복원하며 선택 밖 불투명 픽셀만 소스로 사용한다. 5×5 패치 검사, 인접 소스 오프셋 전파, 고정 시드 무작위 검색을 그대로 사용한다. 투명한 비선택 픽셀은 보존한다. 커널 자체는 페더 비율을 보간하지 않으므로 문서 연결에서 원본의 최종 선택 블렌딩 규칙을 따라야 한다.
+
+고정 폭 Windows ABI와 Raster 연산을 연결했다. 빈 선택은 원본을 반환하고, 소스 패치 부족과 할당 실패를 구분한다. 원본 불변, 256픽셀 타일 경계의 복원, 선택 밖 투명 픽셀 보존, 재실행의 동일 결과, 잘못된 마스크와 사전 취소를 검증했다. Release 경고/오류 0, 코어 619개 및 기존 WPF 회귀 통과.
+
+문서 좌표 선택/페더·마스크·메타데이터·Undo 예산, 원본 기반 표시 전용 미리보기/비교, Edit 메뉴와 Shift+Delete, 적용/취소/Undo/저장 왕복, 대형 메모리·지연 검증은 후속이다. 현재 연산 기반만으로 사용자 기능 완료로 계산하지 않는다. C 호출 내부 중간 취소는 없으며 전후 검사로 늦은 결과를 폐기한다.
+
+배경 제거는 별도 기능이다. 원본 SubjectRemoval.swift의 VNGenerateForegroundInstanceMaskRequest는 Apple Vision 의존이며 Windows에 직접 재사용할 수 없다. Basic 피사체 마스크, Advanced guided refinement/contrast/shift edge, 기존 마스크 결합과 선택 제한, 원본 이미지 보존을 요구사항으로 유지한다. Windows 추론 런타임·모델·라이선스와 실제 품질 검토는 아직 수행하지 않았다. 실제 Mac 왕복 및 별도 Windows PC 실기는 보류다.

@@ -6,6 +6,8 @@ namespace Compositor.Imaging;
 public sealed record BrushSettings(double Diameter, double Hardness, double Opacity, byte Red, byte Green, byte Blue, bool Erase = false);
 public static class NativePixels
 {
+    [DllImport("Compositor.Native", EntryPoint="compositor_content_fill", CallingConvention=CallingConvention.Cdecl)]
+    internal static extern int ContentFill([In,Out] byte[] pixels,[In] byte[] mask,int width,int height);
     [DllImport("Compositor.Native", EntryPoint="compositor_lens", CallingConvention=CallingConvention.Cdecl)]
     internal static extern void Lens([In] byte[] source,[Out] byte[] destination,int width,int height,double strength);
     [DllImport("Compositor.Native", EntryPoint="compositor_add_noise", CallingConvention=CallingConvention.Cdecl)]

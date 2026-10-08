@@ -5,6 +5,11 @@
 #include "LevelsPixels.h"
 #include "NoisePixels.h"
 #include "LensPixels.h"
+#include "ContentFill.h"
+
+__declspec(dllexport) int32_t compositor_content_fill(uint8_t *pixels, const uint8_t *mask, int32_t width, int32_t height) {
+    return content_fill(pixels, (size_t)width * 4, mask, (size_t)width, width, height);
+}
 
 __declspec(dllexport) void compositor_lens(const uint8_t *source, uint8_t *destination, int32_t width, int32_t height, double k) {
     lens_distort(source, destination, (size_t)width, (size_t)height, (size_t)width * 4, k);
