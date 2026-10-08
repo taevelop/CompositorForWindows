@@ -4,6 +4,11 @@
 #include "AdjustPixels.h"
 #include "LevelsPixels.h"
 #include "NoisePixels.h"
+#include "LensPixels.h"
+
+__declspec(dllexport) void compositor_lens(const uint8_t *source, uint8_t *destination, int32_t width, int32_t height, double k) {
+    lens_distort(source, destination, (size_t)width, (size_t)height, (size_t)width * 4, k);
+}
 
 __declspec(dllexport) void compositor_add_noise(uint8_t *p,int32_t w,int32_t h,float amount,int32_t gaussian,int32_t monochromatic,uint32_t seed) {
     noise_add(p,(size_t)w,(size_t)h,(size_t)w*4,amount,gaussian,monochromatic,seed);
