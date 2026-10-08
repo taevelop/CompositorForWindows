@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 
 namespace Compositor.App;
 
@@ -20,6 +20,7 @@ public partial class MainWindow
         AdjustColorsMenu.IsEnabled = AdjustColorsButton.IsEnabled = session.ActiveLayer is { IsGroup: false, IsAdjustment: false } && !session.EditMask;
         PixelAdjustmentsMenu.IsEnabled=AdjustColorsMenu.IsEnabled;
         FilterMenu.IsEnabled=AdjustColorsMenu.IsEnabled;
+        ContentAwareFillMenu.IsEnabled=AdjustColorsMenu.IsEnabled&&session.Document.Selection is {IsEmpty:false};
         bool blackWhite = session.ActiveLayer?.BlackWhite is not null; EditBlackWhiteMenu.IsEnabled = blackWhite; EditBlackWhiteButton.Visibility = blackWhite ? Visibility.Visible : Visibility.Collapsed;
         bool exposure = session.ActiveLayer?.Exposure is not null;
         EditExposureMenu.IsEnabled = exposure;
@@ -33,3 +34,4 @@ public partial class MainWindow
         ExposureHint.Visibility = session.ActiveLayer?.IsAdjustment == true ? Visibility.Visible : Visibility.Collapsed;
     }
 }
+

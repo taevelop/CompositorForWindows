@@ -14,7 +14,7 @@
           <Separator/><MenuItem Header="_Save project" InputGestureText="Ctrl+S" Click="SaveProject"/><MenuItem Header="Save project _as…" InputGestureText="Ctrl+Shift+S" Click="SaveProjectAs"/>
           <Separator/><MenuItem Header="Export _PNG…" Click="ExportPng"/><MenuItem Header="Export _JPEG…" Click="ExportJpeg"/>
         </MenuItem>
-        <MenuItem Header="_Edit"><MenuItem x:Name="UndoMenu" Header="_Undo" InputGestureText="Ctrl+Z" Click="Undo"/><MenuItem x:Name="RedoMenu" Header="_Redo" InputGestureText="Ctrl+Shift+Z" Click="Redo"/><Separator/><MenuItem Header="_Copy" InputGestureText="Ctrl+C" Click="CopyPixels"/><MenuItem Header="Copy _merged" InputGestureText="Ctrl+Shift+C" Click="CopyMergedPixels"/><MenuItem Header="Cu_t selection" InputGestureText="Ctrl+X" Click="CutPixels"/><MenuItem Header="_Paste" InputGestureText="Ctrl+V" Click="PastePixels"/><Separator/><MenuItem Header="Fill foreground color" InputGestureText="Alt+Backspace" Click="FillForeground"/><MenuItem Header="Fill background color" InputGestureText="Ctrl+Backspace" Click="FillBackground"/></MenuItem>
+        <MenuItem Header="_Edit"><MenuItem x:Name="UndoMenu" Header="_Undo" InputGestureText="Ctrl+Z" Click="Undo"/><MenuItem x:Name="RedoMenu" Header="_Redo" InputGestureText="Ctrl+Shift+Z" Click="Redo"/><Separator/><MenuItem Header="_Copy" InputGestureText="Ctrl+C" Click="CopyPixels"/><MenuItem Header="Copy _merged" InputGestureText="Ctrl+Shift+C" Click="CopyMergedPixels"/><MenuItem Header="Cu_t selection" InputGestureText="Ctrl+X" Click="CutPixels"/><MenuItem Header="_Paste" InputGestureText="Ctrl+V" Click="PastePixels"/><Separator/><MenuItem x:Name="ContentAwareFillMenu" Header="Content-Aware Fill…" Click="EditContentAwareFill"/><MenuItem Header="Fill foreground color" InputGestureText="Alt+Backspace" Click="FillForeground"/><MenuItem Header="Fill background color" InputGestureText="Ctrl+Backspace" Click="FillBackground"/></MenuItem>
         <MenuItem Header="_Layer"><MenuItem Header="Transform layer / selection" InputGestureText="Ctrl+T" Click="StartTransform"/><Separator/><MenuItem Header="Duplicate / Layer via copy" InputGestureText="Ctrl+J" Click="LayerViaCopy"/><MenuItem Header="Duplicate whole layer / group" Click="DuplicateLayer"/></MenuItem>
         <MenuItem Header="_Select">
           <MenuItem Header="Select all" InputGestureText="Ctrl+A" Click="SelectAll"/>
@@ -247,4 +247,5 @@
   </Grid>
  </DockPanel>
 </Window>
+
 

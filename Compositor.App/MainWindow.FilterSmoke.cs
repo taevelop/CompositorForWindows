@@ -91,7 +91,17 @@ public partial class MainWindow
             var fullLens=LensCorrection.Apply(large,wide.Id,-80);await dialog.ApplyEditAsync();dialog=null;
             Check(session.ActiveLayer!.Pixels.Width==2600&&session.UndoCount==1&&CompositePixels(fullLens).SequenceEqual(CompositePixels(session.Document)),"Lens Apply used reduced pixels.");
             Undo(this,new());Check(ReferenceEquals(session.Document,large)&&ReferenceEquals(Canvas.DisplayDocument,large),"Lens full Apply Undo retained preview.");
-            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo","Motion distance/angle preview","Motion Apply/Undo/Redo/save","Motion close cancellation","Noise settings and stable seed","Noise full-resolution Apply/Undo/Redo/save","Noise comparison/cancel","Lens settings/comparison/Apply/Undo/Redo/save/cancel","Lens bounded preview and full-resolution Apply"},note="Hidden WPF; original Mac pixel comparison deferred."}));
+            var fillDoc=Document.Create(40,40);var fillLayer=fillDoc.Layers[0] with{Pixels=ShapeRaster.Create(new(ShapeKind.Rectangle,.2,.4,.6),24,24),Transform=new(4,4,24,24),Mask=LayerMask.Solid(24,24)};
+            fillDoc=fillDoc.Replace(fillLayer) with{Selection=SelectionGeometry.Box(24,12,32,20)};session.Load(fillDoc);Refresh();Check(ContentAwareFillMenu.IsEnabled,"Selected image fill menu disabled.");
+            dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.ContentAwareFill){Owner=this};dialog.Show();await dialog.Pending;
+            var fillExpected=ContentAwareFill.Apply(fillDoc,fillLayer.Id);Check(dialog.ApplyButton.IsEnabled&&ReferenceEquals(session.Document,fillDoc)&&CompositePixels(fillExpected).SequenceEqual(CompositePixels(Canvas.DisplayDocument)),"Fill preview mutated source or used wrong selection.");
+            dialog.PreviewEnabled.IsChecked=false;Check(ReferenceEquals(Canvas.DisplayDocument,fillDoc),"Fill comparison failed.");dialog.PreviewEnabled.IsChecked=true;
+            await dialog.ApplyEditAsync();dialog=null;Check(session.UndoCount==1&&!session.InTransaction,"Fill did not commit one Undo.");
+            var fillOutput=CompositePixels(session.Document);Undo(this,new());Check(ReferenceEquals(session.Document,fillDoc),"Fill Undo failed.");Redo(this,new());
+            projectPath=Path.Combine(root,"ContentFill.comp");Check(await Save(false)&&await ReopenSavedProject(projectPath)&&fillOutput.SequenceEqual(CompositePixels(session.Document)),"Fill save/reopen changed pixels.");
+            session.Load(fillDoc);dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.ContentAwareFill){Owner=this};dialog.Show();var fillPending=dialog.Pending;dialog.Close();dialog=null;await fillPending;
+            Check(ReferenceEquals(session.Document,fillDoc)&&!session.InTransaction&&ReferenceEquals(Canvas.DisplayDocument,fillDoc),"Fill cancellation retained result.");
+            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo","Motion distance/angle preview","Motion Apply/Undo/Redo/save","Motion close cancellation","Noise settings and stable seed","Noise full-resolution Apply/Undo/Redo/save","Noise comparison/cancel","Lens settings/comparison/Apply/Undo/Redo/save/cancel","Lens bounded preview and full-resolution Apply","Content fill menu/preview/comparison/Undo/Redo/save/cancel"},note="Hidden WPF; original Mac pixel comparison deferred."}));
         }
         finally
         {
@@ -101,6 +111,7 @@ public partial class MainWindow
         }
     }
 }
+
 
 
 
