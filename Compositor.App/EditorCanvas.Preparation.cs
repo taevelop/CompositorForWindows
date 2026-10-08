@@ -37,7 +37,7 @@ public sealed partial class EditorCanvas
                 try
                 {
                     using var prepared=await (viewport is null?PreparedDocumentRender.CreateAsync(document,cancellation.Token):PreparedDocumentRender.CreateAsync(document,viewport,cancellation.Token));
-                    if(!canvasDisposed&&ReferenceEquals(requestedRender,document)&&requestedViewport==viewport&&ReferenceEquals(Session.Document,document)&&GradientViewport(document)==viewport)
+                    if(!canvasDisposed&&ReferenceEquals(requestedRender,document)&&requestedViewport==viewport&&ReferenceEquals(DisplayDocument,document)&&GradientViewport(document)==viewport)
                     {renderer.InstallPrepared(prepared,document);preparedRender=document;preparedViewport=viewport;requestedRender=null;}
                     else if(ReferenceEquals(requestedRender,document)&&requestedViewport==viewport)requestedRender=null;
                 }

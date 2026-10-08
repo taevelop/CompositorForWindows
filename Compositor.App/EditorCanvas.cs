@@ -369,10 +369,10 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     {
         var c = e.Surface.Canvas; c.Clear(new SKColor(28, 30, 34));
         if (Session is null || ActualWidth <= 0) return;
-        bool ready=EnsurePrepared(Session.Document);
+        var doc=DisplayDocument;
+        bool ready=EnsurePrepared(doc);
         c.Save(); c.Scale(e.Info.Width / (float)ActualWidth, e.Info.Height / (float)ActualHeight);
         c.Translate((float)panX, (float)panY); c.Scale((float)Zoom);
-        var doc = Session.Document;
         using (var background = new SKPaint { Color = new(224, 227, 232) }) c.DrawRect(0, 0, doc.Width, doc.Height, background);
         // Keep checker cells constant in screen space and only draw the visible area.
         double cell = 12 / Zoom;

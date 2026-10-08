@@ -63,10 +63,23 @@ public partial class MainWindow
             var stale=Canvas.ShapeCompletion;session.Load(largeOriginal);session.Begin();
             Check(!await stale&&session.InTransaction&&ReferenceEquals(largeOriginal,session.Document),"Stale shape result cancelled a newer transaction.");session.Cancel();
             session.Load(smallDocument,smallActive);ShapeLine.IsChecked=true;
+            var rounded=smallDocument.Layers.First(l=>l.Shape is {Kind:ShapeKind.Rectangle});
+            session.Load(smallDocument with{Selection=null},rounded.Id);
+            var transformOriginalDocument=session.Document;
+            Canvas.BeginTransform();Canvas.PreviewTransform(rounded.Transform with{Width=100,Height=60});
+            var display=Canvas.DisplayDocument;var shown=display.Layers.First(l=>l.Id==rounded.Id);
+            Check(shown.Pixels.Width==100&&shown.Pixels.Height==60&&ReferenceEquals(session.ActiveLayer!.Pixels,rounded.Pixels),"Rounded preview altered document pixels.");
+            Check(shown.Pixels.ToRgba().SequenceEqual(ShapeRaster.Create(rounded.Shape!,100,60).ToRgba()),"Rounded preview stretched corner radius.");
+            await Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ApplicationIdle);
+            Canvas.CancelTransform();Check(ReferenceEquals(session.Document,transformOriginalDocument)&&ReferenceEquals(Canvas.DisplayDocument,session.Document),"Rounded preview survived cancellation.");
+            Canvas.BeginTransform();Canvas.PreviewTransform(rounded.Transform with{Width=100,Height=60});Canvas.CommitTransform();
+            Check(session.ActiveLayer!.Pixels.Width==100&&session.UndoCount==1,"Rounded transform did not publish final pixels once.");
+            Undo(this,new());Check(ReferenceEquals(session.Document,transformOriginalDocument),"Rounded transform Undo failed.");
+            session.Load(smallDocument,smallActive);ToolPicker.SelectedIndex=11;ShapeLine.IsChecked=true;
             await Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ApplicationIdle);UpdateLayout();
             var bitmap=new RenderTargetBitmap((int)Math.Ceiling(ActualWidth),(int)Math.Ceiling(ActualHeight),96,96,PixelFormats.Pbgra32);bitmap.Render(this);
             var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(bitmap));using(var file=File.Create(Path.ChangeExtension(reportPath,".png")))png.Save(file);
-            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"shape rail/options","rectangle Shift/palette/selection","single Undo/Redo","cancel","ellipse Shift/Alt","line thickness/angle","precise input","UI save/reopen pixels/style","large worker/Dispatcher","large cancel/Undo","stale result preserves newer transaction"},note="Hidden WPF routes; physical mouse and actual Mac comparison deferred."}));
+            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"shape rail/options","rectangle Shift/palette/selection","single Undo/Redo","cancel","ellipse Shift/Alt","line thickness/angle","precise input","UI save/reopen pixels/style","large worker/Dispatcher","large cancel/Undo","stale result preserves newer transaction","rounded transform display/cancel/commit/Undo"},note="Hidden WPF routes; physical mouse and actual Mac comparison deferred."}));
         }
         finally
         {

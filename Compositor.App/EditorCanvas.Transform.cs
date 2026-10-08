@@ -6,6 +6,17 @@ namespace Compositor.App;
 public sealed partial class EditorCanvas
 {
     private LayerTransformEdit? transformEdit;
+    private Document? transformOriginal;
+    private readonly ShapeTransformPreview shapeTransformPreview=new();
+    internal Document DisplayDocument
+    {
+        get
+        {
+            if(transformEdit is not null&&transformOriginal is {} original)
+                return shapeTransformPreview.Create(Session.Document,original);
+            transformOriginal=null;shapeTransformPreview.Clear();return Session.Document;
+        }
+    }
     private TransformDrag? transformDrag;
     public bool IsTransforming=>transformEdit is not null;
     public LayerTransform? TransformDraft=>transformEdit?.Draft;
@@ -15,7 +26,7 @@ public sealed partial class EditorCanvas
     public void BeginTransform()
     {
         if(IsTransforming)return;
-        CancelInteraction();CancelCrop();transformEdit=LayerTransformEdit.Begin(Session);
+        CancelInteraction();CancelCrop();transformOriginal=Session.Document;transformEdit=LayerTransformEdit.Begin(Session);
         Tool=EditorTool.Move;TransformChanged?.Invoke();InvalidateVisual();
     }
     public void PreviewTransform(LayerTransform value)
