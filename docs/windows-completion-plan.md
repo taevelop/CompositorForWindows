@@ -250,3 +250,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Content-Aware Fill UI 1차 연결: 선택 이미지용 Edit 메뉴·자동 미리보기/비교·Apply/Cancel, WPF 단일 Undo/Redo·저장 출력 왕복·취소 통과. 코어 620개 통과. 단축키/시각/회전·페더/대형 검증은 후속, 전체 추정 70/30 유지.
 
 - Content-Aware Fill Shift+Delete 및 패널 시각 검토, 회전/FlipX/Feather 4 최종 혼합 참조 검사. 코어 623개·WPF 통과. 작은 페더 원본 동등성·물리 단축키·대형 성능/배포 잔여, 전체 추정 70/30 유지.
+
+- Content-Aware Fill 4K 단색/200×200 선택 측정 1.24초·누적 managed 219.7MiB, 무변경 원본 참조 공유 검증. 배포본 갱신·portable 1/1 통과. 자연 이미지 품질/큰 선택/피크/취소 성능은 잔여, 별도 PC/Mac 보류 및 전체 70/30 추정 유지.

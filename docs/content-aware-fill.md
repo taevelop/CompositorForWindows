@@ -18,3 +18,7 @@ UI 1차 연결: Edit → Content-Aware Fill은 선택된 이미지 픽셀에서�
 
 Shift+Delete 연결: TextBox의 자체 편집 입력을 우선하고, busy/선택 불가 상태에서는 채우기를 실행하지 않는다. 메뉴에도 단축키를 표시한다. 물리 키 입력 실기는 아직 아니다. 패널 캡처 artifacts/ui-smoke.filters.content-fill.png에서 자동 계산 설명·비교·Cancel/Apply와 불필요한 수치/Reset 제거를 시각 확인했다.
 참조 회귀: 0도/37도/-23도 및 FlipX, Feather 4의 선택 커버리지를 레이어 픽셀 중심에 투영하고 독립적인 최종 픽셀 혼합 계산과 전체 바이트 일치를 확인했다. 0 커버리지 픽셀/원본은 그대로 보존한다. 처음 시험한 Feather 1.5 축 정렬 사례에서는 분수 농도가 없어 테스트 조건을 4로 변경했다; 작은 sigma의 실제 Mac 동등성은 품질 잔여로 유지한다. Release 경고/오류 0, 코어 623개 및 전체 WPF 통과. 대형 성능과 배포본 갱신은 다음 단계다.
+
+4K 연산 측정: --content-fill, 4000×4000 단색 이미지 중앙 200×200 선택, 1회. 1241.4ms, 누적 managed 219.7MiB, 작업 후 working set 320.6MiB. 전체 무변경 원본 문서 참조 유지 확인. 자연 이미지 복원 품질·큰 선택·피크 메모리·WPF 입력 및 취소 지연의 증거는 아니다. C 커널 내부 중간 취소와 대형 작업 메모리 개선은 성능 잔여다.
+
+배포본 artifacts/publish-shape-ui 갱신, portable 분리 런타임 WPF 실행 PASS 1/1. 개발 PC에서의 검사이며 별도 Windows PC/Mac 실기는 보류. Release 빌드 경고/오류 0. 배경 제거는 추론 모델 및 라이선스 조사 후 구현하며, 원본 기능 범위는 유지한다.
