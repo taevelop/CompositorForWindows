@@ -7,6 +7,22 @@ namespace Compositor.Tests;
 public class ContentAwareFillTests
 {
     [Fact]
+    public void DocumentFillGrowsToSelectionPreservesMaskAndUndo()
+    {
+        var doc = Document.Create(40, 40);
+        var layer = doc.Layers[0] with { Pixels = ShapeRaster.Create(new(ShapeKind.Rectangle,.2,.4,.6),24,24), Transform = new(4,4,24,24), Mask = LayerMask.Solid(24,24), Opacity = .6 };
+        doc = doc.Replace(layer) with { Selection = SelectionGeometry.Box(24,12,32,20) };
+        var result = ContentAwareFill.Apply(doc, layer.Id);
+        Assert.True(result.Layers[0].Pixels.Width > 24);
+        Assert.Equal(.6, result.Layers[0].Opacity);
+        Assert.NotNull(result.Layers[0].Mask);
+        var session = new EditorSession(doc); session.Begin(); session.Preview(result); session.Commit();
+        session.Undo(); Assert.Same(doc, session.Document);
+        session.Redo(); Assert.Same(result, session.Document);
+        Assert.Same(layer.Pixels, doc.Layers[0].Pixels);
+    }
+
+    [Fact]
     public void ConstantSurroundingsRepairSelectionAndLeaveOtherPixelsUntouched()
     {
         const int w = 263, h = 16;

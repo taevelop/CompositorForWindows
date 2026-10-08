@@ -9,3 +9,7 @@
 문서 좌표 선택/페더·마스크·메타데이터·Undo 예산, 원본 기반 표시 전용 미리보기/비교, Edit 메뉴와 Shift+Delete, 적용/취소/Undo/저장 왕복, 대형 메모리·지연 검증은 후속이다. 현재 연산 기반만으로 사용자 기능 완료로 계산하지 않는다. C 호출 내부 중간 취소는 없으며 전후 검사로 늦은 결과를 폐기한다.
 
 배경 제거는 별도 기능이다. 원본 SubjectRemoval.swift의 VNGenerateForegroundInstanceMaskRequest는 Apple Vision 의존이며 Windows에 직접 재사용할 수 없다. Basic 피사체 마스크, Advanced guided refinement/contrast/shift edge, 기존 마스크 결합과 선택 제한, 원본 이미지 보존을 요구사항으로 유지한다. Windows 추론 런타임·모델·라이선스와 실제 품질 검토는 아직 수행하지 않았다. 실제 Mac 왕복 및 별도 Windows PC 실기는 보류다.
+
+문서 연결: 선택 path bounds를 캔버스로 제한해 역변형 후 기존 레이어와 합집합 격자로 확장한다. 원본 RasterReframe으로 배치/마스크 정책을 보존한다. 문서 예산을 native 작업 전 검사하고, 레이어별 선택 마스크를 생성해 원본 커널에 전달한 뒤 SelectionPixels.Blend로 페더를 적용한다. 변경 없는 타일은 원본 참조를 공유하며 전체 무변경은 원본 Raster/문서를 유지한다. 256MiB Undo 제한을 적용한다. 레이어 밖 선택의 격자 확장·메타데이터 보존·원본 불변·Undo/Redo를 검증했다. 회전/뒤집기 및 페더 경계의 전용 참조 테스트, UI·저장·성능 검증은 후속이다.
+
+최종 Release 경고/오류 0, 코어 620개 및 기존 WPF 회귀 통과.
