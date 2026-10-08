@@ -1,4 +1,4 @@
-using Compositor.Core;
+﻿using Compositor.Core;
 using Compositor.Imaging;
 using Xunit;
 
@@ -6,6 +6,45 @@ namespace Compositor.Tests;
 
 public class ContentAwareFillTests
 {
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(37, false)]
+    [InlineData(-23, true)]
+    public void FeatherUsesDocumentCoordinatesAndLeavesZeroCoveragePixelsExact(double rotation, bool flip)
+    {
+        const int size = 40;
+        var bytes = new byte[size * size * 4];
+        var transform = new LayerTransform(16,16,size,size,Rotation:rotation,FlipX:flip);
+        var selection = SelectionGeometry.Box(30,30,10,10) with { Feather = 4 };
+        var coverage = SelectionCoverage.Create(selection,80,80);
+        var mask = new byte[size * size];
+        for (int y=0;y<size;y++) for (int x=0;x<size;x++)
+        {
+            int p=y*size+x;
+            double weight=coverage.Sample(transform.ToDocument(new(x+.5,y+.5),size,size));
+            mask[p]=(byte)Math.Round(weight*255,MidpointRounding.AwayFromZero);
+            bytes[p*4]=(byte)(mask[p]>0?0:80);bytes[p*4+1]=(byte)(mask[p]>0?0:100);bytes[p*4+2]=(byte)(mask[p]>0?0:120);bytes[p*4+3]=255;
+        }
+        var source=Raster.FromRgba(size,size,bytes);
+        var synthesized=ContentAwareFill.Apply(source,mask).ToRgba();
+        var doc=Document.Create(80,80);var layer=doc.Layers[0] with {Pixels=source,Transform=transform};doc=doc.Replace(layer) with {Selection=selection};
+        var output=ContentAwareFill.Apply(doc,layer.Id).Layers[0];
+        Assert.Equal(transform,output.Transform);
+        var actual=output.Pixels.ToRgba();
+        bool fractional=false;
+        for(int y=0;y<size;y++)for(int x=0;x<size;x++)
+        {
+            double weight=coverage.Sample(transform.ToDocument(new(x+.5,y+.5),size,size));
+            fractional|=weight>0&&weight<1;
+            for(int c=0;c<4;c++)
+            {
+                int i=(y*size+x)*4+c;
+                Assert.Equal((byte)Math.Round(bytes[i]*(1-weight)+synthesized[i]*weight,MidpointRounding.AwayFromZero),actual[i]);
+            }
+        }
+        Assert.True(fractional);Assert.Equal(bytes,source.ToRgba());
+    }
+
     [Fact]
     public void DocumentFillGrowsToSelectionPreservesMaskAndUndo()
     {
@@ -56,3 +95,5 @@ public class ContentAwareFillTests
         Assert.Empty(source.Tiles);
     }
 }
+
+

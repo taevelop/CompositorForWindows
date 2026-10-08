@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Windows;
@@ -312,6 +312,7 @@ public partial class MainWindow : Window
         {e.Handled=true;await FillPalette(Keyboard.Modifiers==ModifierKeys.Control);return;}
         if (Canvas.IsTransforming && e.Key == Key.Enter) { ApplyTransform(null, e); e.Handled = true; return; }
         if (Canvas.Tool == EditorTool.Crop && e.Key == Key.Enter) { ApplyCrop(null, e); e.Handled = true; return; }
+        if(e.Key==Key.Delete&&Keyboard.Modifiers==ModifierKeys.Shift){e.Handled=true;if(ContentAwareFillMenu.IsEnabled)EditContentAwareFill(this,e);return;}
         if (Canvas.HandleSelectionKey(e.Key)) { e.Handled = true; return; }
         bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control), shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
         if (Layers.IsKeyboardFocusWithin && !session.InTransaction)
@@ -454,3 +455,4 @@ public partial class MainWindow : Window
         if (IsVisible) throw new InvalidOperationException("Clean window did not close.");
     }
 }
+

@@ -94,6 +94,8 @@ public partial class MainWindow
             var fillDoc=Document.Create(40,40);var fillLayer=fillDoc.Layers[0] with{Pixels=ShapeRaster.Create(new(ShapeKind.Rectangle,.2,.4,.6),24,24),Transform=new(4,4,24,24),Mask=LayerMask.Solid(24,24)};
             fillDoc=fillDoc.Replace(fillLayer) with{Selection=SelectionGeometry.Box(24,12,32,20)};session.Load(fillDoc);Refresh();Check(ContentAwareFillMenu.IsEnabled,"Selected image fill menu disabled.");
             dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.ContentAwareFill){Owner=this};dialog.Show();await dialog.Pending;
+            UpdateLayout();var fillBitmap=new RenderTargetBitmap((int)Math.Ceiling(dialog.ActualWidth),(int)Math.Ceiling(dialog.ActualHeight),96,96,PixelFormats.Pbgra32);fillBitmap.Render(dialog);
+            var fillPng=new PngBitmapEncoder();fillPng.Frames.Add(BitmapFrame.Create(fillBitmap));using(var file=File.Create(Path.ChangeExtension(reportPath,".content-fill.png")))fillPng.Save(file);
             var fillExpected=ContentAwareFill.Apply(fillDoc,fillLayer.Id);Check(dialog.ApplyButton.IsEnabled&&ReferenceEquals(session.Document,fillDoc)&&CompositePixels(fillExpected).SequenceEqual(CompositePixels(Canvas.DisplayDocument)),"Fill preview mutated source or used wrong selection.");
             dialog.PreviewEnabled.IsChecked=false;Check(ReferenceEquals(Canvas.DisplayDocument,fillDoc),"Fill comparison failed.");dialog.PreviewEnabled.IsChecked=true;
             await dialog.ApplyEditAsync();dialog=null;Check(session.UndoCount==1&&!session.InTransaction,"Fill did not commit one Undo.");
@@ -111,6 +113,7 @@ public partial class MainWindow
         }
     }
 }
+
 
 
 

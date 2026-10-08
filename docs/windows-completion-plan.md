@@ -248,3 +248,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Content-Aware Fill 문서 연결: 캔버스 제한 선택·레이어 격자 확장·최종 페더·타일 공유·문서/Undo 예산. 확장/Undo/원본 보존 및 코어 620개·기존 WPF 회귀 통과. 전용 회전/페더 참조·UI/저장/성능은 잔여, 전체 추정 70/30 유지.
 
 - Content-Aware Fill UI 1차 연결: 선택 이미지용 Edit 메뉴·자동 미리보기/비교·Apply/Cancel, WPF 단일 Undo/Redo·저장 출력 왕복·취소 통과. 코어 620개 통과. 단축키/시각/회전·페더/대형 검증은 후속, 전체 추정 70/30 유지.
+
+- Content-Aware Fill Shift+Delete 및 패널 시각 검토, 회전/FlipX/Feather 4 최종 혼합 참조 검사. 코어 623개·WPF 통과. 작은 페더 원본 동등성·물리 단축키·대형 성능/배포 잔여, 전체 추정 70/30 유지.
