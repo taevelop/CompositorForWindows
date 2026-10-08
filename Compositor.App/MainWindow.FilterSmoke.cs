@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
@@ -73,7 +73,18 @@ public partial class MainWindow
             projectPath=Path.Combine(root,"Noise.comp");Check(await Save(false)&&await ReopenSavedProject(projectPath)&&firstNoise.SequenceEqual(CompositePixels(session.Document)),"Noise save/reopen changed pixels.");
             var noiseBefore=session.Document;dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.AddNoise){Owner=this};dialog.Show();dialog.GaussianNoise.IsChecked=true;var noiseCancel=dialog.Pending;dialog.Close();dialog=null;await noiseCancel;
             Check(ReferenceEquals(session.Document,noiseBefore)&&!session.InTransaction&&ReferenceEquals(Canvas.DisplayDocument,noiseBefore),"Noise cancel retained a preview or pixels.");
-            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo","Motion distance/angle preview","Motion Apply/Undo/Redo/save","Motion close cancellation","Noise settings and stable seed","Noise full-resolution Apply/Undo/Redo/save","Noise comparison/cancel"},note="Hidden WPF; original Mac pixel comparison deferred."}));
+            session.Load(document);dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.LensCorrection){Owner=this};dialog.Show();
+            Check(dialog.Title=="Lens Correction"&&dialog.Radius.Minimum==-100&&dialog.Radius.Maximum==100&&dialog.Radius.Value==0,"Lens controls have wrong defaults.");
+            dialog.Radius.Value=-80;await dialog.Pending;
+            var lensExpected=LensCorrection.Apply(document,layer.Id,-80);
+            Check(dialog.ApplyButton.IsEnabled&&ReferenceEquals(session.Document,document)&&CompositePixels(lensExpected).SequenceEqual(CompositePixels(Canvas.DisplayDocument)),"Lens preview mutated the document or used wrong settings.");
+            dialog.PreviewEnabled.IsChecked=false;Check(ReferenceEquals(Canvas.DisplayDocument,document),"Lens comparison did not restore source.");dialog.PreviewEnabled.IsChecked=true;
+            await dialog.ApplyEditAsync();dialog=null;Check(session.UndoCount==1&&!session.InTransaction,"Lens Apply did not commit once.");
+            var lensOutput=CompositePixels(session.Document);Undo(this,new());Check(ReferenceEquals(session.Document,document),"Lens Undo failed.");Redo(this,new());
+            projectPath=Path.Combine(root,"Lens.comp");Check(await Save(false)&&await ReopenSavedProject(projectPath)&&lensOutput.SequenceEqual(CompositePixels(session.Document)),"Lens save/reopen changed output.");
+            var lensBefore=session.Document;dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.LensCorrection){Owner=this};dialog.Show();dialog.Radius.Value=90;var lensCancel=dialog.Pending;dialog.Close();dialog=null;await lensCancel;
+            Check(ReferenceEquals(session.Document,lensBefore)&&!session.InTransaction&&ReferenceEquals(Canvas.DisplayDocument,lensBefore),"Lens cancel retained preview or pixels.");
+            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo","Motion distance/angle preview","Motion Apply/Undo/Redo/save","Motion close cancellation","Noise settings and stable seed","Noise full-resolution Apply/Undo/Redo/save","Noise comparison/cancel","Lens settings/comparison/Apply/Undo/Redo/save/cancel"},note="Hidden WPF; original Mac pixel comparison deferred."}));
         }
         finally
         {
@@ -83,3 +94,4 @@ public partial class MainWindow
         }
     }
 }
+

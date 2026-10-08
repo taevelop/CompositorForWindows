@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -6,7 +6,7 @@ using Compositor.Core;
 using Compositor.Imaging;
 namespace Compositor.App;
 
-public enum PixelFilterKind {GaussianBlur,MotionBlur,AddNoise}
+public enum PixelFilterKind {GaussianBlur,MotionBlur,AddNoise,LensCorrection}
 public sealed class PixelFilterWindow:Window
 {
     private readonly EditorSession session;
@@ -15,6 +15,7 @@ public sealed class PixelFilterWindow:Window
     private readonly Action<Document?> display;
     private readonly PixelFilterKind kind;
     private bool motion=>kind==PixelFilterKind.MotionBlur;
+    private bool lens=>kind==PixelFilterKind.LensCorrection;
     private bool noise=>kind==PixelFilterKind.AddNoise;
     private readonly long generation;
     private readonly SemaphoreSlim gate=new(1,1);
@@ -44,12 +45,13 @@ public sealed class PixelFilterWindow:Window
         this.session=session;this.display=display;this.kind=kind;original=session.Document;layerId=layer.Id;
         if(motion){Radius.Minimum=1;Radius.Maximum=2000;Radius.Value=10;Radius.SmallChange=1;Radius.LargeChange=50;RadiusValue.Text="10";}
         if(noise){Radius.Maximum=400;Radius.Value=10;RadiusValue.Text="10";}
-        Title=noise?"Add Noise":motion?"Motion Blur":"Gaussian Blur";Width=430;SizeToContent=SizeToContent.Height;ResizeMode=ResizeMode.NoResize;
+        if(lens){Radius.Minimum=-100;Radius.Maximum=100;Radius.Value=0;RadiusValue.Text="0";}
+        Title=lens?"Lens Correction":noise?"Add Noise":motion?"Motion Blur":"Gaussian Blur";Width=430;SizeToContent=SizeToContent.Height;ResizeMode=ResizeMode.NoResize;
         Style=(Style)Application.Current.FindResource(typeof(Window));ShowInTaskbar=false;WindowStartupLocation=WindowStartupLocation.CenterOwner;
         var body=new StackPanel{Margin=new(22)};Content=body;
         body.Children.Add(new TextBlock{Text=Title,FontSize=20,FontWeight=FontWeights.SemiBold});
-        body.Children.Add(new TextBlock{Text=noise?"Amount (%) · changes image colors while preserving alpha":motion?"Distance in layer pixels · positive angles point up-right":"Radius in layer pixels · edges spread into transparency",TextWrapping=TextWrapping.Wrap,Foreground=(Brush)FindResource("MutedInk"),Margin=new(0,8,0,18)});
-        var row=new DockPanel();body.Children.Add(row);DockPanel.SetDock(RadiusValue,Dock.Right);row.Children.Add(RadiusValue);row.Children.Add(new TextBlock{Text=noise?"Amount (%)":motion?"Distance":"Radius",VerticalAlignment=VerticalAlignment.Center});
+        body.Children.Add(new TextBlock{Text=lens?"Remove distortion · positive: barrel, negative: pincushion":noise?"Amount (%) · changes image colors while preserving alpha":motion?"Distance in layer pixels · positive angles point up-right":"Radius in layer pixels · edges spread into transparency",TextWrapping=TextWrapping.Wrap,Foreground=(Brush)FindResource("MutedInk"),Margin=new(0,8,0,18)});
+        var row=new DockPanel();body.Children.Add(row);DockPanel.SetDock(RadiusValue,Dock.Right);row.Children.Add(RadiusValue);row.Children.Add(new TextBlock{Text=lens?"Remove distortion":noise?"Amount (%)":motion?"Distance":"Radius",VerticalAlignment=VerticalAlignment.Center});
         Radius.Style=(Style)FindResource("EditorSlider");body.Children.Add(Radius);
         if(motion)
         {
@@ -71,7 +73,7 @@ public sealed class PixelFilterWindow:Window
         {
             if(double.TryParse(RadiusValue.Text,NumberStyles.Float,CultureInfo.InvariantCulture,out double value)&&double.IsFinite(value)&&value>=Radius.Minimum&&value<=Radius.Maximum)
             {if(Radius.Value!=value)Radius.Value=value;}
-            else{RadiusValue.Text=Radius.Value.ToString("0.##",CultureInfo.InvariantCulture);Feedback.Text=noise?"Amount must be 0.1–400%.":motion?"Distance must be 1–2000 pixels.":"Radius must be 0.1–250 pixels.";}
+            else{RadiusValue.Text=Radius.Value.ToString("0.##",CultureInfo.InvariantCulture);Feedback.Text=lens?"Distortion must be −100–100.":noise?"Amount must be 0.1–400%.":motion?"Distance must be 1–2000 pixels.":"Radius must be 0.1–250 pixels.";}
         }
         RadiusValue.LostKeyboardFocus+=(_,_)=>ReadValue();RadiusValue.KeyDown+=(_,e)=>{if(e.Key==System.Windows.Input.Key.Enter){ReadValue();e.Handled=true;}};
         Angle.ValueChanged+=(_,_)=>{AngleValue.Text=Angle.Value.ToString("0.##",CultureInfo.InvariantCulture);if(ready)Queue();};
@@ -83,7 +85,7 @@ public sealed class PixelFilterWindow:Window
         AngleValue.LostKeyboardFocus+=(_,_)=>ReadAngle();AngleValue.KeyDown+=(_,e)=>{if(e.Key==System.Windows.Input.Key.Enter){ReadAngle();e.Handled=true;}};
         PreviewEnabled.Checked+=(_,_)=>ShowPreview();PreviewEnabled.Unchecked+=(_,_)=>ShowPreview();
         GaussianNoise.Checked+=(_,_)=>{if(ready)Queue();};GaussianNoise.Unchecked+=(_,_)=>{if(ready)Queue();};Monochromatic.Checked+=(_,_)=>{if(ready)Queue();};Monochromatic.Unchecked+=(_,_)=>{if(ready)Queue();};
-        reset.Click+=(_,_)=>{Radius.Value=motion||noise?10:1;Angle.Value=0;GaussianNoise.IsChecked=false;Monochromatic.IsChecked=false;};cancel.Click+=(_,_)=>Close();ApplyButton.Click+=async(_,_)=>await ApplyEditAsync();
+        reset.Click+=(_,_)=>{Radius.Value=lens?0:motion||noise?10:1;Angle.Value=0;GaussianNoise.IsChecked=false;Monochromatic.IsChecked=false;};cancel.Click+=(_,_)=>Close();ApplyButton.Click+=async(_,_)=>await ApplyEditAsync();
         Closed+=(_,_)=>{closed=true;cancellation?.Cancel();display(null);if(!finished&&Owns)session.Cancel();};
         session.Begin();generation=session.TransactionGeneration;ready=true;Queue();
     }
@@ -93,18 +95,18 @@ public sealed class PixelFilterWindow:Window
     {
         if(committing)return;
         cancellation?.Cancel();var owner=new CancellationTokenSource();cancellation=owner;
-        var settings=ReadSettings();if(!noise)margin=Math.Max(margin,settings.Margin);int padding=margin;var noiseSettings=ReadNoise();
-        ApplyButton.IsEnabled=false;Feedback.Text="Calculating filter…";Pending=Calculate(owner,settings,noiseSettings,padding);
+        var settings=ReadSettings();if(!noise&&!lens)margin=Math.Max(margin,settings.Margin);int padding=margin;var noiseSettings=ReadNoise();
+        ApplyButton.IsEnabled=false;Feedback.Text="Calculating filter…";Pending=Calculate(owner,settings,noiseSettings,padding,Radius.Value);
     }
     private BlurSettings ReadSettings()=>new(motion?BlurKind.Motion:BlurKind.Gaussian,Radius.Value,Angle.Value);
     private NoiseSettings ReadNoise()=>new(Radius.Value,GaussianNoise.IsChecked==true?NoiseDistribution.Gaussian:NoiseDistribution.Uniform,Monochromatic.IsChecked==true,NoiseSeed);
-    private async Task Calculate(CancellationTokenSource owner,BlurSettings settings,NoiseSettings noiseSettings,int padding)
+    private async Task Calculate(CancellationTokenSource owner,BlurSettings settings,NoiseSettings noiseSettings,int padding,double distortion)
     {
         var token=owner.Token;
         try
         {
             await Task.Delay(40,token);
-            var result=await Task.Run(async()=>{await gate.WaitAsync(token);try{return noise?AddNoise.Apply(original,layerId,noiseSettings,token):SpatialBlur.Preview(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
+            var result=await Task.Run(async()=>{await gate.WaitAsync(token);try{return lens?LensCorrection.Apply(original,layerId,distortion,token):noise?AddNoise.Apply(original,layerId,noiseSettings,token):SpatialBlur.Preview(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
             if(closed||token.IsCancellationRequested||!ReferenceEquals(cancellation,owner)||!Owns)return;
             prepared=result;ShowPreview();ApplyButton.IsEnabled=true;Feedback.Text="Ready · one Undo when applied";
         }
@@ -120,10 +122,10 @@ public sealed class PixelFilterWindow:Window
         await Pending;
         if(closed||prepared is null||!Owns){committing=false;if(!closed){Radius.IsEnabled=true;RadiusValue.IsEnabled=true;Angle.IsEnabled=true;AngleValue.IsEnabled=true;reset.IsEnabled=true;GaussianNoise.IsEnabled=true;Monochromatic.IsEnabled=true;}return;}
         var owner=new CancellationTokenSource();cancellation=owner;var token=owner.Token;
-        var settings=ReadSettings();int padding=margin;Feedback.Text="Applying full-size filter…";
+        var settings=ReadSettings();double distortion=Radius.Value;int padding=margin;Feedback.Text="Applying full-size filter…";
         try
         {
-            var result=noise?prepared:await Task.Run(async()=>{await gate.WaitAsync(token);try{return SpatialBlur.Apply(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
+            var result=noise?prepared:await Task.Run(async()=>{await gate.WaitAsync(token);try{return lens?LensCorrection.Apply(original,layerId,distortion,token):SpatialBlur.Apply(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
             if(!closed&&!token.IsCancellationRequested&&Owns){session.Preview(result);session.Commit();finished=true;Close();}
         }
         catch(OperationCanceledException) when(token.IsCancellationRequested){}
@@ -135,3 +137,4 @@ public sealed class PixelFilterWindow:Window
         }
     }
 }
+
