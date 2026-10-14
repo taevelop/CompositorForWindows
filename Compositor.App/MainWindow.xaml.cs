@@ -33,7 +33,7 @@ public partial class MainWindow : Window
         Canvas.ReportError = ShowError;Canvas.WandClick=WandClicked;
         Canvas.ReadSampleColor=()=>{ColorPickerWindow.TryHex(BrushColor.Text,out var color);return new(color.R,color.G,color.B);};
         Canvas.ColorSampled=color=>{BrushColor.Text=$"#{color.Red:X2}{color.Green:X2}{color.Blue:X2}";RefreshPaletteSwatches();};
-        Canvas.ViewportChanged = UpdateStatus;
+        Canvas.ViewportChanged = () => { UpdateStatus();RefreshZoomControls(); };
         Canvas.CropChanged = RefreshCropControls;
         Canvas.TransformChanged = RefreshTransformControls;
         Deactivated += (_, _) => Canvas.CancelInteraction();
@@ -361,8 +361,9 @@ public partial class MainWindow : Window
                 case Key.C: ToolPicker.SelectedIndex = 8; break;
                 case Key.I: ToolPicker.SelectedIndex = 9; break;
                 case Key.G: ToolPicker.SelectedIndex = 10; break;
-                case Key.W: ToolPicker.SelectedIndex = 12; break; case Key.S: ToolPicker.SelectedIndex = 13; break; case Key.J: ToolPicker.SelectedIndex = 14; break; case Key.R: ToolPicker.SelectedIndex = 15; break;
+                case Key.W: ToolPicker.SelectedIndex = 12; break; case Key.S: ToolPicker.SelectedIndex = 13; break; case Key.J: ToolPicker.SelectedIndex = 14; break; case Key.R: ToolPicker.SelectedIndex = 15; break; case Key.Z: ToolPicker.SelectedIndex = 16; break;
                 case Key.U: if(shift&&ToolPicker.SelectedIndex==11)CycleShapeKind();else ToolPicker.SelectedIndex=11;break;
+                case Key.Tab when ToolPicker.SelectedIndex==15: CycleSmearMode();e.Handled=true;break;
                 case Key.Tab when ToolPicker.SelectedIndex==11: CycleShapeKind();break;
                 case Key.X when Keyboard.Modifiers==ModifierKeys.None: SwapPalette(null,e);break;
                 case Key.D when Keyboard.Modifiers==ModifierKeys.None: ResetPalette(null,e);break;

@@ -62,7 +62,7 @@ public partial class MainWindow
         bool transforming = Canvas?.IsTransforming == true;
         BrushOpacityLabel.Text = ToolPicker.SelectedIndex == 15 ? "Strength" : "Opacity";
         bool painting = ToolPicker.SelectedIndex is 1 or 2 or 13 or 14 or 15;
-        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", 6 => "Lasso", 7 => "Polygon", 8 => "Crop", 9 => "Eyedropper", 10 => "Gradient", 11 => "Shape", 12 => "Magic Wand", 13 => "Clone Stamp", 14 => "Spot Healing", 15 => "Smear", _ => "Brush" };
+        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", 6 => "Lasso", 7 => "Polygon", 8 => "Crop", 9 => "Eyedropper", 10 => "Gradient", 11 => "Shape", 12 => "Magic Wand", 13 => "Clone Stamp", 14 => "Spot Healing", 15 => "Smear", 16 => "Zoom", _ => "Brush" };
         if (transforming) ToolTitle.Text = "Transform";
         ColorButton.IsEnabled = ToolbarColorButton.IsEnabled = BackgroundColorButton.IsEnabled = !session.EditMask||ToolPicker.SelectedIndex==11;
         RefreshPaletteSwatches();
@@ -71,7 +71,7 @@ public partial class MainWindow
         SelectionCenter.Visibility = ToolPicker.SelectedIndex is 4 or 5 ? Visibility.Visible : Visibility.Collapsed;
         SelectionHint.Text = ToolPicker.SelectedIndex == 7 ? "Enter: close · Backspace: point · Ctrl-drag: pixels" : ToolPicker.SelectedIndex == 6 ? "Draw · Ctrl-drag: pixels · Esc: cancel" : "Shift: square · Ctrl-drag: pixels · Esc: cancel";
         CropOptions.Visibility = ToolPicker.SelectedIndex == 8 ? Visibility.Visible : Visibility.Collapsed;
-        ToolHint.Visibility = transforming || painting || selecting || ToolPicker.SelectedIndex is 8 or 9 or 10 or 11 or 12 ? Visibility.Collapsed : Visibility.Visible;
+        ToolHint.Visibility = transforming || painting || selecting || ToolPicker.SelectedIndex is 8 or 9 or 10 or 11 or 12 or 16 ? Visibility.Collapsed : Visibility.Visible;
         ShapeOptions.Visibility=ToolPicker.SelectedIndex==11?Visibility.Visible:Visibility.Collapsed;
         RefreshShapeControls();
         WandOptions.Visibility=ToolPicker.SelectedIndex==12?Visibility.Visible:Visibility.Collapsed;
@@ -79,6 +79,7 @@ public partial class MainWindow
         var wandMode=Canvas?.SelectionMode??Compositor.Core.SelectionMode.Replace;WandReplace.IsChecked=wandMode==Compositor.Core.SelectionMode.Replace;WandAdd.IsChecked=wandMode==Compositor.Core.SelectionMode.Add;WandSubtract.IsChecked=wandMode==Compositor.Core.SelectionMode.Subtract;
         GradientOptions.Visibility=ToolPicker.SelectedIndex==10?Visibility.Visible:Visibility.Collapsed;
         EyedropperOptions.Visibility=ToolPicker.SelectedIndex==9?Visibility.Visible:Visibility.Collapsed;
+        ZoomOptions.Visibility = ToolPicker.SelectedIndex == 16 ? Visibility.Visible : Visibility.Collapsed;RefreshZoomControls();
         SmearOptions.Visibility = ToolPicker.SelectedIndex == 15 ? Visibility.Visible : Visibility.Collapsed;
         HealingOptions.Visibility = ToolPicker.SelectedIndex == 14 ? Visibility.Visible : Visibility.Collapsed;
         CloneOptions.Visibility = ToolPicker.SelectedIndex == 13 ? Visibility.Visible : Visibility.Collapsed;

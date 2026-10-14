@@ -25,7 +25,7 @@
 
 - 효과/조정: 원본 9종 비파괴 조정과 6종 공간/자동 필터의 기본 편집 경로가 연결됐다. 남음: 기존 패널 슬라이더 일관성, 원본 샘플링/보간 비교, AI 피사체 누락/흐린 경계 품질과 대형 메모리·지연.
 - 선택/변형: 사각/타원/올가미/크롭·선택 픽셀/클립보드·피사체/레이어/마스크 선택load·기본 변형은 연결됐다. Magic Wand 기본 UI도 연결됐다. 남음: Wand 복잡 윤곽/취소 성능, 왜곡·원근/이동 스냅 상세 범위, 외부 클립보드 호환, 큰 선택/윤곽 성능과 물리 입력.
-- 추가 도구: 도형·그라디언트·색상 채우기·스포이트·Healing·Clone·Smear(Liquify/Blur/Smudge)의 기본 UI·worker·이력·저장 경로가 연결됐다. 남음: 대형/복합·자연품질/원본soft누적 농도·실기, Smear 모드 cycling, Type와 Zoom 전용 도구. 영역 채우기 도구와 기타 확장 범위는 기존 요구를 유지하며 원본과 별도 대조한다.
+- 추가 도구: 도형·그라디언트·색상 채우기·스포이트·Healing·Clone·Smear(Liquify/Blur/Smudge)의 기본 UI·worker·이력·저장 경로와 Zoom(Z)·Smear Tab 순환이 연결됐다. 남음: 대형/복합·자연품질/원본soft누적 농도·커스텀cursor/실기, Type 도구. 영역 채우기 도구와 기타 확장 범위는 기존 요구를 유지하며 원본과 별도 대조한다.
 - 텍스트: 편집 가능한 텍스트 모델·글꼴·배치·저장·inline 편집 UI 미구현.
 - 작업 공간: 문서 탭·그룹·다중 선택·계층 드래그는 기본 UI가 연결됐다. 남음: 원본 그룹 마스크의 모델·합성·저장·편집, 탭/환경 설정 고급 범위, 드래그 복합 입력/모니터·DPI 실기, 캔버스 Alt-drag 복제 및 추가 썸네일 동작. 마스크 Alt-drag는 연결됐지만 실제 OLE/물리 입력은 미검증이다.
 - PSD: 현재 ImageCodec는 PNG/JPEG만 허용한다. PSD 구조/지원 요소 가져오기와 미지원 안내는 미구현; PSD 저장은 범위 제외.
@@ -383,3 +383,7 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Warp actualWPF4K/800px/48입력 dev·publish 측정/단일Undo·원본복원·Esc검사. 배포완료Smudge671ms/Liquify1470ms, 최대Dispatcher106/70ms·EscUI3.5/.6ms로성능개선잔여. 입력은queue등록시간/정확한취소phase미확정·3paint빠른batch조건. publish-smear-tiles에수정tile최적화갱신·배포Save/reopen회귀통과·713코어검증유지. 대형/자연품질/장시간·원본농도/모드cycling·전체Type/Zoom/text/PSD/RAW/groupmask/배포잔여,70/30관리추정재산정전유지.
 
 - 정확한문서격자 active raw Capture공유·all-layers/변형render유지·token검사. 코어716/257×263랜덤premul·3sampling fullrenderer동일/cancel/fallback통과. 4Kcore warpprepare약27~29ms/할당79~93MiB/최종SHA동일,devWPF800px maxpaint12~13ms/gap46/37ms이나Liquify완료1237ms·장시간/자연/100MP잔여. Clone/Blur/Smear회귀통과·publish-smear-capture갱신,70/30관리추정재산정전유지.
+
+- Zoom(Z)클릭2×/Alt½·100px scrub·anchor/cancel뷰복원·0.1–3200%slider/input·Smear Tab순환가드연결. 실제Zoom/document·history불변/17tool startupscroll·고정layout/Smear회귀통과·시각확인·716코어검증유지. publish-zoom-ui갱신. 커스텀cursor/DPI실기·나머지Type/text/PSD/RAW/groupmask·대형품질/제품배포잔여,70/30관리추정재산정전유지.
+
+- Zoom Up/Down1%·Shift10%/Enter·Esc입력적용검사통과. 최종publish-zoom-controls에배포·Zoom/모드순환/portable45초gate1회통과(동일개발PC). 제품core불변·716검증유지,70/30관리추정재산정전유지.

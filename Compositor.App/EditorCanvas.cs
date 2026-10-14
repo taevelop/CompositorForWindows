@@ -8,7 +8,7 @@ using SkiaSharp.Views.WPF;
 
 namespace Compositor.App;
 
-public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection, Crop, Eyedropper, Gradient, Shape, MagicWand, CloneStamp, SpotHealing, Blur }
+public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection, Crop, Eyedropper, Gradient, Shape, MagicWand, CloneStamp, SpotHealing, Blur, Zoom }
 public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
@@ -22,7 +22,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     public Action<string>? ReportError { get; set; }
     public Action? ViewportChanged { get; set; }
     public double Zoom { get; private set; } = 1;
-    public bool HasInteraction => IsWarpPreparing || IsHealingPreparing || IsClonePreparing || IsShapePreparing || shapeDrag is not null || transformDrag is not null || cropDrag is not null || pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
+    public bool HasInteraction => zoomGesture is not null || IsWarpPreparing || IsHealingPreparing || IsClonePreparing || IsShapePreparing || shapeDrag is not null || transformDrag is not null || cropDrag is not null || pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
     private double panX = 30, panY = 30;
     private Point? panStart;
     private Point panOrigin;
@@ -66,7 +66,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     {
         if (Session is null || ActualWidth <= 0 || ActualHeight <= 0) return;
         CancelInteraction();
-        Zoom = Math.Clamp(Math.Min((ActualWidth - 60) / Session.Document.Width, (ActualHeight - 60) / Session.Document.Height), .01, 32);
+        Zoom = Math.Clamp(Math.Min((ActualWidth - 60) / Session.Document.Width, (ActualHeight - 60) / Session.Document.Height), .001, 32);
         panX = (ActualWidth - Session.Document.Width * Zoom) / 2; panY = (ActualHeight - Session.Document.Height * Zoom) / 2;
         InvalidateVisual(); ViewportChanged?.Invoke();
     }
@@ -81,7 +81,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     {
         if (HasInteraction) return;
         var before = DocumentPoint(point);
-        Zoom = Math.Clamp(Zoom * Math.Pow(1.15, delta / 120.0), .01, 32);
+        Zoom = Math.Clamp(Zoom * Math.Pow(1.15, delta / 120.0), .001, 32);
         panX = point.X - before.X * Zoom; panY = point.Y - before.Y * Zoom;
         InvalidateVisual(); ViewportChanged?.Invoke();
     }
@@ -141,6 +141,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         }
         if (button != MouseButton.Left) return false;
         var keys=modifiers??Keyboard.Modifiers;
+        if (Tool == EditorTool.Zoom) { zoomGesture = new(point, Zoom, panX, panY);gestureButton = button;return true; }
         if(Tool==EditorTool.Eyedropper||(keys.HasFlag(ModifierKeys.Alt)&&Tool is EditorTool.Brush or EditorTool.Eraser))
         {BeginColorSampling(button,point);return true;}
         BeginPointer(DocumentPoint(point), modifiers);
@@ -149,6 +150,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     internal void MoveInteraction(Point point)
     {
+        if (zoomGesture is not null) { MoveZoom(point);return; }
         if (Tool == EditorTool.CloneStamp) { clonePointer = DocumentPoint(point); InvalidateVisual(); }
         if(gradientDragging){MoveGradient(DocumentPoint(point));return;}
         if(samplingColor){SampleAt(point);return;}
@@ -159,10 +161,11 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         if (shapeDrag is not null || transformDrag is not null || cropDrag is not null || pixelMove is not null || originalLayer is not null || selectionStart is not null) MovePointer(DocumentPoint(point));
         UpdateSelectionAutoScroll(point);
     }
-    internal bool FinishInteraction(MouseButton button, Point point)
+    internal bool FinishInteraction(MouseButton button, Point point, ModifierKeys? modifiers = null)
     {
         if (gestureButton != button) return false;
         MoveInteraction(point);
+        if (zoomGesture is not null) { FinishZoom(modifiers ?? Keyboard.Modifiers);return true; }
         if(gradientDragging){gradientDragging=false;gestureButton=null;ReleaseGestureCapture();if(double.Hypot(gradientEnd.X-gradientStart.X,gradientEnd.Y-gradientStart.Y)<.5)CancelGradient();return true;}
         if(samplingColor){EndColorSampling();return true;}
         if (panStart is not null) { panStart = null; gestureButton = null; }
@@ -204,6 +207,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void CancelInteraction()
     {
+        CancelZoom();
         CancelHealing();
         CancelWarp();CancelClonePreparation();
         CancelShapePreparation();
@@ -250,7 +254,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             if (Tool == EditorTool.PolygonSelection && !movingSelection) AppendLassoPoint(point);
             Session.Begin(); MovePointer(point); return;
         }
-        if (Session.ActiveLayer is not { } layer || Tool == EditorTool.Hand) return;
+        if (Session.ActiveLayer is not { } layer || Tool is EditorTool.Hand or EditorTool.Zoom) return;
         if (Tool is EditorTool.Brush or EditorTool.Eraser or EditorTool.CloneStamp or EditorTool.SpotHealing or EditorTool.Blur)
         {
             if (Tool is EditorTool.CloneStamp or EditorTool.SpotHealing && Session.EditMask) throw new InvalidOperationException("This tool edits image pixels. Select the image thumbnail first.");
