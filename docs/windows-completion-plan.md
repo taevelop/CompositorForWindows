@@ -315,3 +315,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Clone stroke source-over/고정sample·premulbilinear·coverage/선택 연결, 반투명참조·반복·tile경계·선택/소수offset 검사 코어657개통과. UI/래스터확장/Undo연결후속, 전체WPF30초timeout재발 원인진단잔여. 전체70/30관리추정유지.
 
 - WPF단계별 timing JSONL 추가/30초제한유지. InnerShadow/OuterGlow 완료 후 ToolControls 시작(누적28.5초/27.5초)에서 timeout 관측. toolUI 독립fixture/13도구layout 검사로 이전effect문서누출 제거했으나 미해결, 상세 wpf-smoke-timing.md. Release0경고/오류·코어657개통과, 전체WPF미통과유지.
+
+- 도구UI 단독진단 CLI·캡처별render/encode측정 추가. fixture 저장확인 종료대기해결, 단독2965ms/exit0·35캡처총479ms. 코어657개/빌드0경고오류, fullWPF 기존30초내 통과1회(마지막단계누적28.37초). 이전 timeout원인완전해결/반복안정성은 아직입증안됨. 전체70/30추정유지.

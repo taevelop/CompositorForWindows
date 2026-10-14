@@ -9,3 +9,9 @@ ToolControls는 이전 효과 검사의 최종 문서를 모든 도구/메뉴 sc
 측정2에서도 OuterGlow가 완료되고 ToolControls가 누적27458ms에 시작했으나 전체30초 제한에서 종료됐다. 따라서 fixture 격리만으로 해결된 것으로 기록하지 않는다. Release 경고/오류0 및 코어657개는 통과했다. WPF 전체는 미통과 유지.
 
 다음은 렌더링/PNG 인코딩/모달 및 dispatcher 대기 비용의 상세 측정과 병목 최적화다. 테스트 삭제·검사 축소·30초 제한 연장 없이 진행한다. 실제 Mac 왕복/별도 Windows PC 검증과도 별개다.
+
+## 캡처 및 단독 검사 측정
+
+--tools-smoke report CLI를 추가했다. 기존 full smoke의 ToolControls 전체검사를 동일하게 실행하고, 진단 fixture만 MarkSaved/Close하여 숨겨진 저장확인을 방지한다. 초기 진단은 보고서 작성 후 수정fixture 저장확인 때문에 timeout됐으며 정상 사용자 종료 동작을 변경한 것은 아니다.
+
+수정 후 단독프로세스2965ms/exit0. 35개 캡처 render268ms+PNG encode211ms로 캡처만의 주된 병목은 입증되지 않았다. 각 capture renderMs/encodeMs를 보고서에 기록한다. core657개통과/빌드0경고·오류. 이후 full smoke는 기존30초 제한 내 exit0: ToolControls2057ms, 누적28368ms에 마지막 단계 완료. 이전 timeout 대비 같은 조건의 여러단계 시간이 달라졌으므로 완전한 원인해결/안정성 개선으로 주장하지 않는다. 단독 저장확인 문제와 full smoke 누적실행시간을 구분한다. 반복/상세 rendering/modal 대기 진단은 품질잔여다.

@@ -12,9 +12,10 @@ namespace Compositor.App;
 
 public partial class MainWindow
 {
-    private async Task ToolControlsSmokeTest(string reportPath)
+    internal async Task ToolControlsSmokeTest(string reportPath)
     {
         void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
+        var captureTimes = new List<object>();
 
         // UI layout/palette checks use their own fixture, rather than repeatedly rendering
         // the final effect regression document into every toolbar/menu screenshot.
@@ -22,11 +23,14 @@ public partial class MainWindow
 
         void Capture(FrameworkElement element, string suffix)
         {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
             element.UpdateLayout();
             var bitmap = new RenderTargetBitmap((int)Math.Ceiling(element.ActualWidth), (int)Math.Ceiling(element.ActualHeight), 96, 96, PixelFormats.Pbgra32);
             bitmap.Render(element);
             var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bitmap));
+            double renderMs = clock.Elapsed.TotalMilliseconds;
             using var output = File.Create(Path.ChangeExtension(reportPath, suffix)); png.Save(output);
+            captureTimes.Add(new { suffix, renderMs, encodeMs = clock.Elapsed.TotalMilliseconds - renderMs });
         }
         UpdateLayout();
         var titleOrigin = ToolTitle.TranslatePoint(new Point(), this);
@@ -177,8 +181,15 @@ public partial class MainWindow
         session.Undo(); Refresh();
         Check(((SolidColorBrush)FindResource("Accent")).Color == Color.FromRgb(108, 154, 224), "Blue accent resource changed.");
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-        File.WriteAllText(reportPath, JsonSerializer.Serialize(new { timeUtc = DateTimeOffset.UtcNow,
+        File.WriteAllText(reportPath, JsonSerializer.Serialize(new { timeUtc = DateTimeOffset.UtcNow, captureTimes,
             checks = new[] { "stable title and canvas across four tools", "toolbar and rail open actual palette", "all five dark menu popups", "disabled menu contrast", "four direct tool selectors", "contextual options", "slider/number synchronization", "invalid draft and bounds", "settings preserve document/history", "picker cancel and apply", "hex validation", "hue and keyboard color field", "RGB/HSV round trip", "mask presets", "minimum width layout", "RGB validation", "vertical tool rail", "compact options", "visible layer list with expanded inspector", "dark blend popup", "layer opacity draft/apply/undo", "blue theme resource" },
             note = "Hidden WPF control checks; a changed toolbar still needs a user usability check." }, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    internal async Task ToolsSmoke(string reportPath)
+    {
+        await ToolControlsSmokeTest(reportPath);
+        foreach (var tab in workspace.Documents) tab.Session.MarkSaved();
+        Close();
     }
 }
