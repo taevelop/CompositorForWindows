@@ -12,3 +12,6 @@ Release 경고/오류0·코어650개·기존WPF회귀통과. Magic Wand UI 자�
 
 문서 sample/선택 결합 연결: MagicWand.Compute는 document canvas 크기 bitmap을 전용 renderer에서 만든다. SampleAllLayers는 현재 보이는 합성을, 기본은 raw active layer pixels+Transform만 읽는다(mask/effects/opacity/blend/visibility 제외). 그룹·조정·빈 source는 원본처럼 투명 sample이다. canvas 밖 클릭은 no-op, matching이 비었으면 Replace만 deselect(null), Add/Subtract는 기존선택을 유지한다. Replace native outline은 이미 canvas 좌표라 불필요한 clip을 생략하며 다른 연산은 기존Combine으로 처리한다. Antialiased 설정 및 동일선택 원본문서참조 유지, 취소를 확인한다.
 검증: 검정 mask/낮은 opacity를 가진 active raw와 all-visible composite의 sample 차이, source pixels/mask 참조·Undo, 평균 seed mismatch의 Replace/Add 동작, 밖 클릭 no-op. Release 경고/오류0·코어652개·기존WPF회귀통과. W 도구·캔버스 click/cancel·설정 UI·탭설정·대형성능/배포는 아직 후속이다.
+
+W 도구/UI 연결: EditorTool.MagicWand를 기존 index 뒤에 추가하고 W 단축키/rail icon·cross cursor·Canvas.BeginPointer를 클릭 job에 연결했다. Tolerance0–255 slider+정밀입력, Point/3×3/5×5 sample radio, Contiguous/All layers/AA, Replace/Add/Subtract를 제공한다. Shift-add/Alt-subtract(Alt우선)를 캡처하고 기존취소가능 RunSelectionAsync에서 계산/ownership확인/단일Undo를 실행한다. AA는 공통선택AA와동기화하며 WandSettings를 TabTools에 포함해문서별복원한다. Ctrl+W 문서닫기는기존경로가우선이다.
+WPF검증: 도구옵션/Canvas.BeginPointer matching·Shift/Alt·3회Undo 원본참조·WandSettings복원, 실제 toolbar/rail 캡처 시각검토. Release경고/오류0·코어652개·전체WPF회귀통과. physical click/W/Esc, 큰이미지/native중간취소·탭실제전환추가검사·배포는후속이며native호출전후취소한계유지.

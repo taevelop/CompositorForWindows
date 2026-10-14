@@ -1,3 +1,4 @@
+﻿using Compositor.Imaging;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -7,15 +8,15 @@ public partial class MainWindow
 {
     private sealed record TabTools(int Tool,string Size,string Hardness,string Opacity,string Color,string Mask,
         Compositor.Core.SelectionMode Mode,bool Antialiased,bool Center,int CropRatio,bool CropSnap,string Background,bool SampleRing,
-        bool GradientRadial,bool GradientTransparent,bool GradientReverse,double GradientOpacity,ShapeKind ShapeKind,string ShapeRadius,string ShapeWidth);
+        bool GradientRadial,bool GradientTransparent,bool GradientReverse,double GradientOpacity,ShapeKind ShapeKind,string ShapeRadius,string ShapeWidth){public WandSettings Wand {get;init;}=new();}
     private TabTools defaultTabTools=null!;
     private TabTools CaptureTabTools()=>new(ToolPicker.SelectedIndex,BrushSize.Text,BrushHardness.Text,BrushOpacity.Text,
         BrushColor.Text,MaskGray.Text,Canvas.SelectionMode,Canvas.SelectionAntialiased,Canvas.SelectionFromCenter,
         CropRatioPicker.SelectedIndex,Canvas.CropSnapEnabled,backgroundColor,Canvas.ShowSampleRing,
-        GradientRadial.IsChecked==true,GradientTransparent.IsChecked==true,GradientReverse.IsChecked==true,GradientOpacity.Value,ReadShape().Kind,ShapeRadiusValue.Text,ShapeWidthValue.Text);
+        GradientRadial.IsChecked==true,GradientTransparent.IsChecked==true,GradientReverse.IsChecked==true,GradientOpacity.Value,ReadShape().Kind,ShapeRadiusValue.Text,ShapeWidthValue.Text){Wand=ReadWandSettings()};
     private void RestoreTabTools(TabTools state)
     {
-        gradientOpacityDigit=null;
+        gradientOpacityDigit=null;WandTolerance.Value=state.Wand.Tolerance;WandSamplePoint.IsChecked=state.Wand.SampleRadius==0;WandSample3.IsChecked=state.Wand.SampleRadius==1;WandSample5.IsChecked=state.Wand.SampleRadius==2;WandContiguous.IsChecked=state.Wand.Contiguous;WandAllLayers.IsChecked=state.Wand.SampleAllLayers;
         ShapeRectangle.IsChecked=state.ShapeKind==ShapeKind.Rectangle;ShapeEllipse.IsChecked=state.ShapeKind==ShapeKind.Ellipse;ShapeLine.IsChecked=state.ShapeKind==ShapeKind.Line;
         ShapeRadiusValue.Text=state.ShapeRadius;ShapeWidthValue.Text=state.ShapeWidth;
         ToolPicker.SelectedIndex=state.Tool;
@@ -26,7 +27,7 @@ public partial class MainWindow
         GradientTransparent.IsChecked=state.GradientTransparent;GradientReverse.IsChecked=state.GradientReverse;GradientOpacity.Value=state.GradientOpacity;
         foreach(var radio in SelectionOptions.Children.OfType<RadioButton>())radio.IsChecked=radio.Tag?.ToString()==((int)state.Mode).ToString();
         Canvas.SelectionMode=state.Mode;
-        SelectionAA.IsChecked=Canvas.SelectionAntialiased=state.Antialiased;
+        SelectionAA.IsChecked=WandAA.IsChecked=Canvas.SelectionAntialiased=state.Antialiased;
         SelectionCenter.IsChecked=Canvas.SelectionFromCenter=state.Center;
         CropRatioPicker.SelectedIndex=state.CropRatio;CropSnap.IsChecked=Canvas.CropSnapEnabled=state.CropSnap;
         Canvas.CancelCrop();RefreshToolControls();
@@ -47,3 +48,5 @@ public partial class MainWindow
         return false;
     }
 }
+
+

@@ -30,7 +30,7 @@ public partial class MainWindow : Window
         Canvas.Session = session; Canvas.ReadBrush = ReadBrush;Canvas.ReadGradient=ReadGradient;Canvas.ReadShape=ReadShape;
         defaultTabTools=CaptureTabTools();
         AttachTabDrop(NewCanvasDropFrame,null);
-        Canvas.ReportError = ShowError;
+        Canvas.ReportError = ShowError;Canvas.WandClick=WandClicked;
         Canvas.ReadSampleColor=()=>{ColorPickerWindow.TryHex(BrushColor.Text,out var color);return new(color.R,color.G,color.B);};
         Canvas.ColorSampled=color=>{BrushColor.Text=$"#{color.Red:X2}{color.Green:X2}{color.Blue:X2}";RefreshPaletteSwatches();};
         Canvas.ViewportChanged = UpdateStatus;
@@ -289,7 +289,7 @@ public partial class MainWindow : Window
         Canvas.CommitTransform();
         Canvas.CancelInteraction();
         Canvas.CancelCrop();
-        Canvas.Cursor = ToolPicker.SelectedIndex is 9 or 11?Cursors.Cross:null; Canvas.Tool = (EditorTool)ToolPicker.SelectedIndex; RefreshToolControls(); Canvas.InvalidateVisual(); Canvas.Focus();
+        Canvas.Cursor = ToolPicker.SelectedIndex is 9 or 11 or 12?Cursors.Cross:null; Canvas.Tool = (EditorTool)ToolPicker.SelectedIndex; RefreshToolControls(); Canvas.InvalidateVisual(); Canvas.Focus();
         UpdateStatus();
     }
     private void Undo(object? sender, RoutedEventArgs e) => Safe(session.Undo);
@@ -361,6 +361,7 @@ public partial class MainWindow : Window
                 case Key.C: ToolPicker.SelectedIndex = 8; break;
                 case Key.I: ToolPicker.SelectedIndex = 9; break;
                 case Key.G: ToolPicker.SelectedIndex = 10; break;
+                case Key.W: ToolPicker.SelectedIndex = 12; break;
                 case Key.U: if(shift&&ToolPicker.SelectedIndex==11)CycleShapeKind();else ToolPicker.SelectedIndex=11;break;
                 case Key.Tab when ToolPicker.SelectedIndex==11: CycleShapeKind();break;
                 case Key.X when Keyboard.Modifiers==ModifierKeys.None: SwapPalette(null,e);break;
@@ -413,6 +414,7 @@ public partial class MainWindow : Window
         await ModelSetupSmoke(Path.ChangeExtension(screenshot,".model-setup.json"));
         await SubjectSelectionSmoke(Path.ChangeExtension(screenshot,".subject-selection.json"));
         await MaskCopySmoke(Path.ChangeExtension(screenshot,".mask-copy.json"));
+        await WandSmoke(Path.ChangeExtension(screenshot,".wand.json"));
         await GroupSmokeTest(Path.ChangeExtension(screenshot, ".groups.json"));
         await AdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".adjustments.json"));
         await ExposureSmokeTest(Path.ChangeExtension(screenshot, ".exposure.json"));
@@ -458,6 +460,8 @@ public partial class MainWindow : Window
         if (IsVisible) throw new InvalidOperationException("Clean window did not close.");
     }
 }
+
+
 
 
 

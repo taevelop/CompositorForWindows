@@ -305,3 +305,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Magic Wand 원본C 매칭/native윤곽 및 고정폭ABI·allocator해제 연결. Contiguous/global/평균/alpha/구멍·타일/원본보존·취소·코어650개/기존WPF통과. 문서sample/결합·W 도구/UI·대형/배포는후속, 전체추정70/30유지.
 
 - Magic Wand 문서canvas raw-active/all-visible sample·원본mask/effect제외·좌표·빈Replace deselect/Add유지·Undo/AA 결합 연결. 코어652개/기존WPF통과. W tool/click·UI/탭설정·대형/배포후속, 전체관리추정70/30유지.
+
+- MagicWand W rail/단축키·click job·Tolerance/sample/contiguous/all-layer/AA/mode UI·TabTools 연결. WPF BeginPointer/ShiftAlt/Undo/settings복원·화면·코어652개통과. 물리입력/대형취소성능/탭전환/배포후속, 전체추정70/30유지.
