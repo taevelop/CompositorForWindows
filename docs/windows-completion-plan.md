@@ -25,7 +25,7 @@
 
 - 효과/조정: 원본 9종 비파괴 조정과 6종 공간/자동 필터의 기본 편집 경로가 연결됐다. 남음: 기존 패널 슬라이더 일관성, 원본 샘플링/보간 비교, AI 피사체 누락/흐린 경계 품질과 대형 메모리·지연.
 - 선택/변형: 사각/타원/올가미/크롭·선택 픽셀/클립보드·피사체/레이어/마스크 선택load·기본 변형은 연결됐다. Magic Wand 기본 UI도 연결됐다. 남음: Wand 복잡 윤곽/취소 성능, 왜곡·원근/이동 스냅 상세 범위, 외부 클립보드 호환, 큰 선택/윤곽 성능과 물리 입력.
-- 추가 도구: 도형·그라디언트·색상 채우기·스포이트는 연결됐다. 원본 NavigationTool 및 소스에서 확인한 미구현은 Spot Healing, Clone Stamp, Blur/Smudge/Liquify, Type, Zoom 전용 도구다. 영역 채우기 도구와 기타 확장 범위는 기존 요구를 유지하며 원본과 별도 대조한다.
+- 추가 도구: 도형·그라디언트·색상 채우기·스포이트는 연결됐다. 원본 NavigationTool 및 소스에서 확인한 미구현은 Spot Healing, Blur/Smudge/Liquify, Type, Zoom 전용 도구다. Clone Stamp의 기본 UI·worker·확장·이력·저장 경로는 연결됐으며 입력 지연·복합/실기 품질은 남아 있다. 영역 채우기 도구와 기타 확장 범위는 기존 요구를 유지하며 원본과 별도 대조한다.
 - 텍스트: 편집 가능한 텍스트 모델·글꼴·배치·저장·inline 편집 UI 미구현.
 - 작업 공간: 문서 탭·그룹·다중 선택·계층 드래그는 기본 UI가 연결됐다. 남음: 탭/환경 설정 고급 범위, 드래그 복합 입력/모니터·DPI 실기, 캔버스 Alt-drag 복제 및 추가 썸네일 동작. 마스크 Alt-drag는 연결됐지만 실제 OLE/물리 입력은 미검증이다.
 - PSD: 현재 ImageCodec는 PNG/JPEG만 허용한다. PSD 구조/지원 요소 가져오기와 미지원 안내는 미구현; PSD 저장은 범위 제외.
@@ -339,3 +339,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Raster.FromRgba tile복사취소token/Clone Capture·Preview전달연결, core668/전체빌드0경고오류·Clone단독WPF통과. 실제4K Capture5ms요청→28.5ms/OCE·원본보존(정확한phase미확정). 큰Capture는아직동기이며worker/queue/세대보호/Esc후속, fullWPF30초timeout/배포·실기잔여. 전체관리70/30유지.
 
 - Clone1MP이상sample/selection/queue worker·mouseup단일확정·ownership(session/document/generation/layer/tool)·Esc/전환/Dispose취소연결. 주입지연WPF queuedpoint/Undo/Esc/늦은결과/새transaction보호·기존Clone회귀통과, 전체빌드0경고오류. 실제4K/100MP dispatcher/진행시각·queue/실기/배포후속, fullWPF30초timeout잔여. 전체관리70/30유지.
+
+- 실제Clone4K/100MP WPF worker48입력/단일Undo/활성Esc·Dispatcher검증CLI. begin6.7/7.6ms·완료1.55/1.70초·maxgap54/48ms·Esc13/54ms(sparse64pxsource각1회). 코어668/fullWPF30초내1회통과, 반복timeout미해결유지. 새publish-clone-ui/portable1/1·배포앱4K실행/Undo/Esc통과(maxgap76ms). Clone기본경로연결·품질잔여유지, 다음SpotHealing. 전체70/30관리추정유지.

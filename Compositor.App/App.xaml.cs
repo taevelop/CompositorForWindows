@@ -8,7 +8,16 @@ public partial class App : Application
     {
         base.OnStartup(e);
         var window = new MainWindow(); MainWindow = window;
-        if(e.Args.Length==4&&e.Args[0]=="--background-smoke")
+        if(e.Args.Length==3&&e.Args[0]=="--clone-benchmark")
+        {
+            ShutdownMode=ShutdownMode.OnExplicitShutdown;window.ShowInTaskbar=false;window.Left=-10000;window.Top=-10000;
+            window.Loaded+=async(_,_)=>
+            {
+                try{await window.CloneBenchmark(e.Args[1],int.Parse(e.Args[2]));Shutdown(0);}
+                catch(Exception error){System.IO.File.WriteAllText(e.Args[1]+".error.txt",error.ToString());window.CloseSmokeOnFailure();Shutdown(1);}
+            };
+        }
+        else if(e.Args.Length==4&&e.Args[0]=="--background-smoke")
         {
             ShutdownMode=ShutdownMode.OnExplicitShutdown;window.ShowInTaskbar=false;window.Left=-10000;window.Top=-10000;
             window.Loaded+=async(_,_)=>

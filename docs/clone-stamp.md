@@ -105,3 +105,13 @@ Raster.FromRgba의선택적CancellationToken을추가해시작/각256px tile복�
 결과설치는currentCanvas/session/tool/image-target/activeLayer·originalDocument참조·transaction세대가일치할때만한다. Esc/캡처상실/도구·문서전환/Dispose는준비token을취소하고자신의transaction만복원한다. 늦은완료는새document/transaction을닫지않는다. preparing표시중에는tip source preview를생략한다. Clone selectioncoverage를UI에서중복생성하지않게했다.
 
 지연주입capture를사용한WPF검사: 준비중원본/Undo0유지·initial+queuedpoint·mouseup단일Undo, windowKeyDown Esc취소/늦은결과폐기, session.Load+새Begin generation유지 통과. 기존Clone source/Undo/cancel/tab/확장/mask/저장도동일검사에포함됐고최신Release0경고오류·단독WPF30초내exit0. standalone테스트는Canvas Loaded/Fit을먼저dispatcher idle에서완료한뒤입력을시작한다. 실제4K/100MP worker의dispatcher지연·queue길이/취소응답·진행시각/물리입력·배포본은후속이다. fullWPF30초timeout미해결유지. core668개의이전검증코드는변경하지않았다.
+
+## 실제 대형 WPF 및 배포 검증
+
+--clone-benchmark report side 전용WPF CLI추가. 실제Capture(worker override없음)·800px48pointer입력·mouseup확정/중앙alpha128·단일Undo/원본문서복원·10ms대기후IsClonePreparing확인/windowEsc취소를검사한다. Inputpriority10ms timer로dispatcher gap/ticks를표본측정한다. scene은64px source를큰canvas에배치한sparse조건이며dense이미지/복합효과를대체하지않는다.
+
+최초4K/100MP: begin5.56/5.92ms, completion1101/1365ms, maxgap60.2/54.3ms. activeEsc 재측정: begin6.66/7.59ms, completion1553/1699ms, maxgap54.1/47.8ms, Esc완료13.5/53.7ms·peak311/617MiB. 각각1회이며정확한취소phase와물리입력은미확정이다. 시작직후취소의이전0.8/0.9ms는worker전취소가능성이있어active취소로주장하지않는다.
+
+코어668/Release0경고오류 및 fullWPF 기존30초한도통과1회(마지막stage28.16초). 반복timeout원인완전해결은입증안됨. artifacts/publish-clone-ui 새배포본 생성/portable 전체WPF1/1통과(기존45초게이트), 실제배포앱4K begin8.45ms/completion1732ms/maxgap75.7ms/Esc18.1ms·peak301MiB/Undo검사통과. 기존publish-shape-ui를실행중일수있으므로새폴더로생성했다. 개발PC결과이며별도PC/Mac보류를대체하지않는다.
+
+Clone의기본UI/입력·미리보기·worker/취소·좌표/확장/Undo/저장/portable경로가연결됐다. 더낮은frame지연·dense/all-layer/효과·긴stroke·회전/선택복합·원본softbrush농도동등성·physical/DPI검증은품질잔여로유지한다. 전체전환범위를줄이지않고다음SpotHealing기본경로를진행한다.
