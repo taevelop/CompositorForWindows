@@ -309,3 +309,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - MagicWand W rail/단축키·click job·Tolerance/sample/contiguous/all-layer/AA/mode UI·TabTools 연결. WPF BeginPointer/ShiftAlt/Undo/settings복원·화면·코어652개통과. 물리입력/대형취소성능/탭전환/배포후속, 전체추정70/30유지.
 
 - Magic Wand 실제 문서 탭 전환/독립 설정·클릭 직후 취소의 문서/Undo 보존 WPF 검사, 코어652개/전체WPF 통과. 4K 재측정 Contiguous263ms/global195ms·누적각196MiB·프로세스피크553MiB(합성 타원 각1회). 배포본 갱신 및 portable1/1 통과. native 내부 중간취소/복잡 윤곽/물리입력은 잔여, 전체관리70/30 유지.
+
+- CloneStamp 원본 소스 정렬/aligned·raw/composite 불변샘플 기반 및 독립 코어검사 추가. Release경고/오류0·코어654개통과. 아직 clone스트로크/UI는 미연결. 전체WPF30초timeout2회(진행표본inner-shadow), 원인미확정 품질잔여유지. 상세 clone-stamp.md, 전체70/30 추정유지.
