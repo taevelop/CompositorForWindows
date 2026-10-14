@@ -9,3 +9,6 @@ MagicWand.Select 연산 기반은 원본 매칭과 native 경계 추적을 사�
 아직 사용자 도구 완료가 아니다. active-layer 원본 이미지를 캔버스 좌표로 렌더링하는 sample 경로(마스크/효과를 제외하는 원본 규칙), all-visible composite, 문서 선택 결합/Undo, W 도구·Tolerance slider/sample/contiguous UI, click/최신 결과/취소·대형 성능·배포 검증은 후속이다. C match/trace 내부 중간 취소는 아직 없고 호출 전후/managed 루프에서 검사한다. 실제 Mac 및 별도 Windows PC 검증은 보류한다.
 
 Release 경고/오류0·코어650개·기존WPF회귀통과. Magic Wand UI 자체는 아직 미연결이다.
+
+문서 sample/선택 결합 연결: MagicWand.Compute는 document canvas 크기 bitmap을 전용 renderer에서 만든다. SampleAllLayers는 현재 보이는 합성을, 기본은 raw active layer pixels+Transform만 읽는다(mask/effects/opacity/blend/visibility 제외). 그룹·조정·빈 source는 원본처럼 투명 sample이다. canvas 밖 클릭은 no-op, matching이 비었으면 Replace만 deselect(null), Add/Subtract는 기존선택을 유지한다. Replace native outline은 이미 canvas 좌표라 불필요한 clip을 생략하며 다른 연산은 기존Combine으로 처리한다. Antialiased 설정 및 동일선택 원본문서참조 유지, 취소를 확인한다.
+검증: 검정 mask/낮은 opacity를 가진 active raw와 all-visible composite의 sample 차이, source pixels/mask 참조·Undo, 평균 seed mismatch의 Replace/Add 동작, 밖 클릭 no-op. Release 경고/오류0·코어652개·기존WPF회귀통과. W 도구·캔버스 click/cancel·설정 UI·탭설정·대형성능/배포는 아직 후속이다.

@@ -5,6 +5,25 @@ namespace Compositor.Tests;
 public class MagicWandTests
 {
     [Fact]
+    public void ActiveRawPixelsIgnoreMaskOpacityAndCompositeReadsVisibleCanvas()
+    {
+        var doc=Document.Create(8,8);var layer=doc.Layers[0] with{Pixels=ShapeRaster.Create(new(ShapeKind.Rectangle,.2,.4,.6),4,4),Transform=new(2,2,4,4),Mask=LayerMask.Solid(4,4,0),Opacity=.25};doc=doc.Replace(layer);
+        var raw=MagicWand.Compute(doc,layer.Id,new(3,3),new(0));
+        Assert.True(SelectionGeometry.Contains(raw.Selection!,new(3,3)));Assert.False(SelectionGeometry.Contains(raw.Selection!,new(.5,.5)));
+        var composite=MagicWand.Compute(doc,layer.Id,new(3,3),new(0,SampleAllLayers:true));Assert.True(SelectionGeometry.Contains(composite.Selection!,new(.5,.5)));
+        Assert.Same(layer.Pixels,raw.Layers[0].Pixels);Assert.Same(layer.Mask,raw.Layers[0].Mask);
+        var session=new EditorSession(doc);session.Begin();session.Preview(raw);session.Commit();session.Undo();Assert.Same(doc,session.Document);
+    }
+    [Fact]
+    public void EmptyAverageResultDeselectsOnlyReplaceAndOutsideClickDoesNothing()
+    {
+        var source=Raster.FromRgba(3,1,new byte[]{0,0,0,255,100,0,0,255,200,0,0,255});var doc=Document.Create(3,1);var layer=doc.Layers[0] with{Pixels=source};doc=doc.Replace(layer) with{Selection=SelectionGeometry.Box(0,0,1,1)};
+        Assert.Null(MagicWand.Compute(doc,layer.Id,new(0,0),new(0,1)).Selection);
+        Assert.Same(doc,MagicWand.Compute(doc,layer.Id,new(0,0),new(0,1),SelectionMode.Add));
+        Assert.Same(doc,MagicWand.Compute(doc,layer.Id,new(-1,0),new()));
+    }
+
+    [Fact]
     public void AlphaToleranceAndNativeHoleOutlineMatchExactPixels()
     {
         var source=Raster.FromRgba(2,1,new byte[]{40,30,20,255,40,30,20,128});

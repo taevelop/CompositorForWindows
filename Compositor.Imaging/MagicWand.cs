@@ -9,6 +9,26 @@ public sealed record WandSettings(int Tolerance=32,int SampleRadius=0,bool Conti
 }
 public static class MagicWand
 {
+    public static Document Compute(Document document,Guid? activeLayerId,PointD point,WandSettings settings,SelectionMode mode=SelectionMode.Replace,bool antialiased=true,CancellationToken cancellation=default)
+    {
+        document.Validate();settings.Validate();if(!Enum.IsDefined(mode))throw new ArgumentOutOfRangeException(nameof(mode));cancellation.ThrowIfCancellationRequested();
+        if(!double.IsFinite(point.X)||!double.IsFinite(point.Y)||point.X<0||point.Y<0||point.X>=document.Width||point.Y>=document.Height)return document;
+        var sample=document;
+        if(!settings.SampleAllLayers)
+        {
+            var layer=document.Layers.FirstOrDefault(l=>l.Id==activeLayerId);
+            // Original samples raw active pixels with its displayed transform, ignoring mask/effects/opacity/visibility.
+            sample=document with{Layers=layer is {IsGroup:false,IsAdjustment:false}? [new Layer(layer.Id,layer.Name,layer.Pixels,layer.Transform)]:[]};
+        }
+        using var bitmap=new SKBitmap(CanvasRenderer.Info(document.Width,document.Height));using var renderer=new CanvasRenderer();
+        using(var canvas=new SKCanvas(bitmap)){canvas.Clear(SKColors.Transparent);renderer.DrawCancellable(canvas,sample,cancellation);canvas.Flush();}
+        var pixels=Raster.FromRgba(document.Width,document.Height,bitmap.GetPixelSpan());
+        var traced=Select(pixels,point,settings,cancellation) with{Antialiased=antialiased};
+        DocumentSelection? selection;
+        if(traced.IsEmpty)selection=mode==SelectionMode.Replace?null:document.Selection;
+        else selection=mode==SelectionMode.Replace?traced:SelectionGeometry.Combine(document.Selection,traced,mode,document.Width,document.Height);
+        cancellation.ThrowIfCancellationRequested();return selection==document.Selection?document:document with{Selection=selection};
+    }
     public static DocumentSelection Select(Raster source,PointD point,WandSettings settings,CancellationToken cancellation=default)
     {
         settings.Validate();cancellation.ThrowIfCancellationRequested();

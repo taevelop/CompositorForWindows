@@ -303,3 +303,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - 2026-10-14 최신 배포본 갱신(선택load/썸네일/마스크복사 포함), portable1/1 및 배포앱실제모델 배경/피사체메뉴·Undo/저장검사통과. 작업표 현재잔여를 원본NavigationTool/파일·Windowsenum과 대조해 갱신: Wand/Healing/Clone/Blur-Smudge-Liquify/Type/Zoom 도구, 텍스트·PSD·RAW 등 미구현을 명시. 다음MagicWand, 기존70/30는 가중치재산정없는관리추정임을유지.
 
 - Magic Wand 원본C 매칭/native윤곽 및 고정폭ABI·allocator해제 연결. Contiguous/global/평균/alpha/구멍·타일/원본보존·취소·코어650개/기존WPF통과. 문서sample/결합·W 도구/UI·대형/배포는후속, 전체추정70/30유지.
+
+- Magic Wand 문서canvas raw-active/all-visible sample·원본mask/effect제외·좌표·빈Replace deselect/Add유지·Undo/AA 결합 연결. 코어652개/기존WPF통과. W tool/click·UI/탭설정·대형/배포후속, 전체관리추정70/30유지.
