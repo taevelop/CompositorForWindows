@@ -13,7 +13,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
     private EditorSession session=null!;
-    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){clonePointer=null;ClearClonePreview();ShowFilterPreview(null);CancelShapePreparation();if(shapeDrag is not null)EndShape(false);CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
+    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){CancelClonePreparation();clonePointer=null;ClearClonePreview();ShowFilterPreview(null);CancelShapePreparation();if(shapeDrag is not null)EndShape(false);CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
     public Action<PointD,ModifierKeys>? WandClick {get;set;}
     public CloneSource CloneSource { get; set; } = new();
     public Func<CloneSettings> ReadClone { get; set; } = () => new();
@@ -22,7 +22,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     public Action<string>? ReportError { get; set; }
     public Action? ViewportChanged { get; set; }
     public double Zoom { get; private set; } = 1;
-    public bool HasInteraction => IsShapePreparing || shapeDrag is not null || transformDrag is not null || cropDrag is not null || pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
+    public bool HasInteraction => IsClonePreparing || IsShapePreparing || shapeDrag is not null || transformDrag is not null || cropDrag is not null || pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
     private double panX = 30, panY = 30;
     private Point? panStart;
     private Point panOrigin;
@@ -204,6 +204,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void CancelInteraction()
     {
+        CancelClonePreparation();
         CancelShapePreparation();
         if(shapeDrag is not null)EndShape(false);
         sampleRequest++;
@@ -262,11 +263,13 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         if (Tool is EditorTool.Brush or EditorTool.Eraser or EditorTool.CloneStamp)
         {
             var settings = ReadBrush() with { Erase = Tool == EditorTool.Eraser };
-            var selection = Session.Document.Selection is { } selected ? SelectionCoverage.Create(selected, Session.Document.Width, Session.Document.Height) : null;
+            var selection = Tool != EditorTool.CloneStamp && Session.Document.Selection is { } selected ? SelectionCoverage.Create(selected, Session.Document.Width, Session.Document.Height) : null;
             if (Tool == EditorTool.CloneStamp)
             {
                 var clone = ReadClone();
                 var offset = CloneSource.OffsetAt(point, clone.Aligned) ?? throw new InvalidOperationException("Alt-click a clone source first.");
+                if ((long)Session.Document.Width * Session.Document.Height >= 1_000_000 || CloneCaptureOverride is not null)
+                { CloneSource.Begin(point, clone.Aligned); BeginClonePreparation(layer, settings, clone, offset, point); return; }
                 var sample = CloneStamp.Capture(Session.Document, layer.Id, clone);
                 cloneStroke = new(Session.Document, layer.Id, settings, sample, offset);
                 CloneSource.Begin(point, clone.Aligned);
@@ -279,6 +282,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     public void MovePointer(PointD point, ModifierKeys? modifiers = null)
     {
         if (Tool == EditorTool.CloneStamp) clonePointer = point;
+        if (clonePreparation is { } pending) { if (!pending.Ended) pending.Points.Add(point); return; }
         if(shapeDrag is not null){MoveShape(point,modifiers??Keyboard.Modifiers);return;}
         if (transformDrag is not null) { MoveTransformPointer(point, modifiers ?? Keyboard.Modifiers); return; }
         if (cropDrag is not null) { MoveCrop(point, modifiers ?? Keyboard.Modifiers); return; }
@@ -344,6 +348,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void EndPointer(bool commit)
     {
+        if (clonePreparation is { } pending) { if (commit) { pending.Ended = true; gestureButton = null; } else CancelInteraction(); return; }
         if(shapeDrag is not null){EndShape(commit);return;}
         StopSelectionAutoScroll();
         if (transformDrag is not null)
@@ -413,7 +418,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         if(!ready)
         {
             DrawShape(c);DrawGradient(c);DrawClone(c);c.Restore();c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);
-            DrawPreparation(c);DrawShapeStatus(c);DrawGradientStatus(c);c.Restore();return;
+            DrawPreparation(c);DrawShapeStatus(c);DrawGradientStatus(c);DrawClonePreparation(c);c.Restore();return;
         }
         if (Session.ActiveLayer is { } layer && Tool == EditorTool.Move && !IsTransforming)
         {
@@ -452,8 +457,8 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         DrawCrop(c);
         DrawTransform(c);
         c.Restore();
-        c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);DrawSampleRing(c);DrawShapeStatus(c);DrawGradientStatus(c);c.Restore();
+        c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);DrawSampleRing(c);DrawShapeStatus(c);DrawGradientStatus(c);DrawClonePreparation(c);c.Restore();
     }
-    public void Dispose() { ClearClonePreview();canvasDisposed=true;CancelShapePreparation();CancelGradient();CancelRenderPreparation();CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
+    public void Dispose() { CancelClonePreparation();ClearClonePreview();canvasDisposed=true;CancelShapePreparation();CancelGradient();CancelRenderPreparation();CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
 }
 

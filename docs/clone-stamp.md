@@ -97,3 +97,11 @@ Raster.FromRgba의선택적CancellationToken을추가해시작/각256px tile복�
 사전취소/입력buffer불변·257×263tile경계출력·완료Raster의외부입력변경격리 검사포함해core668개통과. 전체Release0경고오류·Clone단독WPF Undo/cancel/tab/확장/mask/저장통과. --clone-capture-cancel report [side=4000]은실제Capture에5ms후취소요청을보내28.5ms/OCE및빈source불변을확인했다. 정확한취소phase는bitmap준비/render/tilecopy중어디인지증명하지않으므로copy중취소또는WPF Esc응답으로대체해주장하지 않는다.
 
 현재캔버스의큰sample Capture는아직동기호출이다. background worker/입력queue·문서/transaction세대보호·진행표시/Esc/캡처상실취소연결·실기·배포갱신이후속이며UI응답완료로표시하지않는다. fullWPF30초timeout별도유지.
+
+## 큰 샘플 준비 worker 연결
+
+1MP이상canvas는sample Capture와CloneStroke/selectioncoverage초기화를Task.Run에서준비한다. 시작session/document/transaction generation·layer/settings/offset을고정하고serialgate로capture를제한한다. 준비중MovePointer를UI queue에보관하고각batch를worker에서순서대로Append한다. mouseup은Ended표시만하며준비결과설치후Complete/단일Undo확정한다. 이후live입력은기존CloneStroke경로다.
+
+결과설치는currentCanvas/session/tool/image-target/activeLayer·originalDocument참조·transaction세대가일치할때만한다. Esc/캡처상실/도구·문서전환/Dispose는준비token을취소하고자신의transaction만복원한다. 늦은완료는새document/transaction을닫지않는다. preparing표시중에는tip source preview를생략한다. Clone selectioncoverage를UI에서중복생성하지않게했다.
+
+지연주입capture를사용한WPF검사: 준비중원본/Undo0유지·initial+queuedpoint·mouseup단일Undo, windowKeyDown Esc취소/늦은결과폐기, session.Load+새Begin generation유지 통과. 기존Clone source/Undo/cancel/tab/확장/mask/저장도동일검사에포함됐고최신Release0경고오류·단독WPF30초내exit0. standalone테스트는Canvas Loaded/Fit을먼저dispatcher idle에서완료한뒤입력을시작한다. 실제4K/100MP worker의dispatcher지연·queue길이/취소응답·진행시각/물리입력·배포본은후속이다. fullWPF30초timeout미해결유지. core668개의이전검증코드는변경하지않았다.

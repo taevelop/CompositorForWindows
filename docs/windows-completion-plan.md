@@ -337,3 +337,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Clonetile정렬frame변경시coverage/Output이동으로points전체재생생략. 원본무변경·partial tilepadding·halfopacity 좌표반올림안정화·코어667/단독WPF통과. 800px48입력912ms/최대163ms/managed97.3MiB; 이전PNG912pixel최대1LSB차이는수학적halfopacity수정이며bitexact동일주장안함. worker/capture·복합/회전입력성능·배포/물리/fullWPF잔여, 전체70/30관리추정유지.
 
 - Raster.FromRgba tile복사취소token/Clone Capture·Preview전달연결, core668/전체빌드0경고오류·Clone단독WPF통과. 실제4K Capture5ms요청→28.5ms/OCE·원본보존(정확한phase미확정). 큰Capture는아직동기이며worker/queue/세대보호/Esc후속, fullWPF30초timeout/배포·실기잔여. 전체관리70/30유지.
+
+- Clone1MP이상sample/selection/queue worker·mouseup단일확정·ownership(session/document/generation/layer/tool)·Esc/전환/Dispose취소연결. 주입지연WPF queuedpoint/Undo/Esc/늦은결과/새transaction보호·기존Clone회귀통과, 전체빌드0경고오류. 실제4K/100MP dispatcher/진행시각·queue/실기/배포후속, fullWPF30초timeout잔여. 전체관리70/30유지.

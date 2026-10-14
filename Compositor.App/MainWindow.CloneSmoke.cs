@@ -7,6 +7,7 @@ public partial class MainWindow
 {
     private async Task CloneSmoke(string? reportPath = null)
     {
+        await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         static void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
         var saved = session.Document; var active = session.ActiveLayerId; var tools = CaptureTabTools();
         var first = workspace.Current;
@@ -50,9 +51,28 @@ public partial class MainWindow
             Check(Canvas.CloneSource.Source is null, "New tab inherited clone source.");
             await SelectTabAsync(first.Id); Check(ReferenceEquals(source, Canvas.CloneSource) && ToolPicker.SelectedIndex == 13, "Tab lost clone state.");
             Check(workspace.Close(second.Id, true), "Clone fixture did not close."); tabViews.Remove(second.Id);
+            session.Load(small);BrushSize.Text = "1";BrushHardness.Text = "100";Canvas.CloneSource.Set(new(.5, .5));
+            var entered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Canvas.CloneCaptureOverride = (document, id, settings, token) => { entered.TrySetResult(true);release.Task.GetAwaiter().GetResult();return CloneStamp.Capture(document, id, settings, token); };
+            Canvas.BeginPointer(new(4.5, .5), ModifierKeys.None);await entered.Task;
+            Canvas.MovePointer(new(5.5, .5));Canvas.EndPointer(true);
+            Check(Canvas.IsClonePreparing && session.InTransaction && session.UndoCount == 0 && ReferenceEquals(session.Document, small), "Preparing clone published an early edit.");
+            release.TrySetResult(true);Check(await Canvas.CloneCompletion, "Queued clone did not finish.");
+            Check(session.UndoCount == 1 && !session.InTransaction && session.ActiveLayer!.Pixels.ToRgba()[16] == 100, "Queued clone lost initial point or single Undo.");
+            session.Load(small);entered = new(TaskCreationOptions.RunContinuationsAsynchronously);release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            Canvas.BeginPointer(new(4.5, .5), ModifierKeys.None);await entered.Task;
+            var escape = new KeyEventArgs(Keyboard.PrimaryDevice, System.Windows.PresentationSource.FromVisual(this), Environment.TickCount, Key.Escape) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
+            WindowKeyDown(this, escape);Check(escape.Handled, "Clone preparation Esc was not handled.");release.TrySetResult(true);
+            Check(!await Canvas.CloneCompletion && ReferenceEquals(session.Document, small) && !session.InTransaction && !session.CanUndo, "Cancelled preparation published a late edit.");
+            session.Load(small);entered = new(TaskCreationOptions.RunContinuationsAsynchronously);release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            Canvas.BeginPointer(new(4.5, .5), ModifierKeys.None);await entered.Task;session.Load(small);session.Begin();long generation = session.TransactionGeneration;release.TrySetResult(true);
+            Check(!await Canvas.CloneCompletion && session.InTransaction && session.TransactionGeneration == generation, "Stale clone closed a newer transaction.");session.Cancel();
+            Canvas.CloneCaptureOverride = null;
         }
         finally
         {
+            Canvas.CloneCaptureOverride = null;Canvas.CancelInteraction();
             SelectTab(first.Id); session.Load(saved, active); RestoreTabTools(tools); Refresh();
             var root = System.IO.Path.GetFullPath(directory);
             var parent = System.IO.Path.GetFullPath(System.IO.Path.GetTempPath()).TrimEnd(System.IO.Path.DirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar;
@@ -64,7 +84,7 @@ public partial class MainWindow
     internal async Task CloneToolSmoke(string reportPath)
     {
         await CloneSmoke(reportPath);
-        System.IO.File.WriteAllText(reportPath, System.Text.Json.JsonSerializer.Serialize(new { passed = true, checks = new[] { "Alt-source without Undo", "source-over clone click", "source indicator offset", "Undo/Redo", "cancel", "project roundtrip", "PNG/composite match", "independent tab sources" }, note = "Injected WPF pointer path; physical input, tip preview and raster expansion remain separate." }));
+        System.IO.File.WriteAllText(reportPath, System.Text.Json.JsonSerializer.Serialize(new { passed = true, checks = new[] { "Alt-source without Undo", "source-over clone click", "source indicator offset", "Undo/Redo", "cancel", "project roundtrip", "PNG/composite match", "independent tab sources", "expansion and linked mask", "worker queued points and single Undo", "Esc discards late preparation", "new transaction ownership" }, note = "Injected WPF pointer/key and gated capture path; physical input and real large-document responsiveness remain separate." }));
         foreach (var tab in workspace.Documents) tab.Session.MarkSaved(); Close();
     }
 }
