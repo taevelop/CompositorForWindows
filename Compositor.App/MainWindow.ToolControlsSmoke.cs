@@ -33,6 +33,9 @@ public partial class MainWindow
             captureTimes.Add(new { suffix, renderMs, encodeMs = clock.Elapsed.TotalMilliseconds - renderMs });
         }
         UpdateLayout();
+        Check(ToolRailScroll.ComputedVerticalScrollBarVisibility == Visibility.Collapsed && ToolRailScroll.ScrollableHeight <= .1,
+            "Default startup height shows an unnecessary tool rail scrollbar.");
+        Capture(this, ".startup.png");
         var titleOrigin = ToolTitle.TranslatePoint(new Point(), this);
         double canvasTop = Canvas.TranslatePoint(new Point(), this).Y;
         foreach (int tool in new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 })
@@ -162,6 +165,12 @@ public partial class MainWindow
         double width = Width, height = Height; Width = 1000; Height = 650; LayerInspector.IsExpanded = true; UpdateLayout();
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         UpdateLayout();
+        Check(ToolRailScroll.ComputedVerticalScrollBarVisibility == Visibility.Visible && ToolRailScroll.ScrollableHeight > 0,
+            "Compact window cannot scroll overflowing tools.");
+        ToolRailScroll.ScrollToBottom(); UpdateLayout();
+        Check(ColorButton.TranslatePoint(new Point(0, ColorButton.ActualHeight), ToolRailScroll).Y <= ToolRailScroll.ActualHeight + 1,
+            "Compact rail cannot reach its palette.");
+        ToolRailScroll.ScrollToTop();
         Check(Layers.ActualHeight >= 100, "Layer list disappeared behind the inspector.");
         Check(LayerInspector.TranslatePoint(new Point(0, LayerInspector.ActualHeight), this).Y <= Canvas.TranslatePoint(new Point(0, Canvas.ActualHeight), this).Y + 1, "Inspector exceeds the canvas area.");
         Check(ToolPicker.TranslatePoint(new Point(0, 0), this).X < Canvas.TranslatePoint(new Point(0, 0), this).X, "Tool rail is not left of canvas.");
@@ -171,6 +180,8 @@ public partial class MainWindow
         using (var output = File.Create(Path.ChangeExtension(reportPath, ".compact.png"))) compactEncoder.Save(output);
         Check(BrushOptions.ActualWidth <= Editor.ActualWidth, "Toolbar overflows minimum window width.");
         LayerInspector.IsExpanded = false; Width = width; Height = height; UpdateLayout(); Canvas.Fit();
+        Check(ToolRailScroll.ComputedVerticalScrollBarVisibility == Visibility.Collapsed,
+            "Tool rail scrollbar remains after restoring normal window height.");
         var originalBlend = LayerBlend.SelectedItem; LayerBlend.IsDropDownOpen = true;
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         Check(LayerBlend.Template.FindName("PART_Popup", LayerBlend) is System.Windows.Controls.Primitives.Popup { IsOpen: true }, "Blend popup did not open.");
@@ -182,7 +193,7 @@ public partial class MainWindow
         Check(((SolidColorBrush)FindResource("Accent")).Color == Color.FromRgb(108, 154, 224), "Blue accent resource changed.");
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         File.WriteAllText(reportPath, JsonSerializer.Serialize(new { timeUtc = DateTimeOffset.UtcNow, captureTimes,
-            checks = new[] { "stable title and canvas across four tools", "toolbar and rail open actual palette", "all five dark menu popups", "disabled menu contrast", "four direct tool selectors", "contextual options", "slider/number synchronization", "invalid draft and bounds", "settings preserve document/history", "picker cancel and apply", "hex validation", "hue and keyboard color field", "RGB/HSV round trip", "mask presets", "minimum width layout", "RGB validation", "vertical tool rail", "compact options", "visible layer list with expanded inspector", "dark blend popup", "layer opacity draft/apply/undo", "blue theme resource" },
+            checks = new[] { "startup rail without scrollbar", "compact rail scroll reaches palette", "restored height removes scrollbar", "stable title and canvas across thirteen tools", "toolbar and rail open actual palette", "all dark menu popups", "disabled menu contrast", "direct tool selectors", "contextual options", "slider/number synchronization", "invalid draft and bounds", "settings preserve document/history", "picker cancel and apply", "hex validation", "hue and keyboard color field", "RGB/HSV round trip", "mask presets", "minimum width layout", "RGB validation", "vertical tool rail", "compact options", "visible layer list with expanded inspector", "dark blend popup", "layer opacity draft/apply/undo", "blue theme resource" },
             note = "Hidden WPF control checks; a changed toolbar still needs a user usability check." }, new JsonSerializerOptions { WriteIndented = true }));
     }
 

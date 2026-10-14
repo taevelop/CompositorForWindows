@@ -15,3 +15,11 @@ ToolControls는 이전 효과 검사의 최종 문서를 모든 도구/메뉴 sc
 --tools-smoke report CLI를 추가했다. 기존 full smoke의 ToolControls 전체검사를 동일하게 실행하고, 진단 fixture만 MarkSaved/Close하여 숨겨진 저장확인을 방지한다. 초기 진단은 보고서 작성 후 수정fixture 저장확인 때문에 timeout됐으며 정상 사용자 종료 동작을 변경한 것은 아니다.
 
 수정 후 단독프로세스2965ms/exit0. 35개 캡처 render268ms+PNG encode211ms로 캡처만의 주된 병목은 입증되지 않았다. 각 capture renderMs/encodeMs를 보고서에 기록한다. core657개통과/빌드0경고·오류. 이후 full smoke는 기존30초 제한 내 exit0: ToolControls2057ms, 누적28368ms에 마지막 단계 완료. 이전 timeout 대비 같은 조건의 여러단계 시간이 달라졌으므로 완전한 원인해결/안정성 개선으로 주장하지 않는다. 단독 저장확인 문제와 full smoke 누적실행시간을 구분한다. 반복/상세 rendering/modal 대기 진단은 품질잔여다.
+
+## 시작 시 도구 막대 스크롤 수정
+
+ToolPicker의 기본 ListBox 내부ScrollViewer와 바깥 도구rail ScrollViewer가 중첩돼 있었다. 도구ItemsPresenter/비가상화StackPanel을 명시해 스크롤소유자를 ToolRailScroll 하나로 만들었다. 13개 도구와 팔레트가 기본860px 높이에 들어가도록 도구높이34·세로margin2로 조정했다. 작은창의 실제overflow에는 Auto스크롤을 유지한다.
+
+--tools-smoke에서 최초layout(창 크기변경전) scrollbarCollapsed/ScrollableHeight0, 최소1000×650에서 scrollbarVisible 및 palette도달, 원래높이복원후Collapsed를 검증했다. startup screenshot도 시각확인했다. 코어657개통과. fullWPF30초timeout재발(마지막toolstage시작28.59초)과는구분한다.
+
+수정배포본 artifacts/publish-shape-ui 갱신, portable fullWPF45초기존한도1/1통과. 30초개발회귀timeout문제는미해결이며 portable통과로대체하지 않는다.

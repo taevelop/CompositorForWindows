@@ -171,9 +171,11 @@
    </Border>
    <Grid Grid.Row="3">
     <Grid.ColumnDefinitions><ColumnDefinition Width="56"/><ColumnDefinition Width="*"/><ColumnDefinition Width="5"/><ColumnDefinition Width="280" MinWidth="245" MaxWidth="420"/></Grid.ColumnDefinitions>
-    <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Divider}" BorderThickness="0,0,1,0"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="0,8">
+    <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Divider}" BorderThickness="0,0,1,0"><ScrollViewer x:Name="ToolRailScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="0,8">
      <ListBox x:Name="ToolPicker" SelectedIndex="1" SelectionChanged="ToolChanged" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Editing tool rail">
-      <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource RailToolItem}"/></ListBox.ItemContainerStyle>
+      <ListBox.Template><ControlTemplate TargetType="ListBox"><ItemsPresenter/></ControlTemplate></ListBox.Template>
+      <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate></ListBox.ItemsPanel>
+      <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource RailToolItem}"><Setter Property="Height" Value="34"/><Setter Property="Margin" Value="3,2"/><Setter Property="Padding" Value="6"/></Style></ListBox.ItemContainerStyle>
 <ListBoxItem ToolTip="Move (V)" AutomationProperties.Name="Move (V)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M12,2 L12,22 M2,12 L22,12 M8,6 L12,2 16,6 M8,18 L12,22 16,18 M6,8 L2,12 6,16 M18,8 L22,12 18,16"/></ListBoxItem>
 <ListBoxItem ToolTip="Brush (B)" AutomationProperties.Name="Brush (B)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M8,15 L17,3 Q19,1 21,3 Q23,5 21,7 L12,17 Z M8,15 Q3,14 4,19 Q4,21 2,22 Q10,23 12,17"/></ListBoxItem>
 <ListBoxItem ToolTip="Eraser (E)" AutomationProperties.Name="Eraser (E)"><Path Width="21" Height="21" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M3,14 L13,3 Q14,2 15,3 L22,10 10,22 5,22 1,18 Z M7,10 L16,18 M10,22 L23,22"/></ListBoxItem>
