@@ -29,7 +29,7 @@ public sealed class U2NetPredictor : IDisposable
     {
         cancellation.ThrowIfCancellationRequested();
         using var bitmap = new SKBitmap(CanvasRenderer.Info(source.Width,source.Height));
-        source.ToRgba().CopyTo(bitmap.GetPixelSpan());
+        RasterBuffer.CopyTo(source,bitmap.GetPixelSpan(),cancellation);
         using var scaled = new SKBitmap(CanvasRenderer.Info(320,320));
         using(var canvas = new SKCanvas(scaled))
         { canvas.Clear(SKColors.Transparent);canvas.DrawBitmap(bitmap,new SKRect(0,0,320,320),new SKSamplingOptions(SKCubicResampler.CatmullRom)); }

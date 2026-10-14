@@ -52,3 +52,6 @@ Release 경고/오류 0, 코어 634개 및 일반 WPF 회귀 통과.
 --subject-cancel 실제 정규 모델 검사: 세션 생성 후 320px 타원 Predict에 50ms 후 취소 요청, 약 60.1ms에 OperationCanceledException 관측·원본 바이트 보존. 준비/ORT/후처리 중 정확한 취소 단계와 모든 대형 작업 지연은 아직 미검증이다. Release 경고/오류 0, 코어 634개 및 확장 WPF 회귀 통과. 대형 피크/모델 설치·배포·피사체 품질 및 Mac/별도 PC 보류는 유지한다.
 
 대형 분리 프로세스 검증: --background-scale model report side, 실제 u2netp/합성 타원/Advanced 12·25·0에서 추론 1회·원본 Raster 참조/최종 mask 크기·문서 Validate를 검사한다. OS PeakWorkingSet은 시작/원본 생성과 preview/full 문서 보존을 포함한 프로세스 전체 high-water다. 4K(4000²) 1회: 추론 783ms, 모델 로드/추론 포함 미리보기1852ms, 최종1149ms, 누적 managed1583.7MiB, 피크1082.6MiB. 100MP(10000²) 1회: 추론3415ms, 미리보기8145ms, 최종7184ms, 누적9525.3MiB, 피크6228.2MiB. 당시 가용 약33GiB/설치64GiB 개발 PC에서 완료됐다. 전체 해상도 100MP 실행 증거지만 자연 이미지/복합 문서·WPF 입력/지속 안정성/별도 PC 통과가 아니다. 6GiB 이상 피크는 해결된 최적화로 처리하지 않으며 전체 gray/RGBA/문서 복사/마스크 처리 개선이 잔여다. 모델 설치·배포 및 피사체 품질도 잔여다.
+
+중복 RGBA 배열 제거: RasterBuffer.CopyTo는 기존 packed 비트맵 span을 초기화하고 불변 타일을 직접 복사한다. 부분 타일과 누락 타일·투명 영역·토큰 취소를 검사하며 U2Net 입력 및 MatteRefinement Gray8 입력에서 ToRgba 중간 byte[]를 제거했다. 코어 635개 및 전체 WPF 회귀, Release 경고/오류 0.
+동일 분리 프로세스 1회 재측정: 4K 누적 managed1278.5MiB/피크1023.3MiB/최종1254ms(이전1583.7/1082.6/1149); 100MP 누적7618.0MiB/피크5965.6MiB/최종6701ms(이전9525.3/6228.2/7184). 추론1회·원본참조/마스크크기·문서 검사 통과. 큰 누적 할당을 제거했지만 피크는 여전히 약5.83GiB이며 광범위 안정성이나 속도 개선 완료로 처리하지 않는다. gray/float/최종 RGBA·마스크 복제는 여전히 남는다. 모델 설치·배포·품질 및 Mac/별도 PC 보류 유지.

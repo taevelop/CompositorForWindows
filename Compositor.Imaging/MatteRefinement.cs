@@ -58,7 +58,7 @@ public static class MatteRefinement
     }
     private static SKBitmap Levels(Raster raster,int width,int height,CancellationToken cancellation)
     {
-        cancellation.ThrowIfCancellationRequested();using var input=new SKBitmap(CanvasRenderer.Info(raster.Width,raster.Height));raster.ToRgba().CopyTo(input.GetPixelSpan());
+        cancellation.ThrowIfCancellationRequested();using var input=new SKBitmap(CanvasRenderer.Info(raster.Width,raster.Height));RasterBuffer.CopyTo(raster,input.GetPixelSpan(),cancellation);
         var output=new SKBitmap(new SKImageInfo(width,height,SKColorType.Gray8,SKAlphaType.Opaque));
         try{using var canvas=new SKCanvas(output);canvas.Clear(SKColors.Black);canvas.DrawBitmap(input,new SKRect(0,0,width,height),new SKSamplingOptions(SKCubicResampler.CatmullRom));cancellation.ThrowIfCancellationRequested();return output;}
         catch{output.Dispose();throw;}
