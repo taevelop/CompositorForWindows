@@ -410,6 +410,7 @@ public partial class MainWindow : Window
         await MaskSmokeTest(Path.ChangeExtension(screenshot, ".masks.json"));
         await ShapeSmokeTest(Path.ChangeExtension(screenshot,".shapes.json"));
         await FilterSmokeTest(Path.ChangeExtension(screenshot,".filters.json"));
+        await ModelSetupSmoke(Path.ChangeExtension(screenshot,".model-setup.json"));
         await GroupSmokeTest(Path.ChangeExtension(screenshot, ".groups.json"));
         await AdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".adjustments.json"));
         await ExposureSmokeTest(Path.ChangeExtension(screenshot, ".exposure.json"));
@@ -455,4 +456,5 @@ public partial class MainWindow : Window
         if (IsVisible) throw new InvalidOperationException("Clean window did not close.");
     }
 }
+
 
