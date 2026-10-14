@@ -65,3 +65,11 @@ EditorCanvas Clone경로에연결하고cancel/end에서worker상태를해제한�
 원본 paintSnapshot은 sourceRect를항상유지하고새coverage alpha영역과union한다. CloneStroke.Complete도원본사각형을유지하고확장margin의tile만native AlphaBounds로스캔해crop한다. 원본내부tile은스캔하지않고 RasterReframe으로transform·linkedmask/독립placement를보존한다. 확정결과검증/Undo예산검사후게시하며중복Complete는동일참조를반환하고이후Append는거부한다. 취소는정리하지않고원본문서로복원한다.
 
 Core663개통과: 11×11초안을10×10으로정리하면서원본rect/white mask유지, 전후16×16canvas모든채널일치·원본/완료불변 검사. WPF단독Clone30초내exit0: 큰softtip draft7px→mouseup확정5px·mask·Undo/Redo·저장재열기검사. 최신빌드0경고오류. fullWPF30초timeout및Mac/별도PC보류는여전히별도다. 긴확장stroke재생비용·큰samplecapture/worker·복합sample·물리입력·배포후속이다.
+
+## 확장 작업 경계 예약 및 측정
+
+필요frame을 먼저검증한후256px tile 경계까지여유를예약한다. 예약frame이크기/image/mask예산을넘으면검증된정확frame으로fallback한다. 각pointerpixel마다reframe/replay하지않고예약경계내에서stroke를이어쓴다. 최종Complete는예약투명여백을제거하므로확정/출력geometry를유지한다. 30000px 한계test에서좌표변환극소오차가ceil30001을만드는문제를발견해1e-7px 이내정수좌표를정규화했다.
+
+--clone-stroke report [count=48] [diameter=40] 측정CLI추가. 4K·40px·48입력기준 최초비교: growth48→2, input830→172ms, 최대47→42ms, complete2.90→0.80ms, managed737→39MiB, processpeak425→332MiB. PNG SHA256 C8D43E3E02C2B120F92769A16B80337DF58603CB92E477494A3E4727C6FAAF0C 동일. 최신정규화후40px재측정268ms/최대116ms로변동도기록하고PNG동일성재확인했다. source원본bytes보존·result.Validate를검사한다. 할당은PNG출력을포함하며peak는source준비포함이다.
+
+800px·48입력추가측정은growth3·총2523ms·최대910ms·complete7.14ms·managed417MiB·peak394MiB. 최대입력지연은높아미완료성능항목이다. 모두합성core각1회이며WPF프레임/물리입력/자연texture증거가아니다. 코어664개/빌드0경고오류·최신Clone단독WPF통과. fullWPF30초timeout별도유지. 큰coverage재합성/경계replay·sourcecaptureworker/취소·복합sample·배포검증이남는다.

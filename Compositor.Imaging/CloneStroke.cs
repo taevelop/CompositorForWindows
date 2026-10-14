@@ -43,7 +43,13 @@ public sealed class CloneStroke
         if (x1 > x0 && y1 > y0)
         {
             PointD[] corners = [new(x0, y0), new(x1, y0), new(x0, y1), new(x1, y1)];
-            var local = corners.Select(p => source.Transform.ToPixels(p, source.Pixels.Width, source.Pixels.Height)).ToArray();
+            static double Snap(double value)
+            {
+                double whole = Math.Round(value);
+                return Math.Abs(value - whole) < 1e-7 ? whole : value;
+            }
+            var local = corners.Select(p => source.Transform.ToPixels(p, source.Pixels.Width, source.Pixels.Height))
+                .Select(p => new PointD(Snap(p.X), Snap(p.Y))).ToArray();
             int left = checked((int)Math.Floor(Math.Min(frame.Left, local.Min(p => p.X))));
             int top = checked((int)Math.Floor(Math.Min(frame.Top, local.Min(p => p.Y))));
             int right = checked((int)Math.Ceiling(Math.Max(frame.Left + frame.Width, local.Max(p => p.X))));
@@ -52,6 +58,14 @@ public sealed class CloneStroke
             if (next != frame)
             {
                 CheckBudget(next);
+                // Reserve complete tiles to avoid reframing/replaying for every pointer
+                // pixel. If headroom would exceed a budget, use the exact required frame.
+                int reservedLeft = (int)(Math.Floor(next.Left / 256d) * 256), reservedTop = (int)(Math.Floor(next.Top / 256d) * 256);
+                var reserved = new RasterFrame(reservedLeft, reservedTop,
+                    checked((int)(Math.Ceiling((next.Left + next.Width) / 256d) * 256) - reservedLeft),
+                    checked((int)(Math.Ceiling((next.Top + next.Height) / 256d) * 256) - reservedTop));
+                try { CheckBudget(reserved); next = reserved; }
+                catch (InvalidDataException) { /* Exact frame was already checked above. */ }
                 var grown = RasterReframe.Apply(source, next);
                 var replay = MakeStroke(grown);
                 foreach (var painted in points) replay.Append(painted);

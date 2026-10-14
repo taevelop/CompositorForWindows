@@ -329,3 +329,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - CloneStroke canvasclip/frame확장·mask흰여백/독립pin·시작source기반coverage재생/Undo예산·WPF연결. 코어662개·단독WPF 작은layer밖clone/Undo/저장통과. 회전Flip/원본위치·투명무변경·예산실패검사. 연속확장성능/alpha trim/큰capture/복합선택·배포/물리후속, 전체70/30추정유지.
 
 - Clone확정 sourceRect유지+새margin alpha스캔·transform/mask좌표 crop 연결. 코어663개·전후canvas전채널동일 및WPF draft7→commit5px·Undo/저장통과. 긴확장성능/큰capture/복합/물리/배포후속, fullWPF30초timeout잔여. 전체관리70/30유지.
+
+- Clone256px경계예약/정확frame예산fallback·좌표극소오차정규화, 코어664/단독WPF통과. 40px48입력growth48→2/input830→172ms/managed737→39MiB·PNG동일, 재측정268ms변동기록. 800px총2.52초/최대910ms성능미완료. 큰coverage/replay/sourceworker·복합·배포후속, 전체70/30관리추정유지.

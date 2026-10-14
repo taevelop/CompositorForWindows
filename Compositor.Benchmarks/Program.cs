@@ -5,6 +5,8 @@ using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 
+if(args.Length>0&&args[0]=="--clone-stroke"){CloneStrokeBenchmark.Run(args[1],args.Length>2?int.Parse(args[2]):48,args.Length>3?int.Parse(args[3]):40);return;}
+
 if(args.Length>0&&args[0]=="--clone-preview"){ClonePreviewBenchmark.Run(args[1],args.Length>2?int.Parse(args[2]):4000);return;}
 
 if(args.Length>0&&args[0]=="--wand"){WandBenchmark.Run(args[1],args.Length>2?int.Parse(args[2]):4000);return;}

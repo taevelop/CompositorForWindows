@@ -6,11 +6,19 @@ namespace Compositor.Tests;
 public class CloneStrokeTests
 {
     [Fact]
+    public void TileReservationFallsBackToExactFrameAtDimensionLimit()
+    {
+        var doc = Document.Create(30000, 3000);var layer = doc.Layers[0] with { Pixels = new Raster(29999, 3000), Transform = new(0, 0, 29999, 3000) };doc = doc.Replace(layer);
+        var stroke = new CloneStroke(doc, layer.Id, new(1, 1, 1, 0, 0, 0), new Raster(30000, 3000), new());
+        stroke.Append(new(29999.5, .5));Assert.Same(doc, stroke.Complete());
+    }
+
+    [Fact]
     public void CompletionTrimsOnlyNewTransparentMarginsAndKeepsSourceRectangle()
     {
         var doc = Document.Create(16, 16);var source = doc.Layers[0] with { Pixels = Red(2, 2), Transform = new(0, 0, 2, 2), Mask = LayerMask.Solid(2, 2) };doc = doc.Replace(source);
         var stroke = new CloneStroke(doc, source.Id, new(4, 0, 1, 0, 0, 0), Red(16, 16), new());stroke.Append(new(8.5, 8.5));
-        var before = stroke.Document;Assert.Equal(11, before.Layers[0].Pixels.Width);
+        var before = stroke.Document;Assert.True(before.Layers[0].Pixels.Width > 10);
         var complete = stroke.Complete();var layer = complete.Layers[0];Assert.Equal(10, layer.Pixels.Width);Assert.Equal(10, layer.Pixels.Height);
         Assert.Equal(10, layer.Mask!.Pixels.Width);Assert.Equal(0, layer.Transform.X);Assert.Equal(0, layer.Transform.Y);
         using var renderer = new CanvasRenderer();using var imageBefore = renderer.Flatten(before);using var imageAfter = renderer.Flatten(complete);
@@ -48,7 +56,7 @@ public class CloneStrokeTests
     {
         var doc = Document.Create(16, 16);var source = doc.Layers[0] with { Pixels = Red(2, 2), Transform = new(4, 4, 2, 2), Mask = LayerMask.Solid(2, 2) };doc = doc.Replace(source);
         var stroke = new CloneStroke(doc, source.Id, new(1, 1, .5, 0, 0, 0), Red(16, 16), new());
-        stroke.Append(new(12.5, 12.5));stroke.Append(new(14.5, 12.5));var result = stroke.Document;var layer = result.Layers[0];
+        stroke.Append(new(12.5, 12.5));stroke.Append(new(14.5, 12.5));var result = stroke.Complete();var layer = result.Layers[0];
         Assert.Equal(11, layer.Pixels.Width);Assert.Equal(9, layer.Pixels.Height);Assert.Equal(4, layer.Transform.X);Assert.Equal(4, layer.Transform.Y);
         var bytes = layer.Pixels.ToRgba();
         Assert.Equal(new byte[] { 50, 10, 5, 128 }, bytes.Skip((8 * 11 + 8) * 4).Take(4).ToArray());
