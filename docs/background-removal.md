@@ -39,3 +39,6 @@ Advanced UI 연결: Advanced edge refinement 체크, Refine 0–40/Contrast 0–
 실제 모델 WPF 전용 검증: --background-smoke report model image 진입점을 추가해 일반 30초 smoke와 분리했다. 검증용 u2netp 및 987×1481 식물 사진에서 추론 1회, Basic/Advanced 비교·원본 불변·전체 해상도 Refine 12/Contrast 25 적용 참조 일치·단일 Undo/Redo·.comp 마스크 출력 왕복을 확인했다. 보고 artifacts/background-model-wpf.json: 전체 검증 2031ms, 누적 managed 624.6MiB, 작업 후 WS 494.3MiB. 모델 로드·미리보기·참조 계산·Apply·저장/출력 포함이며 피크 메모리/사용자 입력 지연이 아니다. 실제 패널/흰 배경 결과를 시각 확인했으나 작은 피사체 누락 및 흐린 경계가 남아 품질 미통과 유지. 검사 결과는 모델 파일 선택 다이얼로그·자동 설치·별도 PC·Mac 실기를 검증하지 않는다. 다음은 대형 정제 메모리와 취소/세대 검사, 설치·배포 및 품질 검증이다.
 
 전용 실제 모델 검사 이후 Release 경고/오류 0, 코어 631개 및 일반 WPF 회귀 통과.
+
+대형 guided filter 분할: 65,536픽셀 초과는 256×256 출력 단위 및 2r 주변 halo로 처리한다. 두 차례 box 평균의 영향 범위를 포함하므로 내부 경계를 이미지 가장자리로 clamp하지 않는다. 원본 전체 입력/출력 float 배열은 유지하지만 다수 중간 통계 배열은 구간 크기로 제한한다. 반경 1/12/40, 519×271 무작위 guide/mask의 전체 계산과 각 채널 2e-5 이하 차이를 검사했다. Release 경고/오류 0, 코어 634개/전체 WPF 회귀 통과.
+실제 u2netp WPF 재검사(987×1481)는 추론 1회·전체 정제 참조·Undo·저장 통과. 전체 1709ms, 누적 managed 773.7MiB, 작업 후 WS 415.8MiB. 이전 2031ms/624.6MiB/494.3MiB와 각각 단 1회이므로 속도·피크 개선을 확정하지 않는다. 누적 할당은 증가했다. 중간 배열 재사용/전체 gray·RGBA 버퍼/4K와100MP 피크·취소 지연은 후속이다. 모델 누락 품질 및 설치·배포도 계속 잔여다.

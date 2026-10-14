@@ -6,6 +6,19 @@ public class GuidedMatteTests
 {
     [Theory]
     [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(40)]
+    public void ChunkHaloMatchesWholeImageAcrossBothTileBoundaries(int radius)
+    {
+        const int w=519,h=271;
+        var random=new Random(731);var mask=Enumerable.Range(0,w*h).Select(_=>(float)random.NextDouble()).ToArray();var guide=Enumerable.Range(0,w*h).Select(_=>(float)random.NextDouble()).ToArray();
+        var expected=GuidedMatte.FilterCore(mask,guide,w,h,radius);
+        var result=GuidedMatte.Filter(mask,guide,w,h,radius);
+        for(int i=0;i<result.Length;i++)Assert.InRange(Math.Abs(result[i]-expected[i]),0,2e-5);
+    }
+
+    [Theory]
+    [InlineData(1)]
     [InlineData(4)]
     [InlineData(250)]
     public void RunningMeanMatchesIndependentSquareIncludingClampedEdges(int radius)

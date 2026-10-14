@@ -29,6 +29,30 @@ public static class GuidedMatte
         Limits.CheckDimensions(width,height);
         if(mask.Length!=checked(width*height)||guide.Length!=mask.Length||radius is <1 or >250||mask.Any(v=>!float.IsFinite(v)||v<0||v>1)||guide.Any(v=>!float.IsFinite(v)||v<0||v>1))throw new ArgumentException("Use finite 0–1 mask and guide levels with radius 1–250.");
         cancellation.ThrowIfCancellationRequested();
+        if(mask.Length<=65536)return FilterCore(mask,guide,width,height,radius,cancellation);
+        // Two box passes in the guided filter reach at most 2r from each output.
+        // Keep that halo so internal chunk boundaries never become clamped image edges.
+        var output=new float[mask.Length];int halo=radius*2;
+        for(int top=0;top<height;top+=256)for(int left=0;left<width;left+=256)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            int x0=Math.Max(0,left-halo),y0=Math.Max(0,top-halo);
+            int right=Math.Min(width,left+256+halo),bottom=Math.Min(height,top+256+halo);
+            int w=right-x0,h=bottom-y0;var localMask=new float[w*h];var localGuide=new float[w*h];
+            for(int y=0;y<h;y++)
+            {
+                cancellation.ThrowIfCancellationRequested();
+                mask.AsSpan((y+y0)*width+x0,w).CopyTo(localMask.AsSpan(y*w));
+                guide.AsSpan((y+y0)*width+x0,w).CopyTo(localGuide.AsSpan(y*w));
+            }
+            var local=FilterCore(localMask,localGuide,w,h,radius,cancellation);
+            int rows=Math.Min(256,height-top),columns=Math.Min(256,width-left);
+            for(int y=0;y<rows;y++)local.AsSpan((top-y0+y)*w+left-x0,columns).CopyTo(output.AsSpan((top+y)*width+left,columns));
+        }
+        cancellation.ThrowIfCancellationRequested();return output;
+    }
+    internal static float[] FilterCore(float[] mask,float[] guide,int width,int height,int radius,CancellationToken cancellation=default)
+    {
         var meanGuide=Box(guide,width,height,radius,cancellation);var meanMask=Box(mask,width,height,radius,cancellation);
         var squares=new float[mask.Length];var products=new float[mask.Length];
         for(int i=0;i<mask.Length;i++){squares[i]=guide[i]*guide[i];products[i]=guide[i]*mask[i];}
