@@ -96,6 +96,8 @@ Raster.FromRgba의선택적CancellationToken을추가해시작/각256px tile복�
 
 사전취소/입력buffer불변·257×263tile경계출력·완료Raster의외부입력변경격리 검사포함해core668개통과. 전체Release0경고오류·Clone단독WPF Undo/cancel/tab/확장/mask/저장통과. --clone-capture-cancel report [side=4000]은실제Capture에5ms후취소요청을보내28.5ms/OCE및빈source불변을확인했다. 정확한취소phase는bitmap준비/render/tilecopy중어디인지증명하지않으므로copy중취소또는WPF Esc응답으로대체해주장하지 않는다.
 
+후속캡처최적화:active raw가문서와정확한동일격자(origin0/rotation0/flip없음/scale1)면immutablesource를공유한다. all-layers/변형은render유지,원본mask/effects/opacity제외계약도유지한다. 코어716/partialtile·랜덤premul·3sampling fullrenderer byte동일과fallback/cancel검사통과. 이때빈identity raw는즉시완료될수있으므로timedcapture-cancel CLI를all-layers render부하로명시했다. 최신5ms요청/29.5ms OCE도정확한phase미확정이며과거28.5ms와같은조건의비교가아니다. Clone/Blur/Smear 실제WPF회귀통과,상세smudge-liquify.md.
+
 현재캔버스의큰sample Capture는아직동기호출이다. background worker/입력queue·문서/transaction세대보호·진행표시/Esc/캡처상실취소연결·실기·배포갱신이후속이며UI응답완료로표시하지않는다. fullWPF30초timeout별도유지.
 
 ## 큰 샘플 준비 worker 연결

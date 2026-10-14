@@ -1,11 +1,32 @@
 using Compositor.Core;
 using Compositor.Imaging;
 using Xunit;
+using SkiaSharp;
 
 namespace Compositor.Tests;
 
 public class CloneStampTests
 {
+    [Theory]
+    [InlineData(Sampling.Nearest)]
+    [InlineData(Sampling.Smooth)]
+    [InlineData(Sampling.High)]
+    public void IdentityRawCaptureSharesPixelsAndMatchesFullRenderAcrossPartialTiles(Sampling sampling)
+    {
+        var doc = Document.Create(257, 263);var bytes = new byte[257 * 263 * 4];var random = new Random(123);
+        for (int p = 0; p < bytes.Length; p += 4) { byte alpha = (byte)random.Next(256);for (int c = 0; c < 3; c++) bytes[p + c] = (byte)random.Next(alpha + 1);bytes[p + 3] = alpha; }
+        var layer = doc.Layers[0] with { Pixels = Raster.FromRgba(257, 263, bytes), Transform = doc.Layers[0].Transform with { Sampling = sampling }, Mask = LayerMask.Solid(257, 263, 0), Opacity = .2, Effects = new(ColorOverlay: new(1, 0, 0, 1)) };doc = doc.Replace(layer);
+        var actual = CloneStamp.Capture(doc, layer.Id, new());Assert.Same(layer.Pixels, actual);
+        var raw = doc with { Layers = [new Layer(layer.Id, layer.Name, layer.Pixels, layer.Transform)] };
+        using var bitmap = new SKBitmap(CanvasRenderer.Info(257, 263));using var renderer = new CanvasRenderer();
+        using (var canvas = new SKCanvas(bitmap)) { canvas.Clear(SKColors.Transparent);renderer.Draw(canvas, raw);canvas.Flush(); }
+        Assert.Equal(bitmap.GetPixelSpan().ToArray(), actual.ToRgba());
+        Assert.NotSame(layer.Pixels, CloneStamp.Capture(doc, layer.Id, new(SampleAllLayers: true)));
+        Assert.Throws<OperationCanceledException>(() => CloneStamp.Capture(doc, layer.Id, new(), new CancellationToken(true)));
+        Assert.NotSame(layer.Pixels, CloneStamp.Capture(doc.Replace(layer with { Transform = layer.Transform with { X = .5 } }), layer.Id, new()));
+        Assert.NotSame(layer.Pixels, CloneStamp.Capture(doc.Replace(layer with { Transform = layer.Transform with { FlipX = true } }), layer.Id, new()));
+    }
+
     [Fact]
     public void DeltaStrokeMatchesIndependentSweptCoverageWithGradientSource()
     {

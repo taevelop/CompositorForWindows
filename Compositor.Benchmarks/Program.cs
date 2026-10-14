@@ -14,11 +14,11 @@ if(args.Length>0&&args[0]=="--clone-capture-cancel")
 {
     int side=args.Length>2?int.Parse(args[2]):4000;var document=Document.Create(side,side);
     using var cancellation=new CancellationTokenSource();var clock=Stopwatch.StartNew();cancellation.CancelAfter(5);
-    try { CloneStamp.Capture(document,document.Layers[0].Id,new(),cancellation.Token);throw new InvalidOperationException("Capture completed before cancellation was observed."); }
+    try { CloneStamp.Capture(document,document.Layers[0].Id,new(SampleAllLayers:true),cancellation.Token);throw new InvalidOperationException("Capture completed before cancellation was observed."); }
     catch(OperationCanceledException) when(cancellation.IsCancellationRequested)
     {
         if(document.Layers[0].Pixels.Tiles.Count!=0)throw new InvalidOperationException("Cancelled capture changed source.");
-        File.WriteAllText(args[1],JsonSerializer.Serialize(new{side,requestedAfterMs=5,elapsedMs=clock.Elapsed.TotalMilliseconds,note="Actual timed capture cancellation; phase may be bitmap preparation, rendering or tile copy. Source remained empty; not WPF input verification."}));
+        File.WriteAllText(args[1],JsonSerializer.Serialize(new{side,requestedAfterMs=5,elapsedMs=clock.Elapsed.TotalMilliseconds,note="Actual timed all-layer render capture cancellation (identity raw capture can now reuse source without work); phase may be bitmap preparation, rendering or tile copy. Source remained empty; not WPF input verification."}));
     }
     return;
 }

@@ -96,3 +96,17 @@ queued입력시간은알고리즘처리시간이아니다. 완료에는capture/d
 최신수정타일최적화·세모드패키지는 `artifacts/publish-smear-tiles/Compositor.Windows.exe`다. 기존패키지를유지한다. Release0경고/오류·개발/배포actual4KWPF검사와배포warp 실제Save대기/재열기/PNG/Undo/Esc/newgen회귀통과. 코어제품변경없음·713검증유지. portable검사결과는아래에기록한다. 100MP/800px자연품질·복합장시간/원본농도·모드cycling·제품설치/서명·실기범위는계속잔여다.
 
 이패키지의portable45초gate1회도통과했다. 공백경로copy/제한PATH·패키지내CLR/Skia/C관측·전체WPF회귀는같은개발PC에서수행했다. 보류된실제Mac왕복·별도Windows실기나일반30초gate안정화를대체하지않는다.
+
+## 정확한 raw 캡처 공유
+
+CloneStamp.Capture의 active raw 경로에서 raster와문서크기가같고transform이정확히origin0/rotation0/flip없음/scale1이면기존immutable Raster를반환한다. mask/effects/opacity를무시하는기존raw계약은유지한다. all-layers·이동/크기/회전/flip은기존render경로다. token과document 검사는공유반환전에도수행한다. Warp의 private 작업RGBA는계속별도복사하므로원본은수정되지않는다.
+
+코어716개통과:257×263 partialtile/무작위premul alpha/RGB의Nearest·Smooth·High 세sampling에서기존전체renderer와byte동일·source참조공유,masked/effect/opacity제외·all-layers/fractionalshift/flip fallback·사전취소. 기존warp최종SHA도두모드동일하다. 4K/40px/12입력core 준비는Smudge206→27.4ms/Liquify186→29.3ms,누적할당207→78.6MiB/221→93.2MiB로감소했다. 각1회합성core이며넓은조건의일반수치는아니다.
+
+개발actualWPF4K/800px/48입력:Smudge완료531ms/maxpaint12.3ms/Dispatchergap45.8ms, Liquify1237ms/13.0ms/37.0ms. 기존fullraw캡처가모든tile참조를교체하던것과달리공유캡처는처음preview에서도수정tile만바뀐다. 이번probe에서paint비용이낮아졌지만단일run·3paint빠른batch조건이며지속frame보장은아니다. EscUI3.11/.52ms·worker정리3.25/.78ms이고정확한취소phase는여전히미확정이다. 큰Liquify 연산·장시간/자연품질·100MP는잔여다.
+
+Clone·이미지/마스크Blur·SmearactualWPF회귀통과·Release0경고/오류. timedcapture-cancel CLI는즉시끝나는identity raw대신all-layers render캡처를명시해실제취소부하를유지했다(5ms요청/29.5ms OCE,phase미확정).
+
+최신패키지는 `artifacts/publish-smear-capture/Compositor.Windows.exe`이며기존패키지는유지한다. 개발UI 성능측정과배포기능검증은구분하며배포4K성능은이번에재측정하지않았다. 배포회귀결과는아래에기록한다.
+
+배포actualwarp Save/reopen/Undo/preview/Esc/newgen 회귀와portable45초gate1회가통과했다. 공백경로copy/제한PATH/패키지내CLR·Skia·C로드관측·전체WPF회귀는동일개발PC결과이며보류실기와일반30초gate안정화의대체가아니다.

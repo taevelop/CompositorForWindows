@@ -98,6 +98,10 @@ public static class CloneStamp
     public static Raster Capture(Document document, Guid? activeLayerId, CloneSettings settings, CancellationToken cancellation = default)
     {
         document.Validate(); cancellation.ThrowIfCancellationRequested();
+        if (!settings.SampleAllLayers && document.Layers.FirstOrDefault(l => l.Id == activeLayerId) is { IsGroup: false, IsAdjustment: false } layer &&
+            layer.Pixels.Width == document.Width && layer.Pixels.Height == document.Height && layer.Transform is { X: 0, Y: 0, Rotation: 0, FlipX: false, FlipY: false } placement &&
+            placement.Width == document.Width && placement.Height == document.Height)
+            return layer.Pixels;
         var sample = SampleDocument(document, activeLayerId, settings);
         using var bitmap = new SKBitmap(CanvasRenderer.Info(document.Width, document.Height));
         using var renderer = new CanvasRenderer();
