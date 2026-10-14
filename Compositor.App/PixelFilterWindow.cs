@@ -36,6 +36,12 @@ public sealed class PixelFilterWindow:Window
     internal readonly TextBox AngleValue=new(){Text="0",Width=70};
     internal readonly CheckBox GaussianNoise=new(){Content="Gaussian distribution",Margin=new(0,10,0,6)};
     internal readonly CheckBox Monochromatic=new(){Content="Monochromatic",Margin=new(0,4,0,6)};
+    internal readonly CheckBox AdvancedMatte=new(){Content="Advanced edge refinement",Margin=new(0,8,0,10)};
+    internal readonly Slider RefineMatte=new(){Minimum=0,Maximum=40,Value=12};
+    internal readonly Slider ContrastMatte=new(){Minimum=0,Maximum=100,Value=25};
+    internal readonly Slider ShiftMatte=new(){Minimum=-10,Maximum=10,Value=0};
+    private readonly StackPanel matteControls=new();
+    private MatteSettings ReadMatte()=>new(AdvancedMatte.IsChecked==true,RefineMatte.Value,ContrastMatte.Value,ShiftMatte.Value);
     internal uint NoiseSeed {get;}=(uint)Random.Shared.NextInt64(1L<<32);
     internal Task Pending {get;private set;}=Task.CompletedTask;
     public PixelFilterWindow(EditorSession session,Action<Document?> display,PixelFilterKind kind=PixelFilterKind.GaussianBlur,Func<Raster,CancellationToken,LayerMask>? predict=null)
@@ -68,6 +74,22 @@ public sealed class PixelFilterWindow:Window
             GaussianNoise.Foreground=Monochromatic.Foreground=(Brush)FindResource("Ink");body.Children.Add(GaussianNoise);
             body.Children.Add(new TextBlock{Text="Unchecked: uniform distribution",Foreground=(Brush)FindResource("MutedInk")});body.Children.Add(Monochromatic);
         }
+        if(background)
+        {
+            reset.Visibility=Visibility.Visible;AdvancedMatte.Foreground=(Brush)FindResource("Ink");body.Children.Add(AdvancedMatte);body.Children.Add(matteControls);
+            void AddMatteControl(string label,Slider slider)
+            {
+                var text=new TextBox{Width=70,Text=slider.Value.ToString("0.##",CultureInfo.InvariantCulture)};
+                var line=new DockPanel{Margin=new(0,5,0,0)};DockPanel.SetDock(text,Dock.Right);line.Children.Add(text);line.Children.Add(new TextBlock{Text=label,VerticalAlignment=VerticalAlignment.Center});matteControls.Children.Add(line);
+                slider.Style=(Style)FindResource("EditorSlider");matteControls.Children.Add(slider);
+                slider.ValueChanged+=(_,_)=>{text.Text=slider.Value.ToString("0.##",CultureInfo.InvariantCulture);if(ready)Queue();};
+                void Read(){if(double.TryParse(text.Text,NumberStyles.Float,CultureInfo.InvariantCulture,out var value)&&double.IsFinite(value)&&value>=slider.Minimum&&value<=slider.Maximum)slider.Value=value;else text.Text=slider.Value.ToString("0.##",CultureInfo.InvariantCulture);}
+                text.LostKeyboardFocus+=(_,_)=>Read();text.KeyDown+=(_,e)=>{if(e.Key==System.Windows.Input.Key.Enter){Read();e.Handled=true;}};
+            }
+            AddMatteControl("Refine edges (pixels)",RefineMatte);AddMatteControl("Matte contrast (%)",ContrastMatte);AddMatteControl("Shift edge (pixels)",ShiftMatte);
+            matteControls.Visibility=Visibility.Collapsed;
+            AdvancedMatte.Checked+=(_,_)=>{matteControls.Visibility=Visibility.Visible;if(ready)Queue();};AdvancedMatte.Unchecked+=(_,_)=>{matteControls.Visibility=Visibility.Collapsed;if(ready)Queue();};
+        }
         body.Children.Add(PreviewEnabled);body.Children.Add(Feedback);
         var buttons=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right};body.Children.Add(buttons);
         var cancel=new Button{Content="Cancel",IsCancel=true};
@@ -90,7 +112,7 @@ public sealed class PixelFilterWindow:Window
         AngleValue.LostKeyboardFocus+=(_,_)=>ReadAngle();AngleValue.KeyDown+=(_,e)=>{if(e.Key==System.Windows.Input.Key.Enter){ReadAngle();e.Handled=true;}};
         PreviewEnabled.Checked+=(_,_)=>ShowPreview();PreviewEnabled.Unchecked+=(_,_)=>ShowPreview();
         GaussianNoise.Checked+=(_,_)=>{if(ready)Queue();};GaussianNoise.Unchecked+=(_,_)=>{if(ready)Queue();};Monochromatic.Checked+=(_,_)=>{if(ready)Queue();};Monochromatic.Unchecked+=(_,_)=>{if(ready)Queue();};
-        reset.Click+=(_,_)=>{Radius.Value=lens?0:motion||noise?10:1;Angle.Value=0;GaussianNoise.IsChecked=false;Monochromatic.IsChecked=false;};cancel.Click+=(_,_)=>Close();ApplyButton.Click+=async(_,_)=>await ApplyEditAsync();
+        reset.Click+=(_,_)=>{if(background){AdvancedMatte.IsChecked=false;RefineMatte.Value=12;ContrastMatte.Value=25;ShiftMatte.Value=0;}Radius.Value=lens?0:motion||noise?10:1;Angle.Value=0;GaussianNoise.IsChecked=false;Monochromatic.IsChecked=false;};cancel.Click+=(_,_)=>Close();ApplyButton.Click+=async(_,_)=>await ApplyEditAsync();
         Closed+=(_,_)=>{closed=true;cancellation?.Cancel();display(null);if(!finished&&Owns)session.Cancel();};
         session.Begin();generation=session.TransactionGeneration;ready=true;Queue();
     }
@@ -101,17 +123,17 @@ public sealed class PixelFilterWindow:Window
         if(committing)return;
         cancellation?.Cancel();var owner=new CancellationTokenSource();cancellation=owner;
         var settings=ReadSettings();if(!noise&&!lens&&!fill&&!background)margin=Math.Max(margin,settings.Margin);int padding=margin;var noiseSettings=ReadNoise();
-        ApplyButton.IsEnabled=false;Feedback.Text="Calculating filter…";Pending=Calculate(owner,settings,noiseSettings,padding,Radius.Value);
+        ApplyButton.IsEnabled=false;Feedback.Text="Calculating filter…";Pending=Calculate(owner,settings,noiseSettings,padding,Radius.Value,ReadMatte());
     }
     private BlurSettings ReadSettings()=>new(motion?BlurKind.Motion:BlurKind.Gaussian,Radius.Value,Angle.Value);
     private NoiseSettings ReadNoise()=>new(Radius.Value,GaussianNoise.IsChecked==true?NoiseDistribution.Gaussian:NoiseDistribution.Uniform,Monochromatic.IsChecked==true,NoiseSeed);
-    private async Task Calculate(CancellationTokenSource owner,BlurSettings settings,NoiseSettings noiseSettings,int padding,double distortion)
+    private async Task Calculate(CancellationTokenSource owner,BlurSettings settings,NoiseSettings noiseSettings,int padding,double distortion,MatteSettings matte)
     {
         var token=owner.Token;
         try
         {
             await Task.Delay(40,token);
-            var result=await Task.Run(async()=>{await gate.WaitAsync(token);try{return background?backgroundJob!.Prepare(new(),true,token):fill?ContentAwareFill.Apply(original,layerId,token):lens?LensCorrection.Preview(original,layerId,distortion,token):noise?AddNoise.Apply(original,layerId,noiseSettings,token):SpatialBlur.Preview(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
+            var result=await Task.Run(async()=>{await gate.WaitAsync(token);try{return background?backgroundJob!.Prepare(matte,true,token):fill?ContentAwareFill.Apply(original,layerId,token):lens?LensCorrection.Preview(original,layerId,distortion,token):noise?AddNoise.Apply(original,layerId,noiseSettings,token):SpatialBlur.Preview(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
             if(closed||token.IsCancellationRequested||!ReferenceEquals(cancellation,owner)||!Owns)return;
             prepared=result;ShowPreview();ApplyButton.IsEnabled=true;Feedback.Text="Ready · one Undo when applied";
         }
@@ -123,14 +145,14 @@ public sealed class PixelFilterWindow:Window
     {
         if(committing||closed)return;committing=true;
         Radius.IsEnabled=false;RadiusValue.IsEnabled=false;Angle.IsEnabled=false;AngleValue.IsEnabled=false;reset.IsEnabled=false;ApplyButton.IsEnabled=false;
-        GaussianNoise.IsEnabled=false;Monochromatic.IsEnabled=false;
+        AdvancedMatte.IsEnabled=false;matteControls.IsEnabled=false;GaussianNoise.IsEnabled=false;Monochromatic.IsEnabled=false;
         await Pending;
-        if(closed||prepared is null||!Owns){committing=false;if(!closed){Radius.IsEnabled=true;RadiusValue.IsEnabled=true;Angle.IsEnabled=true;AngleValue.IsEnabled=true;reset.IsEnabled=true;GaussianNoise.IsEnabled=true;Monochromatic.IsEnabled=true;}return;}
+        if(closed||prepared is null||!Owns){committing=false;if(!closed){Radius.IsEnabled=true;RadiusValue.IsEnabled=true;Angle.IsEnabled=true;AngleValue.IsEnabled=true;reset.IsEnabled=true;AdvancedMatte.IsEnabled=true;matteControls.IsEnabled=true;GaussianNoise.IsEnabled=true;Monochromatic.IsEnabled=true;}return;}
         var owner=new CancellationTokenSource();cancellation=owner;var token=owner.Token;
-        var settings=ReadSettings();double distortion=Radius.Value;int padding=margin;Feedback.Text="Applying full-size filter…";
+        var matte=ReadMatte();var settings=ReadSettings();double distortion=Radius.Value;int padding=margin;Feedback.Text="Applying full-size filter…";
         try
         {
-            var result=noise||fill?prepared:await Task.Run(async()=>{await gate.WaitAsync(token);try{return background?backgroundJob!.Prepare(new(),false,token):lens?LensCorrection.Apply(original,layerId,distortion,token):SpatialBlur.Apply(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
+            var result=noise||fill?prepared:await Task.Run(async()=>{await gate.WaitAsync(token);try{return background?backgroundJob!.Prepare(matte,false,token):lens?LensCorrection.Apply(original,layerId,distortion,token):SpatialBlur.Apply(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
             if(!closed&&!token.IsCancellationRequested&&Owns){session.Preview(result);session.Commit();finished=true;Close();}
         }
         catch(OperationCanceledException) when(token.IsCancellationRequested){}
@@ -138,10 +160,11 @@ public sealed class PixelFilterWindow:Window
         finally
         {
             if(ReferenceEquals(cancellation,owner))cancellation=null;owner.Dispose();committing=false;
-            if(!closed){Radius.IsEnabled=true;RadiusValue.IsEnabled=true;Angle.IsEnabled=true;AngleValue.IsEnabled=true;reset.IsEnabled=true;GaussianNoise.IsEnabled=true;Monochromatic.IsEnabled=true;ApplyButton.IsEnabled=prepared is not null;}
+            if(!closed){Radius.IsEnabled=true;RadiusValue.IsEnabled=true;Angle.IsEnabled=true;AngleValue.IsEnabled=true;reset.IsEnabled=true;AdvancedMatte.IsEnabled=true;matteControls.IsEnabled=true;GaussianNoise.IsEnabled=true;Monochromatic.IsEnabled=true;ApplyButton.IsEnabled=prepared is not null;}
         }
     }
 }
+
 
 
 

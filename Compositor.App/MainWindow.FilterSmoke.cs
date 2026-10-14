@@ -108,6 +108,11 @@ public partial class MainWindow
             dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.RemoveBackground,PredictBackground){Owner=this};dialog.Show();await dialog.Pending;
             Check(dialog.ApplyButton.IsEnabled&&ReferenceEquals(session.Document,document)&&inferenceCount==1,"Background inference preview failed or mutated source.");
             dialog.PreviewEnabled.IsChecked=false;Check(ReferenceEquals(Canvas.DisplayDocument,document),"Background comparison failed.");dialog.PreviewEnabled.IsChecked=true;
+            dialog.AdvancedMatte.IsChecked=true;dialog.RefineMatte.Value=0;dialog.ContrastMatte.Value=75;dialog.ShiftMatte.Value=0;await dialog.Pending;
+            var advancedExpected=SubjectMask.Apply(document,layer.Id,MatteRefinement.Apply(LayerMask.Solid(layer.Pixels.Width,layer.Pixels.Height,128),layer.Pixels,new(true,0,75,0)));
+            Check(inferenceCount==1&&CompositePixels(advancedExpected).SequenceEqual(CompositePixels(Canvas.DisplayDocument)),"Advanced settings repeated inference or showed wrong preview.");
+            UpdateLayout();var backgroundBitmap=new RenderTargetBitmap((int)Math.Ceiling(dialog.ActualWidth),(int)Math.Ceiling(dialog.ActualHeight),96,96,PixelFormats.Pbgra32);backgroundBitmap.Render(dialog);
+            var backgroundPng=new PngBitmapEncoder();backgroundPng.Frames.Add(BitmapFrame.Create(backgroundBitmap));using(var file=File.Create(Path.ChangeExtension(reportPath,".background.png")))backgroundPng.Save(file);
             await dialog.ApplyEditAsync();dialog=null;Check(session.UndoCount==1&&inferenceCount==1&&ReferenceEquals(session.ActiveLayer!.Pixels,layer.Pixels),"Background Apply repeated inference or changed image pixels.");
             var backgroundOutput=CompositePixels(session.Document);Undo(this,new());Check(ReferenceEquals(session.Document,document),"Background Undo failed.");Redo(this,new());
             projectPath=Path.Combine(root,"Background.comp");Check(await Save(false)&&await ReopenSavedProject(projectPath)&&backgroundOutput.SequenceEqual(CompositePixels(session.Document)),"Background save/reopen changed mask output.");
@@ -123,6 +128,7 @@ public partial class MainWindow
         }
     }
 }
+
 
 
 

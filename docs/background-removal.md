@@ -33,3 +33,5 @@ Release 경고/오류 0, 코어 631개 및 전체 WPF 회귀 통과. 사용자 �
 Basic UI 및 캐시 1차 연결: Filter → Remove Background는 검증된 소형/정규 ONNX 파일 선택 후 실행한다. 모델 자동 설치/배포는 아직 없다. BackgroundRemovalJob는 원본 문서/레이어에 고정된 단일 추론 마스크를 직렬 worker에서 캐시한다. 표시 전용 비교 및 전체 적용에서 같은 원본 마스크를 사용하며 이미지 픽셀을 보존한다. 실제 WPF 회귀는 주입한 고정 회색 마스크로 추론 횟수 1·원본 픽셀 보존·비교·Undo/Redo·저장 출력 왕복·닫기 취소를 검사한다. 이 검사는 실제 ONNX 이미지 품질 검증이 아니다. Advanced 연산은 Job API로 준비됐지만 사용자 설정 UI는 아직 연결하지 않았다. 모델 자동 설치·패널 시각/실제 ONNX UI/늦은 세대/메모리 및 Advanced UI는 후속이다.
 
 최종 Release 경고/오류 0, 코어 631개 및 확장 WPF 회귀 통과.
+
+Advanced UI 연결: Advanced edge refinement 체크, Refine 0–40/Contrast 0–100/Shift Edge -10–10 슬라이더와 정밀 입력·Reset(12/25/0)·비교. Queue에서 설정 스냅샷을 worker로 전달하고 Apply 중 설정 입력을 막는다. 표시 정제와 최종 전체 정제 모두 단일 BackgroundRemovalJob의 추론 마스크 캐시를 사용한다. 실제 WPF 고정 마스크 검사에서 Advanced 전환/Contrast 75/Refine 0 출력과 참조 합성 일치·추론 1회·Apply/Undo/Redo/저장/취소를 확인했다. artifacts/ui-smoke.filters.background.png의 블루 슬라이더·입력 정렬·버튼을 시각 확인했다. Release 경고/오류 0, 코어 631개/확장 WPF 통과. 실제 ONNX UI/대형 전체 정제의 참조·피크 메모리/모델 설치·배포·품질은 아직 남아 있다.
