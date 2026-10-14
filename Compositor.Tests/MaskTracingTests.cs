@@ -5,6 +5,19 @@ using Xunit;
 namespace Compositor.Tests;
 public class MaskTracingTests
 {
+    [Theory]
+    [InlineData(0,false)]
+    [InlineData(35,true)]
+    public void LayerAlphaIgnoresMaskAndMapsTransformWhileMaskUsesIndependentPlacement(double angle,bool flip)
+    {
+        var doc=Document.Create(100,100);var transform=new LayerTransform(20,20,20,20,Rotation:angle,FlipX:flip);
+        var layer=doc.Layers[0] with{Pixels=ShapeRaster.Create(new(ShapeKind.Rectangle,.2,.4,.6),4,4),Transform=transform,Mask=LayerMask.Solid(4,4,0) with{Placement=new(60,60,8,8),Linked=false}};doc=doc.Replace(layer);
+        var image=MaskTracing.LoadSelection(doc,layer.Id,false);var hidden=MaskTracing.LoadSelection(doc,layer.Id,true);
+        Assert.True(SelectionGeometry.Contains(image.Selection!,transform.ToDocument(new(2,2),4,4)));Assert.False(SelectionGeometry.Contains(image.Selection!,new(64,64)));
+        Assert.True(SelectionGeometry.Contains(hidden.Selection!,new(64,64)));Assert.False(SelectionGeometry.Contains(hidden.Selection!,new(30,30)));
+        Assert.Same(layer.Pixels,image.Layers[0].Pixels);Assert.Same(layer.Mask,hidden.Layers[0].Mask);
+    }
+
     [Fact]
     public void SubjectInferenceReceivesVisibleCanvasCompositeRatherThanActiveLayer()
     {

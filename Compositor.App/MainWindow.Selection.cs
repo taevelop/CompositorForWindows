@@ -22,14 +22,25 @@ public partial class MainWindow
         subjectPending=SelectSubjectAsync(mode,subjectPredictorOverride??Predict);await subjectPending;
     }
     private async Task SelectSubjectAsync(Compositor.Core.SelectionMode mode,Func<Raster,CancellationToken,LayerMask> predict)
+        =>await RunSelectionAsync("Selecting foreground subject…",(document,token)=>SubjectSelection.Compute(document,predict,mode,token));
+    private async void LoadPixelSelection(object sender,RoutedEventArgs e)
+    {
+        if(!await ResolveGradientBeforeAction())return;
+        if(!busy&&Canvas.IsTransforming)Canvas.CommitTransform();if(busy||session.InTransaction)return;
+        if(sender is not MenuItem {Tag:string tag})return;var parts=tag.Split(':');
+        if(parts.Length!=2||!Enum.TryParse<Compositor.Core.SelectionMode>(parts[1],out var mode))return;
+        if(session.ActiveLayerId is not {} id)return;bool mask=parts[0]=="Mask";
+        subjectPending=RunSelectionAsync(mask?"Loading hidden mask areas…":"Loading layer pixels…",(document,token)=>MaskTracing.LoadSelection(document,id,mask,mode,token));await subjectPending;
+    }
+    private async Task RunSelectionAsync(string label,Func<Document,CancellationToken,Document> compute)
     {
         if(busy||session.InTransaction)return;
         var target=session;var original=target.Document;
         using var owner=new CancellationTokenSource();subjectCancellation=owner;busy=true;Editor.IsEnabled=false;
-        FillCancelButton.Content="Cancel subject selection";FillCancelButton.Visibility=Visibility.Visible;Status.Text="Selecting foreground subject…";
+        FillCancelButton.Content="Cancel selection";FillCancelButton.Visibility=Visibility.Visible;Status.Text=label;
         try
         {
-            var result=await Task.Run(()=>SubjectSelection.Compute(original,predict,mode,owner.Token));owner.Token.ThrowIfCancellationRequested();
+            var result=await Task.Run(()=>compute(original,owner.Token));owner.Token.ThrowIfCancellationRequested();
             if(ReferenceEquals(session,target)&&ReferenceEquals(target.Document,original)&&!target.InTransaction)target.Apply(_=>result);
         }
         catch(OperationCanceledException) when(owner.IsCancellationRequested){}
@@ -97,4 +108,5 @@ public partial class MainWindow
         session.Apply(_ => next);
     });
 }
+
 

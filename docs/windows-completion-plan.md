@@ -288,3 +288,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - 피사체 선택 원본MaskTracing 경계/구멍/threshold·캔버스 합성/숨김제외·교체/추가/빼기 메뉴 연결. 코어641개·기존WPF통과. 실제모델 메뉴/윤곽/취소·대형 추적과 레이어/마스크 선택로드는 후속, 전체추정70/30유지.
 
 - 피사체 선택 Cancel 버튼/Esc 연결·Replace/Add/Subtract Routed 메뉴/Undo·활성취소·다른문서 늦은 결과 폐기 WPF통과. 실제모델 Routed 선택/윤곽참조·Undo/selection 비저장 검증, 코어641개통과. physical입력/큰윤곽·레이어마스크선택로드/품질은 잔여, 전체추정70/30유지.
+
+- 레이어 alpha/마스크 dark 선택load·원본50% threshold·회전/뒤집기/독립배치·Select 메뉴 3연산 연결. 코어643개·WPF Routed메뉴/Undo통과. 원본 썸네일 Ctrl/Shift/Alt 바로가기·대형/물리입력은 후속, 전체추정70/30유지.

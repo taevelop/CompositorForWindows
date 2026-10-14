@@ -74,3 +74,8 @@ Release 경고/오류0·코어641개·기존WPF회귀통과. ONNX 피사체 메�
 
 피사체 선택 UI 작업 검증: Replace/Add/Subtract Routed 메뉴를 실제 공통 handler/worker로 실행하고 단일 Undo/Redo·작업 중 Cancel subject selection 버튼/토큰·busy 복원·늦은 결과 다른 문서 폐기를 WPF에서 확인했다. Esc는 기존 busy 입력 경로에 같은 취소 핸들러를 연결했으나 물리 키 입력 검증은 아니다. 선택용 worker는 원본 세션/문서 참조를 확인해 적용한다. cancel은 오류 안내 대신 원본을 유지한다.
 실제 u2netp/987×1481 자연 이미지 전용 WPF 검증도 Select 메뉴를 Routed 실행(검증 경로 predictor override는 실제 모델)해 추론1회·모델마스크/선택윤곽 동일·Undo 및 .comp 재열기에 selection 미저장 정책을 확인했다. 배경+피사체 전체 검사2527ms/누적managed459.7MiB/작업후WS381.6MiB, 성능/피크 기준이나 품질 통과가 아니다. 모델 선택file/setup 자체는 다른 검사로 구분한다. Release 경고/오류0·코어641개·확장WPF통과. physical입력·대형윤곽복잡도·모델품질/메모리 및 레이어/마스크 선택load는 잔여다.
+
+레이어/마스크 선택load: MaskTracing은 image alpha>=128, mask gray<128을 공통 경계추적으로 처리한다. 레이어 alpha는 마스크/표시 불투명도를 무시하고 source Transform으로, 마스크 숨긴 영역은 Placement??Transform으로 문서 좌표에 매핑한다. 선택 교체/추가/빼기는 기존 Combine/캔버스 clip/Undo를 재사용하고 no-pixels는 원본 보존 오류로 처리한다. 회전35도/FlipX·독립마스크 배치 및 pixels/mask 원본참조를 검사했다.
+Select 메뉴 Load layer pixels / Load hidden mask areas의 세 연산을 취소 가능한 공통 선택 worker에 연결했다. WPF Routed 메뉴는 layer alpha가 mask를 무시함·독립1px mask Placement·Undo를 확인한다. 원본의 Ctrl+thumbnail/Shift-add/Alt-subtract 입력은 후속이며 아직 메뉴를 그 바로가기 완료로 계산하지 않는다. 대형추적/물리입력·모델품질/메모리·Mac/별도PC보류 유지.
+
+Release 경고/오류0·코어643개·레이어/마스크 Routed 메뉴 확장WPF회귀통과.

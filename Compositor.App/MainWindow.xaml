@@ -20,6 +20,8 @@
           <MenuItem Header="Select all" InputGestureText="Ctrl+A" Click="SelectAll"/>
           <MenuItem Header="Deselect" InputGestureText="Ctrl+D" Click="Deselect"/>
           <MenuItem Header="Subject"><MenuItem x:Name="SubjectReplaceMenu" Header="Select subject" Tag="Replace" Click="SelectSubject"/><MenuItem x:Name="SubjectAddMenu" Header="Add subject to selection" Tag="Add" Click="SelectSubject"/><MenuItem x:Name="SubjectSubtractMenu" Header="Subtract subject from selection" Tag="Subtract" Click="SelectSubject"/></MenuItem>
+          <MenuItem Header="Load layer pixels"><MenuItem x:Name="LoadLayerReplaceMenu" Header="Replace selection" Tag="Image:Replace" Click="LoadPixelSelection"/><MenuItem Header="Add to selection" Tag="Image:Add" Click="LoadPixelSelection"/><MenuItem Header="Subtract from selection" Tag="Image:Subtract" Click="LoadPixelSelection"/></MenuItem>
+          <MenuItem Header="Load hidden mask areas"><MenuItem x:Name="LoadMaskReplaceMenu" Header="Replace selection" Tag="Mask:Replace" Click="LoadPixelSelection"/><MenuItem Header="Add to selection" Tag="Mask:Add" Click="LoadPixelSelection"/><MenuItem Header="Subtract from selection" Tag="Mask:Subtract" Click="LoadPixelSelection"/></MenuItem>
           <MenuItem Header="Invert selection" Click="InvertSelection"/>
           <Separator/><MenuItem Header="Feather selection…" Tag="Feather" Click="ModifySelection"/><MenuItem Header="Expand selection…" Tag="Expand" Click="ModifySelection"/><MenuItem Header="Contract selection…" Tag="Contract" Click="ModifySelection"/>
           <Separator/><MenuItem Header="Clear selected pixels" InputGestureText="Delete" Click="ClearSelectionPixels"/>
@@ -248,6 +250,7 @@
   </Grid>
  </DockPanel>
 </Window>
+
 
 
 
