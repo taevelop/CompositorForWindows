@@ -5,6 +5,20 @@ using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 
+if(args.Length>0&&args[0]=="--pixel-diff")
+{
+    var first=ImageCodec.Load(args[1]);var second=ImageCodec.Load(args[2]);
+    if(first.Width!=second.Width||first.Height!=second.Height)throw new InvalidOperationException("Image dimensions differ.");
+    var a=first.ToRgba();var b=second.ToRgba();int count=0,maximum=0;var examples=new List<object>();
+    for(int p=0;p<a.Length;p+=4)
+    {
+        int error=0;for(int c=0;c<4;c++)error=Math.Max(error,Math.Abs(a[p+c]-b[p+c]));
+        if(error==0)continue;count++;maximum=Math.Max(maximum,error);
+        if(examples.Count<12)examples.Add(new{x=p/4%first.Width,y=p/4/first.Width,before=a.AsSpan(p,4).ToArray(),after=b.AsSpan(p,4).ToArray()});
+    }
+    File.WriteAllText(args[3],JsonSerializer.Serialize(new{count,maximum,examples},new JsonSerializerOptions{WriteIndented=true}));return;
+}
+
 if(args.Length>0&&args[0]=="--clone-stroke"){CloneStrokeBenchmark.Run(args[1],args.Length>2?int.Parse(args[2]):48,args.Length>3?int.Parse(args[3]):40);return;}
 
 if(args.Length>0&&args[0]=="--clone-preview"){ClonePreviewBenchmark.Run(args[1],args.Length>2?int.Parse(args[2]):4000);return;}

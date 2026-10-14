@@ -58,6 +58,35 @@ public sealed class BrushStroke
     private readonly PointD cloneOffset;
     private PointD? previous;
     public Raster Pixels { get; private set; }
+    internal BrushStroke ReframeClone(Layer grown, RasterFrame relative)
+    {
+        if (cloneSample is null || relative.Left % 256 != 0 || relative.Top % 256 != 0 || relative.Left > 0 || relative.Top > 0 ||
+            relative.Left + relative.Width < Pixels.Width || relative.Top + relative.Height < Pixels.Height)
+            throw new ArgumentException("Clone work transfer requires tile-aligned expansion.");
+        var next = new BrushStroke(grown, settings, canvasWidth, canvasHeight, selection, cloneSample, cloneOffset)
+        { Pixels = ReferenceEquals(Pixels, layer.Pixels) ? grown.Pixels : RasterReframe.Apply(Pixels, relative), previous = previous };
+        foreach (var (key, tile) in work)
+        {
+            var shifted = new TileKey(key.X - relative.Left / 256, key.Y - relative.Top / 256);
+            int oldWidth = Math.Min(256, Pixels.Width - key.X * 256), oldHeight = Math.Min(256, Pixels.Height - key.Y * 256);
+            if (oldWidth == 256 && oldHeight == 256) { next.work.Add(shifted, tile); continue; }
+            // A cropped edge tile can contain nonzero bytes outside its old logical
+            // dimensions. New cells must start from the expanded base, never padding.
+            byte[] original = grown.Pixels.Tiles.TryGetValue(shifted, out var source) ? source.Bytes.ToArray() : new byte[PixelTile.ByteCount];
+            var output = (byte[])original.Clone();
+            for (int y = 0; y < oldHeight; y++) tile.Output.AsSpan(y * PixelTile.Stride, oldWidth * 4).CopyTo(output.AsSpan(y * PixelTile.Stride));
+            float[]? weights = null;
+            if (selection is not null)
+            {
+                weights = new float[256 * 256];
+                for (int y = 0; y < Math.Min(256, relative.Height - shifted.Y * 256); y++)
+                for (int x = 0; x < Math.Min(256, relative.Width - shifted.X * 256); x++)
+                    weights[y * 256 + x] = (float)selection.Sample(grown.Transform.ToDocument(new(shifted.X * 256 + x + .5, shifted.Y * 256 + y + .5), relative.Width, relative.Height));
+            }
+            next.work.Add(shifted, new(original, output, tile.Coverage, weights, tile.Delta));
+        }
+        return next;
+    }
     public BrushStroke(Layer layer, BrushSettings settings, int canvasWidth, int canvasHeight, SelectionCoverage? selection = null, Raster? cloneSample = null, PointD cloneOffset = default)
     {
         if (!double.IsFinite(settings.Diameter) || settings.Diameter is < 1 or > 2000 ||
@@ -130,7 +159,8 @@ public sealed class BrushStroke
                     if (tile.Delta![index] == 0) continue;
                     double amount = tile.Coverage[index] * settings.Opacity * (tile.Selection?[index] ?? 1);
                     if (amount <= 0) continue;
-                    var mapped = layer.Transform.ToDocument(new(tx * 256 + x + .5, ty * 256 + y + .5), Pixels.Width, Pixels.Height);
+                    double localX = tx * 256 + x + .5, localY = ty * 256 + y + .5;
+                    var mapped = new PointD(mapping[0] * localX + mapping[2] * localY + mapping[4], mapping[1] * localX + mapping[3] * localY + mapping[5]);
                     var sampled = CloneStamp.Sample(cloneSample, new(mapped.X + cloneOffset.X, mapped.Y + cloneOffset.Y));
                     double inverse = 1 - sampled.Alpha * amount / 255;
                     for (int c = 0; c < 4; c++)

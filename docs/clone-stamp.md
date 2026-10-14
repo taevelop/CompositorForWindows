@@ -81,3 +81,11 @@ compositor_clone_coverage 고정폭export를추가했다. sweptgeometry/linearha
 4K800px48입력단일비교: input2523→1439ms, 최대910→442ms, complete7.14→6.12ms, managed417→168MiB, peak394→370MiB. 출력PNG SHA동일 확인. 각1회합성core/파일출력포함이며비교최대값의반복안정성및WPF지연을입증하지않는다. 최대442ms는여전히높아성능완료가아니다.
 
 반투명gradientsource+fractionaloffset·삼각교차stroke를독립segment거리/source-over참조와전픽셀1LSB이내비교하고반복동일point의Raster참조유지를검사했다. 코어665개·MSVC/Release0경고오류·Clone단독WPF source/Undo/cancel/tab/확장/mask/저장검사통과. 큰frame재생·sourcecaptureworker/취소·복합sample·배포/물리입력과fullWPF30초timeout은잔여다.
+
+## 경계 확장 시 작업 타일 이동
+
+타일정렬확장에서는BrushStroke.ReframeClone으로oldcoverage/Output/previouspoint를shift된key로이동하고이전points전체를재생하지않는다. 정렬되지않는정확frame fallback은기존재생을유지한다. 부분edge tile은grownbase로새cells를초기화하고old논리영역Output만복사한다. selectioncoverage도새논리영역까지갱신하며zero-change stroke는grownbase참조를유지해transparent/no-op확장Undo를방지한다.
+
+초기측정은800px48입력952ms/최대170ms이나이전PNG와536pixels·최대1LSB차이가있어동일성불통과로진단했다. sample위치를다른frame폭에의존한나눗셈대신nativecoverage와동일affine식으로계산해half-opacity부동소수반올림을안정화했다. 최종측정912ms/최대163ms·complete8.96ms·managed97.3MiB·peak368MiB. 이전PNG와912pixels/최대1LSB차이를명시한다(이전경로와bit-exact주장안함). --pixel-diff 두파일 report 로RGBA변경수/최대오차/예시좌표를재현한다. 비교이미지16Mpixel이며source준비/PNG조건은기존benchmark와동일하다.
+
+수학적reference로canvaspixelcenter의128alpha/halfRGB·확장전후불변, 잘린200px tile의nonzero padding이newmargin에누출되지않는것, 기존gradient/삼각coverage/source-over·core667개 검사통과. 최신빌드0경고오류·Clone단독WPF source/Undo/cancel/tab/확장/mask/저장검사통과. 163ms최대도낮은입력지연완료로판정하지않으며반복/회전복합확장·worker샘플준비/취소·배포/물리입력과fullWPF30초timeout은잔여다.

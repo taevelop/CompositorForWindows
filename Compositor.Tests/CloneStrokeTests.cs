@@ -6,6 +6,32 @@ namespace Compositor.Tests;
 public class CloneStrokeTests
 {
     [Fact]
+    public void TransferredWorkKeepsExactHalfOpacityAtCanvasCenters()
+    {
+        var doc = Document.Create(800, 64);var layer = doc.Layers[0] with { Pixels = Red(64, 64), Transform = new(100, 0, 64, 64) };doc = doc.Replace(layer);
+        var stroke = new CloneStroke(doc, layer.Id, new(800, .7, .5, 0, 0, 0), Red(800, 64), new());
+        stroke.Append(new(200, 32));CheckCenter(stroke.Document);stroke.Append(new(400, 32));CheckCenter(stroke.Document);CheckCenter(stroke.Complete());
+        static void CheckCenter(Document document)
+        {
+            var target = document.Layers[0];var local = target.Transform.ToPixels(new(.5, .5), target.Pixels.Width, target.Pixels.Height);
+            int p = ((int)Math.Floor(local.Y) * target.Pixels.Width + (int)Math.Floor(local.X)) * 4;
+            Assert.Equal(new byte[] { 50, 10, 5, 128 }, target.Pixels.ToRgba().Skip(p).Take(4).ToArray());
+        }
+    }
+
+    [Fact]
+    public void TransferredPartialTileDoesNotRevealOldPadding()
+    {
+        var cropped = RasterReframe.Apply(Red(256, 256), new(0, 0, 200, 200));
+        var doc = Document.Create(300, 300);var layer = doc.Layers[0] with { Pixels = cropped, Transform = new(0, 0, 200, 200) };doc = doc.Replace(layer);
+        var stroke = new CloneStroke(doc, layer.Id, new(1, 1, 1, 0, 0, 0), Red(300, 300), new());
+        stroke.Append(new(195.5, 100.5));stroke.Append(new(205.5, 100.5));var grown = stroke.Complete().Layers[0];
+        Assert.Equal(206, grown.Pixels.Width);Assert.Equal(200, grown.Pixels.Height);var rgba = grown.Pixels.ToRgba();
+        Assert.Equal((byte)0, rgba[(99 * 206 + 205) * 4 + 3]);Assert.Equal((byte)255, rgba[(100 * 206 + 205) * 4 + 3]);
+        Assert.Equal((byte)0, rgba[(101 * 206 + 205) * 4 + 3]);
+    }
+
+    [Fact]
     public void TileReservationFallsBackToExactFrameAtDimensionLimit()
     {
         var doc = Document.Create(30000, 3000);var layer = doc.Layers[0] with { Pixels = new Raster(29999, 3000), Transform = new(0, 0, 29999, 3000) };doc = doc.Replace(layer);

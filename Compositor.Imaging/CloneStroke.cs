@@ -67,8 +67,16 @@ public sealed class CloneStroke
                 try { CheckBudget(reserved); next = reserved; }
                 catch (InvalidDataException) { /* Exact frame was already checked above. */ }
                 var grown = RasterReframe.Apply(source, next);
-                var replay = MakeStroke(grown);
-                foreach (var painted in points) replay.Append(painted);
+                var relative = new RasterFrame(next.Left - frame.Left, next.Top - frame.Top, next.Width, next.Height);
+                BrushStroke replay;
+                if (relative.Left % 256 == 0 && relative.Top % 256 == 0)
+                {
+                    replay = stroke.ReframeClone(grown, relative); replay.Append(point);
+                }
+                else
+                {
+                    replay = MakeStroke(grown); foreach (var painted in points) replay.Append(painted);
+                }
                 expanded = grown; stroke = replay; frame = next;
             }
             else stroke.Append(point);
