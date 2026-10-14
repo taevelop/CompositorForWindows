@@ -42,6 +42,13 @@ public partial class MainWindow
     private async Task<bool> ResolveGradientBeforeAction()
     {
         if (busy) return false;
+        if (Canvas.IsWarpPreparing)
+        {
+            Canvas.EndPointer(true);
+            var target = session;busy = true;Editor.IsEnabled = false;
+            try { return await Canvas.WarpCompletion && ReferenceEquals(session, target) && !session.InTransaction; }
+            finally { busy = false;Editor.IsEnabled = true;Refresh(); }
+        }
         if (Canvas.IsClonePreparing)
         {
             var target = session;var documentId = session.Document.Id;busy = true;Editor.IsEnabled = false;

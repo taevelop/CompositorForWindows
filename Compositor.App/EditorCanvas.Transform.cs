@@ -12,6 +12,7 @@ public sealed partial class EditorCanvas
     {
         get
         {
+            if (warpOwner is { } warp && OwnsWarp(warp) && warpDisplay is { } warped) return warped;
             if(filterDisplay is {} display&&Session.InTransaction&&Session.TransactionGeneration==filterGeneration&&ReferenceEquals(Session.Document,filterOriginal))return display;
             if(transformEdit is not null&&transformOriginal is {} original)
                 return shapeTransformPreview.Create(Session.Document,original);

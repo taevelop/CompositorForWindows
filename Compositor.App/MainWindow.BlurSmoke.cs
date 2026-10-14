@@ -16,8 +16,8 @@ public partial class MainWindow
         for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++)
         { int p = (y * 64 + x) * 4;bytes[p] = bytes[p + 1] = bytes[p + 2] = x >= 32 ? (byte)255 : (byte)0;bytes[p + 3] = 255; }
         doc = doc.Replace(doc.Layers[0] with { Pixels = Raster.FromRgba(64, 64, bytes) });
-        session.Load(doc);ToolPicker.SelectedIndex = 15;BrushSize.Text = "40";BrushHardness.Text = "100";BrushOpacity.Text = "50";Canvas.Fit();
-        Check(Canvas.Tool == EditorTool.Blur && BrushOptions.IsVisible && !ColorOptions.IsVisible && !CloneOptions.IsVisible && ToolTitle.Text == "Blur", "Blur controls were not connected.");
+        session.Load(doc);SmearBlur.IsChecked = true;ToolPicker.SelectedIndex = 15;BrushSize.Text = "40";BrushHardness.Text = "100";BrushOpacity.Text = "50";Canvas.Fit();
+        Check(Canvas.Tool == EditorTool.Blur && BrushOptions.IsVisible && !ColorOptions.IsVisible && !CloneOptions.IsVisible && ToolTitle.Text == "Smear", "Blur controls were not connected.");
         Canvas.BeginPointer(new(31.5, 32.5), ModifierKeys.None);Canvas.MovePointer(new(33.5, 32.5));Canvas.EndPointer(true);
         Check(await Canvas.CloneCompletion, "Blur preparation failed.");
         var result = session.Document;Check(session.UndoCount == 1 && !session.InTransaction && result.Layers[0].Pixels.ToRgba()[(32 * 64 + 31) * 4] > 0, "Blur did not soften or commit once.");

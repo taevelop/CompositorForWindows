@@ -13,7 +13,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
     private EditorSession session=null!;
-    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){CancelHealing();CancelClonePreparation();clonePointer=null;ClearClonePreview();ShowFilterPreview(null);CancelShapePreparation();if(shapeDrag is not null)EndShape(false);CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
+    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){CancelWarp();CancelHealing();CancelClonePreparation();clonePointer=null;ClearClonePreview();ShowFilterPreview(null);CancelShapePreparation();if(shapeDrag is not null)EndShape(false);CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
     public Action<PointD,ModifierKeys>? WandClick {get;set;}
     public CloneSource CloneSource { get; set; } = new();
     public Func<CloneSettings> ReadClone { get; set; } = () => new();
@@ -22,7 +22,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     public Action<string>? ReportError { get; set; }
     public Action? ViewportChanged { get; set; }
     public double Zoom { get; private set; } = 1;
-    public bool HasInteraction => IsHealingPreparing || IsClonePreparing || IsShapePreparing || shapeDrag is not null || transformDrag is not null || cropDrag is not null || pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
+    public bool HasInteraction => IsWarpPreparing || IsHealingPreparing || IsClonePreparing || IsShapePreparing || shapeDrag is not null || transformDrag is not null || cropDrag is not null || pixelMove is not null || selectionStart is not null || originalLayer is not null || panStart is not null || gestureButton is not null;
     private double panX = 30, panY = 30;
     private Point? panStart;
     private Point panOrigin;
@@ -205,7 +205,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     public void CancelInteraction()
     {
         CancelHealing();
-        CancelClonePreparation();
+        CancelWarp();CancelClonePreparation();
         CancelShapePreparation();
         if(shapeDrag is not null)EndShape(false);
         sampleRequest++;
@@ -254,6 +254,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         if (Tool is EditorTool.Brush or EditorTool.Eraser or EditorTool.CloneStamp or EditorTool.SpotHealing or EditorTool.Blur)
         {
             if (Tool is EditorTool.CloneStamp or EditorTool.SpotHealing && Session.EditMask) throw new InvalidOperationException("This tool edits image pixels. Select the image thumbnail first.");
+            if (Tool == EditorTool.Blur && ReadSmear() != SmearMode.Blur && Session.EditMask) throw new InvalidOperationException("Smudge and Liquify work on image pixels, not masks.");
             if (layer.IsAdjustment && !Session.EditMask) throw new InvalidOperationException("Adjustment layers have no image pixels. Select Edit mask to paint coverage.");
             if (layer.IsGroup) throw new InvalidOperationException("Select an image layer inside the group before painting.");
             if (!LayerHierarchy.Entries(Session.Document).First(e => e.Layer.Id == layer.Id).Visible) throw new InvalidOperationException("Show the layer and its parent groups before painting.");
@@ -266,7 +267,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             var settings = ReadBrush() with { Erase = Tool == EditorTool.Eraser };
             var selection = Tool is not (EditorTool.CloneStamp or EditorTool.SpotHealing or EditorTool.Blur) && Session.Document.Selection is { } selected ? SelectionCoverage.Create(selected, Session.Document.Width, Session.Document.Height) : null;
             if (Tool == EditorTool.SpotHealing) BeginHealing(layer, settings);
-            else if (Tool == EditorTool.Blur) { BeginClonePreparation(layer, settings, new(), new(), point);return; }
+            else if (Tool == EditorTool.Blur) { if (ReadSmear() == SmearMode.Blur) BeginClonePreparation(layer, settings, new(), new(), point);else BeginWarp(point, settings);return; }
             else if (Tool == EditorTool.CloneStamp)
             {
                 var clone = ReadClone();
@@ -284,6 +285,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void MovePointer(PointD point, ModifierKeys? modifiers = null)
     {
+        if (warpOwner is { } warp) { if (!warp.Ended) { warp.Points.Add(point);warp.Signal.TrySetResult(); } return; }
         if (Tool == EditorTool.CloneStamp) clonePointer = point;
         if (clonePreparation is { } pending) { if (!pending.Ended) pending.Points.Add(point); return; }
         if(shapeDrag is not null){MoveShape(point,modifiers??Keyboard.Modifiers);return;}
@@ -352,6 +354,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void EndPointer(bool commit)
     {
+        if (warpOwner is { } warp) { if (commit) { warp.Ended = true;gestureButton = null;warp.Signal.TrySetResult(); } else CancelInteraction();return; }
         if (healingDrag is not null) { EndHealing(commit); return; }
         if (clonePreparation is { } pending) { if (commit) { pending.Ended = true; gestureButton = null; } else CancelInteraction(); return; }
         if(shapeDrag is not null){EndShape(commit);return;}
@@ -423,7 +426,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         if(!ready)
         {
             DrawShape(c);DrawGradient(c);DrawClone(c);c.Restore();c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);
-            DrawPreparation(c);DrawShapeStatus(c);DrawGradientStatus(c);DrawClonePreparation(c);DrawHealingStatus(c);c.Restore();return;
+            DrawPreparation(c);DrawShapeStatus(c);DrawGradientStatus(c);DrawClonePreparation(c);DrawHealingStatus(c);DrawWarpStatus(c);c.Restore();return;
         }
         if (Session.ActiveLayer is { } layer && Tool == EditorTool.Move && !IsTransforming)
         {
@@ -462,8 +465,8 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         DrawCrop(c);
         DrawTransform(c);
         c.Restore();
-        c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);DrawSampleRing(c);DrawShapeStatus(c);DrawGradientStatus(c);DrawClonePreparation(c);DrawHealingStatus(c);c.Restore();
+        c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);DrawSampleRing(c);DrawShapeStatus(c);DrawGradientStatus(c);DrawClonePreparation(c);DrawHealingStatus(c);DrawWarpStatus(c);c.Restore();
     }
-    public void Dispose() { CancelHealing();CancelClonePreparation();ClearClonePreview();canvasDisposed=true;CancelShapePreparation();CancelGradient();CancelRenderPreparation();CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
+    public void Dispose() { CancelWarp();CancelHealing();CancelClonePreparation();ClearClonePreview();canvasDisposed=true;CancelShapePreparation();CancelGradient();CancelRenderPreparation();CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
 }
 

@@ -373,3 +373,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - SmudgeLiquify.swift 대조 및 WarpRasterStroke 문서좌표 연산 기반 추가. 원본 dab간격/float 운반색/smoothstep/이동·bilinear/strength clamp 유지, immutable snapshot·row/dab 취소/실패 재사용 거부. 코어705·반투명 운반/독립120→110 보간/tile경계/간격/원본·snapshot/취소 검사 통과. layer copy반영/selection/확장·모드UI/worker/Undo저장/대형품질·배포는 후속. 전체70/30관리추정 재산정 전 유지, 상세smudge-liquify.md.
 
 - WarpLayerStroke 시작raw캡처/끝hard diameter+4 dab경로·RGBA sample교체·Clone확장/selection/mask/crop/예산 연결. 코어709/독립copy·source-over alpha수식/transparent지우기/정렬확장flag/feather·2004최대commit tip·Smudge metadata/Undo/저장·취소 검사 통과. 모드UI/작업중표시/async·warp WPF·대형품질/배포는후속. 전체70/30관리추정재산정전유지.
+
+- Smear(R) Liquify/Blur/Smudge selector·Strength슬라이더·초기Liquify/탭상태·async초기화/queued입력/최종반영·display-only preview·owner/session/doc/gen/모드보호·입력중명령대기/Esc 연결. 실제warp WPF 두모드/UndoRedo·프로젝트/PNG·preview불변·탭·busy취소·새gen보호와Blur/16tool 회귀통과·시각확인. 709코어검증유지. 대형·복합품질/원본sampling·실제UI pendingSave/모드cycling·배포후속,전체70/30관리추정재산정전유지.

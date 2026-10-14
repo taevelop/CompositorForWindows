@@ -27,7 +27,7 @@ public partial class MainWindow : Window
         defaultPrompts = prompts = EditorPrompts.For(this);
         InitializeComponent();
         InitializeToolControls();
-        Canvas.Session = session; Canvas.ReadBrush = ReadBrush;Canvas.ReadHealing=()=>HealTexture.IsChecked==true?HealingMode.CreateTexture:HealProximity.IsChecked==true?HealingMode.ProximityMatch:HealingMode.ContentAware; Canvas.ReadClone = () => new(CloneAligned.IsChecked == true, CloneAllLayers.IsChecked == true);Canvas.ReadGradient=ReadGradient;Canvas.ReadShape=ReadShape;
+        Canvas.Session = session; Canvas.ReadBrush = ReadBrush;Canvas.ReadSmear=()=>SmearBlur.IsChecked==true?SmearMode.Blur:SmearSmudge.IsChecked==true?SmearMode.Smudge:SmearMode.Liquify;Canvas.ReadHealing=()=>HealTexture.IsChecked==true?HealingMode.CreateTexture:HealProximity.IsChecked==true?HealingMode.ProximityMatch:HealingMode.ContentAware; Canvas.ReadClone = () => new(CloneAligned.IsChecked == true, CloneAllLayers.IsChecked == true);Canvas.ReadGradient=ReadGradient;Canvas.ReadShape=ReadShape;
         defaultTabTools=CaptureTabTools() with {CloneSourceState=null};
         AttachTabDrop(NewCanvasDropFrame,null);
         Canvas.ReportError = ShowError;Canvas.WandClick=WandClicked;
@@ -70,7 +70,7 @@ public partial class MainWindow : Window
     }
     private void UpdateStatus()
     {
-        if (!busy) Status.Text = $"{session.Document.Width:N0} × {session.Document.Height:N0} px   ·   {session.Document.Layers.Length} layers / {session.SelectedLayerIds.Count} selected   ·   {Canvas.Zoom:P0}   ·   {Canvas.Tool}   ·   {(session.EditMask ? "Mask" : "Image")}   ·   {(session.Document.Selection is null ? "No selection" : session.Document.Selection.IsEmpty ? "Empty selection — painting blocked" : "Selection active")}";
+        if (!busy) Status.Text = $"{session.Document.Width:N0} × {session.Document.Height:N0} px   ·   {session.Document.Layers.Length} layers / {session.SelectedLayerIds.Count} selected   ·   {Canvas.Zoom:P0}   ·   {(Canvas.Tool == EditorTool.Blur ? Canvas.ReadSmear().ToString() : Canvas.Tool.ToString())}   ·   {(session.EditMask ? "Mask" : "Image")}   ·   {(session.Document.Selection is null ? "No selection" : session.Document.Selection.IsEmpty ? "Empty selection — painting blocked" : "Selection active")}";
     }
     private static string F(double n) => n.ToString("0.###", CultureInfo.InvariantCulture);
     private static double Number(TextBox input)
@@ -298,7 +298,7 @@ public partial class MainWindow : Window
     private void ActualPixels(object? sender, RoutedEventArgs e) { Canvas.ActualPixels(); Refresh(); }
     private async void WindowKeyDown(object sender, KeyEventArgs e)
     {
-        if (busy){if(e.Key==Key.Escape&&(Canvas.IsShapePreparing||Canvas.IsHealingPreparing||Canvas.IsClonePreparing)){Canvas.CancelInteraction();e.Handled=true;}else if(e.Key==Key.Escape&&(fillCancellation is not null||subjectCancellation is not null)){CancelFill(null,e);e.Handled=true;}return;}
+        if (busy){if(e.Key==Key.Escape&&(Canvas.IsShapePreparing||Canvas.IsHealingPreparing||Canvas.IsClonePreparing||Canvas.IsWarpPreparing)){Canvas.CancelInteraction();e.Handled=true;}else if(e.Key==Key.Escape&&(fillCancellation is not null||subjectCancellation is not null)){CancelFill(null,e);e.Handled=true;}return;}
         if (Canvas.IsTransforming && e.Key == Key.Escape) { CancelTransform(null, e); e.Handled = true; return; }
         if (Canvas.Tool == EditorTool.Crop && e.Key == Key.Escape) { CancelCrop(null, e); e.Handled = true; return; }
         if (e.Key == Key.Escape && Canvas.HasInteraction) { Canvas.CancelInteraction(); e.Handled = true; return; }

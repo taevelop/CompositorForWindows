@@ -33,3 +33,15 @@ dab 중심 목록을 유지하고 Append가 성공하면 immutable Raster 스냅
 이번에는 최종 반영 코어까지 연결했다. 작업 중 표시/세 모드 selector·탭 상태·비동기 준비/큐·저장대기·실제 warp WPF·회전/복합선택·대형/자연품질·새패키지배포는 계속 잔여다. 현재 publish-blur-ui 패키지에는 warp 모드가 없다.
 
 최신 Release 빌드0경고/오류, 기존Clone 및 이미지·마스크Blur 단독 WPF 회귀가 통과했다. 이 검사는 기존 도구의 보존 증거이며 아직 연결되지 않은 warp UI의 검증이 아니다.
+
+## Smear 모드와 비동기 UI
+
+Smear(R) 도구에 Liquify/Blur/Smudge radio selector를 추가했다. 원본처럼 초기 모드는 Liquify이며 공유 Size/Hardness/Strength slider를 사용한다. Blur는 기존 이미지/마스크 경로를 사용하고 Smudge/Liquify는 마스크 입력을 명확히 거부한다. 탭 도구 상태에 선택 모드를 저장·복원한다. 제목/캔버스 위치와 시작 rail scroll 계약을 유지한다.
+
+WarpOwner는 시작 session/document/layer/mode/settings/generation을 고정하고 worker에서 캡처·queued Append·최종 Complete를 순서대로 실행한다. 실행 중 UI는 immutable 작업 Raster를 문서 좌표 display-only 레이어로 보여준다. 기존 mask는 원래 placement에 고정해 표시 위치를 유지한다. 이 display document는 Session.Document/Undo/프로젝트에 들어가지 않는다. 최종 결과만 같은 소유자·모드·image target이면 Preview/Commit한다. 마지막 입력 뒤 기다리는 worker는 입력/end 신호나 취소로 깨어난다.
+
+Esc·mode/tool/tab/session/Dispose 변경은 owner token과 transaction을 취소한다. 늦은 worker는 새 generation을 닫지 않는다. 공통 명령은 진행 중 stroke의 입력 큐를 End 처리하고 WarpCompletion을 기다리며, 대기중 UI를 잠근다. busy Esc는 warp와 명령을 함께 취소한다. 상태 overlay에 준비/현재 모드와 Esc 안내를 표시한다.
+
+실제 --warp-smoke 통과: 두 모드의 Session불변 display preview/단일UndoRedo/.comp·PNG-composite 픽셀일치, TabTools 모드복원, 입력 중 명령대기·UI잠금/busyEsc·원본복원/늦은결과폐기, 새generation 보호. 이미지/마스크Blur 회귀와16tool 시작scroll/compactscroll/고정title/canvas도통과했고 도구 화면을 시각확인했다. Release0경고/오류, 제품코어변경없음·709코어검증유지.
+
+아직 대형문서의 초기 캡처·반복전체Raster snapshot/preview tile 변환·메모리/최대지연·physical 입력, 복합선택·회전/flip·mask/effects 미리보기·최종결과 동등성, 실제 UI Save pending 파일쓰기/읽기, 모드 cycling shortcut·자연품질·새실행패키지배포는 후속이다. 현재 publish-blur-ui는 이전Blur단계이며 이번SmearUI는개발Release에만반영된다. 전체 전환 완료나 Mac parity 통과로 표시하지 않는다.
