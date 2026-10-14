@@ -8,7 +8,16 @@ public partial class App : Application
     {
         base.OnStartup(e);
         var window = new MainWindow(); MainWindow = window;
-        if (e.Args.Length == 2 && e.Args[0] is "--smoke" or "--render-benchmark" or "--gradient-benchmark" or "--shape-benchmark")
+        if(e.Args.Length==4&&e.Args[0]=="--background-smoke")
+        {
+            ShutdownMode=ShutdownMode.OnExplicitShutdown;window.ShowInTaskbar=false;window.Left=-10000;window.Top=-10000;
+            window.Loaded+=async(_,_)=>
+            {
+                try{await window.BackgroundModelSmoke(e.Args[1],e.Args[2],e.Args[3]);Shutdown(0);}
+                catch(Exception error){System.IO.File.WriteAllText(e.Args[1]+".error.txt",error.ToString());window.CloseSmokeOnFailure();Shutdown(1);}
+            };
+        }
+        else if (e.Args.Length == 2 && e.Args[0] is "--smoke" or "--render-benchmark" or "--gradient-benchmark" or "--shape-benchmark")
         {
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
             window.ShowInTaskbar = false; window.Left = -10000; window.Top = -10000;

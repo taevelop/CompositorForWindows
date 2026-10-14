@@ -35,3 +35,7 @@ Basic UI 및 캐시 1차 연결: Filter → Remove Background는 검증된 소�
 최종 Release 경고/오류 0, 코어 631개 및 확장 WPF 회귀 통과.
 
 Advanced UI 연결: Advanced edge refinement 체크, Refine 0–40/Contrast 0–100/Shift Edge -10–10 슬라이더와 정밀 입력·Reset(12/25/0)·비교. Queue에서 설정 스냅샷을 worker로 전달하고 Apply 중 설정 입력을 막는다. 표시 정제와 최종 전체 정제 모두 단일 BackgroundRemovalJob의 추론 마스크 캐시를 사용한다. 실제 WPF 고정 마스크 검사에서 Advanced 전환/Contrast 75/Refine 0 출력과 참조 합성 일치·추론 1회·Apply/Undo/Redo/저장/취소를 확인했다. artifacts/ui-smoke.filters.background.png의 블루 슬라이더·입력 정렬·버튼을 시각 확인했다. Release 경고/오류 0, 코어 631개/확장 WPF 통과. 실제 ONNX UI/대형 전체 정제의 참조·피크 메모리/모델 설치·배포·품질은 아직 남아 있다.
+
+실제 모델 WPF 전용 검증: --background-smoke report model image 진입점을 추가해 일반 30초 smoke와 분리했다. 검증용 u2netp 및 987×1481 식물 사진에서 추론 1회, Basic/Advanced 비교·원본 불변·전체 해상도 Refine 12/Contrast 25 적용 참조 일치·단일 Undo/Redo·.comp 마스크 출력 왕복을 확인했다. 보고 artifacts/background-model-wpf.json: 전체 검증 2031ms, 누적 managed 624.6MiB, 작업 후 WS 494.3MiB. 모델 로드·미리보기·참조 계산·Apply·저장/출력 포함이며 피크 메모리/사용자 입력 지연이 아니다. 실제 패널/흰 배경 결과를 시각 확인했으나 작은 피사체 누락 및 흐린 경계가 남아 품질 미통과 유지. 검사 결과는 모델 파일 선택 다이얼로그·자동 설치·별도 PC·Mac 실기를 검증하지 않는다. 다음은 대형 정제 메모리와 취소/세대 검사, 설치·배포 및 품질 검증이다.
+
+전용 실제 모델 검사 이후 Release 경고/오류 0, 코어 631개 및 일반 WPF 회귀 통과.
