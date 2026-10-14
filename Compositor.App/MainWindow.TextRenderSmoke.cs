@@ -76,7 +76,21 @@ public partial class MainWindow
         var doc = Document.Create(400, 200);var styleRoundTrip = new LayerTextStyle("cached 😀", "Segoe UI", 32, Tracking: 3);var cached = TextRasterizer.Render(styleRoundTrip);
         doc = doc.Replace(doc.Layers[0] with { Pixels = cached.Pixels, Transform = new(0, 0, cached.Pixels.Width, cached.Pixels.Height), Text = styleRoundTrip });
         ProjectStore.Save(doc, doc.Layers[0].Id, report + ".comp");var loaded = ProjectStore.Load(report + ".comp").Document;Check(loaded.Layers[0].Text == styleRoundTrip && loaded.Layers[0].Pixels.ToRgba().SequenceEqual(cached.Pixels.ToRgba()), "Rendered text project round trip failed.");
-        File.WriteAllText(report, JsonSerializer.Serialize(new { passed = true, rows, colorPixels, checks = new[] { "multilingual nonempty premul", "paragraph alignment/wrap", "leading", "font aliases", "missing font flag", "empty text", "cancel", "positive/negative tracking", "color emoji and fallback", "STA/MTA identical", "oversized point guard", "cached project pixels" }, note = "Development PC DirectWrite/Direct2D text rendering. Nonempty cluster samples do not prove every language's shaping or Mac metrics. Type editing UI, full quality and mid-layout native cancellation remain pending." }));
+        var editing = new EditorSession(Document.Create(400, 200));var originalDocument = editing.Document;
+        var createRequest = TextEdit.Capture(editing, new(editing.Document.Id, null, new(20, 30), styleRoundTrip));
+        var create = await Task.Run(() => TextEdit.Prepare(createRequest, TextRasterizer.Render(styleRoundTrip).Pixels));
+        Check(create.Apply(editing) && editing.UndoCount == 1 && editing.ActiveLayer?.Text == styleRoundTrip, "Worker-created text did not commit once.");
+        var firstText = editing.ActiveLayer!;var firstDocument = editing.Document;
+        var updatedStyle = styleRoundTrip with { Content = "edited 한글 😀", FontSize = 48, Tracking = 5 };
+        var editRequest = TextEdit.Capture(editing, new(editing.Document.Id, firstText.Id, new(0, 0), updatedStyle));
+        var edit = await Task.Run(() => TextEdit.Prepare(editRequest, TextRasterizer.Render(updatedStyle).Pixels));
+        Check(edit.Apply(editing) && editing.UndoCount == 2 && editing.ActiveLayer?.Text == updatedStyle, "Worker text edit did not commit once.");
+        ProjectStore.Save(editing.Document, editing.ActiveLayerId, report + ".edit.comp");var editedLoad = ProjectStore.Load(report + ".edit.comp");
+        Check(editedLoad.Document.Layers.Single(l => l.Id == firstText.Id).Text == updatedStyle && editedLoad.Document.Layers.Single(l => l.Id == firstText.Id).Pixels.ToRgba().SequenceEqual(editing.ActiveLayer!.Pixels.ToRgba()), "Edited text lost metadata/cached pixels on reopen.");
+        editing.Undo();Check(ReferenceEquals(editing.Document, firstDocument) && ReferenceEquals(editing.ActiveLayer, firstText), "Text edit Undo lost original immutable layer.");
+        editing.Undo();Check(ReferenceEquals(editing.Document, originalDocument), "Text creation Undo lost original document.");
+        editing.Redo();editing.Redo();Check(ReferenceEquals(editing.Document, edit.Document), "Text Redo lost prepared document.");
+        File.WriteAllText(report, JsonSerializer.Serialize(new { passed = true, rows, colorPixels, checks = new[] { "multilingual nonempty premul", "paragraph alignment/wrap", "leading", "font aliases", "missing font flag", "empty text", "cancel", "positive/negative tracking", "color emoji and fallback", "STA/MTA identical", "oversized point guard", "cached project pixels", "worker text create/edit/Undo/Redo/reopen" }, note = "Development PC DirectWrite/Direct2D text rendering. Nonempty cluster samples do not prove every language's shaping or Mac metrics. Type editing UI, full quality and mid-layout native cancellation remain pending." }));
         foreach (var tab in workspace.Documents) tab.Session.MarkSaved();Close();
     }
 }

@@ -1,6 +1,6 @@
 # 편집 가능한 텍스트 전환
 
-원본 기준은 `macOS/Compositor/Document/TypeTool.swift`, `Rendering/InlineTextEditor.swift`, `IO/ProjectStore.swift`다. 2026-10-14 현재 모델·저장·글꼴 해결·렌더러가 연결됐으며, Type/inline 편집 UI와 텍스트 편집 명령은 아직 없다.
+원본 기준은 `macOS/Compositor/Document/TypeTool.swift`, `Rendering/InlineTextEditor.swift`, `IO/ProjectStore.swift`다. 2026-10-14 현재 모델·저장·글꼴 해결·렌더러·텍스트 편집 명령 기반이 연결됐으며, Type/inline 편집 UI는 아직 없다.
 
 ## 모델과 프로젝트
 
@@ -32,18 +32,31 @@ API 기준: Microsoft [문자 간격](https://learn.microsoft.com/en-us/windows/
 
 ## 검증
 
-제품 코어 720개 검사 통과: 텍스트 Unicode/부족한 글꼴/style/cached pixels 저장 왕복, 변환·마스크·동일 픽셀 정보 유지, 픽셀 편집의 래스터화 및 Undo/Redo, 손상 metadata의 열기/덮어쓰기 거부와 원본 보존, SFNT/TTC 이름 및 잘못된 offset/길이 거부.
+렌더러 단계의 제품 코어 720개 검사 통과: 텍스트 Unicode/부족한 글꼴/style/cached pixels 저장 왕복, 변환·마스크·동일 픽셀 정보 유지, 픽셀 편집의 래스터화 및 Undo/Redo, 손상 metadata의 열기/덮어쓰기 거부와 원본 보존, SFNT/TTC 이름 및 잘못된 offset/길이 거부.
 
 실제 `--text-render-smoke` 결과는 `artifacts/text-directwrite-final.json`이다. Latin/한글/아랍어/이모지/결합 문자/다중 행 출력과 premultiplied 알파, 문단 정렬·줄바꿈·고정 크기, 행간 24/60, 부족한 글꼴 표시, 빈 내용·사전 취소, 양수 12/음수 -4 자간, 컬러 이모지 및 Segoe UI에서의 이모지 폴백, STA/MTA 픽셀 일치, 너무 큰 포인트 텍스트의 사전 거부, 자간·이모지 metadata/PNG 왕복을 통과했다. ArialMT/Arial-BoldMT/Arial Bold와 설치 TTC face의 이름·스타일 검사도 유지한다. 굵은 face의 실제 알파 면적 증가 및 사용자 행간 1의 겹침도 검사했다. WPF에서 해결한 family가 DirectWrite 목록에 없으면 다른 글꼴로 조용히 치환하지 않고 오류를 반환한다.
 
 검은 텍스트색으로 출력한 이모지에서 컬러 픽셀 4663개를 확인했고 PNG를 시각 확인했다. 아랍어 PNG도 확인했으나 모든 언어·복합 시퀀스의 shaping 정확성이나 Mac 픽셀 동등성을 입증하지 않는다. Release 빌드 경고·오류는 0개다. 일반 WPF 회귀는 첫 실행이 30초 제한에서 시간 초과됐다. 단계 기록의 마지막은 ToolControlsSmokeTest 시작(27.48초)이었다. 같은 제한으로 재실행한 결과는 통과했고 마지막 단계 종료 기록은 28.27초였다. 간헐적 시간 초과 원인이 해결됐다는 증거는 아니므로 안정성 잔여 항목을 유지한다.
 
+
+## 텍스트 생성·재편집 명령 기반
+
+`Compositor.Core/TextEdit.cs`의 TextDraft는 문서 ID, 선택적 기존 레이어 ID, 문서 좌표의 origin, style, 선택적 변환 초안을 보관한다. Capture는 UI 스레드에서 문서 참조·세션·선택 레이어·마스크 대상·transaction generation을 고정한다. Prepare는 불변 문서와 렌더된 Raster만 사용해 작업 스레드에서 새 문서를 만든다. Apply는 같은 편집 상태일 때만 UI 스레드에서 한 번의 Undo로 확정한다. Session.Load는 같은 문서 참조를 재사용하더라도 generation을 증가시켜 이전 준비 결과를 무효화한다.
+
+새 텍스트는 활성 그룹 안 또는 활성 레이어의 형제 위치에 추가하고 기존 선택 윤곽을 유지한다. 이름은 공백·개행을 한 칸으로 정리한 첫 40개 grapheme이다. 빈 새 초안은 레이어를 만들지 않고, 내용과 변환이 그대로인 기존 텍스트는 다시 렌더링하지 않으므로 부족한 원본 글꼴의 cached PNG도 유지할 수 있다.
+
+재편집은 ID·이름·외관·효과·계층을 유지한다. 새 픽셀 크기에 기존 픽셀당 배율을 적용한 뒤 회전·뒤집기를 반영한 좌상단 anchor가 움직이지 않도록 origin을 보정한다. 명시적 문단 상자 크기 조정에는 초안 변환을 그대로 사용한다. 위치가 암묵적이던 마스크는 이전 레이어 변환에 고정하고, 명시적인 마스크 위치와 연결 여부는 보존한다. 픽셀 참조를 교체한 뒤 Text metadata를 다시 설정해 텍스트 편집성을 유지한다. 손상된 대상·다른 문서·상자와 픽셀 크기 불일치·100MP/Undo 예산 초과·취소는 세션을 변경하지 않는다.
+
+코어 733개 검사 통과: 새 그룹 내 생성·선택 보존·한 번의 Undo, 회전/뒤집기의 anchor·배율·마스크 유지, 명시적/암묵적 문단 크기 변경, 무변경·빈 초안, 다른 세션/선택/세대/재열기의 늦은 결과 거부, 취소·래스터화된 대상 거부·예산 초과, 이모지 시퀀스를 자르지 않는 이름. 실제 `--text-render-smoke`의 `artifacts/text-edit-command.json`에서는 작업 스레드 DirectWrite 렌더링 → 새 텍스트 생성 → 내용/크기/자간 재편집 → 두 번의 Undo/Redo → .comp 저장/재열기의 metadata/픽셀 일치를 통과했다.
+
+이는 편집 명령 기반의 검증이며 사용자가 Type 도구로 직접 입력하는 기능 완료가 아니다. Type/inline 편집 UI·IME·미리보기·저장 전 확정과 새 배포본은 계속 남아 있다.
 ## 남은 작업
 
 - Type(T), 클릭/드래그의 포인트·문단 텍스트 생성과 기존 레이어 재편집
 - inline editor, 커서·선택·IME·키보드·확정/취소, 글꼴 선택·크기/자간/행간 슬라이더·색상표
-- 재렌더 편집 명령, 변환과 상자 크기·마스크 보존, 단일 Undo/Redo, 저장 전 확정
-- 작업 스레드 준비와 문서/세션/transaction generation 보호, 취소·늦은 결과 폐기
+- 편집 명령을 Type/inline UI에 연결, 상자 크기 핸들·저장 전 확정
+- UI 작업 수명과 편집 초안 변경에 따른 취소·늦은 결과 폐기, 표시용 미리보기와 확정 경로 연결
 - 샘플링/서체·언어·음수 자간·혼합 행간 품질, 대형 문서 피크·지연, 새로운 배포본 검증
 
 현재 최신 배포본 publish-rail-verified에는 이 DirectWrite 변경이 없다. 실제 Mac 왕복과 별도 Windows PC 실기 검증은 사용자 지시로 보류하며 통과로 표시하지 않는다.
+편집 명령 단계의 Release 빌드 경고·오류 0개, build.ps1 -Test의 코어 733개와 일반 WPF 30초 제한 검사도 통과했다. 이전 렌더러 단계의 간헐적 시간 초과는 원인이 규명되지 않았으므로 품질 작업표에 계속 남긴다.

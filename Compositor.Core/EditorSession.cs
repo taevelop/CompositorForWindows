@@ -56,6 +56,8 @@ public sealed class EditorSession
         document.Validate();
         if (active is not null && !document.Layers.Any(l => l.Id == active)) throw new InvalidDataException("Invalid active layer.");
         Document = document; revision = ++nextRevision; savedRevision = recovered ? -1 : revision;
+        // Reloading even the same immutable document invalidates pending work.
+        TransactionGeneration++;
         transaction = null; undo.Clear(); redo.Clear(); EditMask = false;
         ActiveLayerId = active ?? document.Layers.LastOrDefault()?.Id; Changed?.Invoke();
     }
