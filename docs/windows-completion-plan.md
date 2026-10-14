@@ -369,3 +369,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Blur마스크문서sample/edge배경·GaussianClamp·maskstroke고정sample·EditMask소유자worker/UI연결. 코어699/상수0·128·255·독립placement·opacity·selection·image불변·Undo검사,실제Blur이미지/마스크·저장/Undo/Esc/late 및Clone회귀통과. 마스크밖격자확장/회전복합/그룹범위·大형/원본농도·배포는잔여. 전체70/30관리추정재산정전유지.
 
 - 원본BrushStroke mask extent/affected clip을확인해이전mask바깥확장잔여항목정정:원본도고정mask격자다. 코어700/rotation37·FlipXY·feather3·독립blend수식/범위밖no-op·snapshot검사통과. 원본groupmask편집허용과Windows모델거부차이를확인해groupmask모델/합성/저장/UI를잔여명시. publish-blur-ui에이미지·마스크Blur갱신. 대형/원본농도/Gaussian품질·그룹mask·전체기능잔여,70/30관리추정재산정전유지.
+
+- SmudgeLiquify.swift 대조 및 WarpRasterStroke 문서좌표 연산 기반 추가. 원본 dab간격/float 운반색/smoothstep/이동·bilinear/strength clamp 유지, immutable snapshot·row/dab 취소/실패 재사용 거부. 코어705·반투명 운반/독립120→110 보간/tile경계/간격/원본·snapshot/취소 검사 통과. layer copy반영/selection/확장·모드UI/worker/Undo저장/대형품질·배포는 후속. 전체70/30관리추정 재산정 전 유지, 상세smudge-liquify.md.
