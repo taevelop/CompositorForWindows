@@ -18,15 +18,28 @@ public static class BlurBrush
         var layer = document.Layers.First(l => l.Id == layerId);
         if (layer.IsGroup || layer.IsAdjustment) throw new InvalidOperationException("Blur requires image pixels.");
         var sharp = CloneStamp.Capture(document, layerId, new(), cancellation);
-        using var input = new SKBitmap(CanvasRenderer.Info(document.Width, document.Height));
+        return Soften(sharp, sigma, SKShaderTileMode.Decal, cancellation);
+    }
+    public static Raster CaptureMask(Document document, Guid layerId, double diameter, CancellationToken cancellation = default)
+    {
+        double sigma = Sigma(diameter);document.Validate();cancellation.ThrowIfCancellationRequested();
+        var layer = document.Layers.First(l => l.Id == layerId);
+        var mask = layer.Mask ?? throw new InvalidOperationException("Add a mask before blurring it.");
+        if (!mask.Enabled) throw new InvalidOperationException("Enable the mask before blurring it.");
+        var placed = MaskPlacement.Resolve(mask, mask.Placement ?? layer.Transform, new(0, 0, document.Width, document.Height), document.Width, document.Height, cancellation);
+        return Soften(placed.EditingPixels(document.Width, document.Height), sigma, SKShaderTileMode.Clamp, cancellation);
+    }
+    private static Raster Soften(Raster sharp, double sigma, SKShaderTileMode edge, CancellationToken cancellation)
+    {
+        using var input = new SKBitmap(CanvasRenderer.Info(sharp.Width, sharp.Height));
         RasterBuffer.CopyTo(sharp, input.GetPixelSpan(), cancellation);
         using var output = new SKBitmap(input.Info);
         using (var canvas = new SKCanvas(output))
-        using (var filter = SKImageFilter.CreateBlur((float)sigma, (float)sigma, SKShaderTileMode.Decal))
+        using (var filter = SKImageFilter.CreateBlur((float)sigma, (float)sigma, edge))
         using (var paint = new SKPaint { ImageFilter = filter, BlendMode = SKBlendMode.Src })
         { canvas.Clear(SKColors.Transparent);canvas.DrawBitmap(input, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest), paint); }
         cancellation.ThrowIfCancellationRequested();
-        return Raster.FromRgba(document.Width, document.Height, output.GetPixelSpan(), cancellation);
+        return Raster.FromRgba(sharp.Width, sharp.Height, output.GetPixelSpan(), cancellation);
     }
 }
 

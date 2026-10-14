@@ -12,6 +12,7 @@ public sealed partial class EditorCanvas
         public long Generation { get; } = generation;
         public Guid Layer { get; } = layer;
         public EditorTool Tool { get; init; }
+        public bool EditMask { get; init; }
         public CancellationTokenSource Cancellation { get; } = new();
         public List<PointD> Points { get; } = [];
         public bool Ended { get; set; }
@@ -24,11 +25,11 @@ public sealed partial class EditorCanvas
     internal Func<Document, Guid, double, CancellationToken, Raster>? BlurCaptureOverride { get; set; }
     private static bool OwnsCloneTransaction(ClonePreparation owner) => owner.Session.InTransaction && owner.Session.TransactionGeneration == owner.Generation && ReferenceEquals(owner.Session.Document, owner.Document);
     private bool OwnsClone(ClonePreparation owner) => !canvasDisposed && ReferenceEquals(clonePreparation, owner) && ReferenceEquals(Session, owner.Session)
-        && Tool == owner.Tool && owner.Session.ActiveLayerId == owner.Layer && !owner.Session.EditMask && OwnsCloneTransaction(owner);
+        && Tool == owner.Tool && owner.Session.ActiveLayerId == owner.Layer && owner.Session.EditMask == owner.EditMask && OwnsCloneTransaction(owner);
 
     private void BeginClonePreparation(Layer layer, BrushSettings brush, CloneSettings settings, PointD offset, PointD point)
     {
-        Session.Begin();var owner = new ClonePreparation(Session, Session.Document, Session.TransactionGeneration, layer.Id) { Tool = Tool };
+        Session.Begin();var owner = new ClonePreparation(Session, Session.Document, Session.TransactionGeneration, layer.Id) { Tool = Tool, EditMask = Session.EditMask };
         owner.Points.Add(point);clonePreparation = owner;
         CloneCompletion = PrepareCloneAsync(owner, layer.Id, brush, settings, offset, CloneCaptureOverride, BlurCaptureOverride);InvalidateVisual();
     }
@@ -53,9 +54,14 @@ public sealed partial class EditorCanvas
                 try
                 {
                     var sample = owner.Tool == EditorTool.Blur
-                        ? (blurCapture is { } blur ? blur(owner.Document, layer, brush.Diameter, token) : BlurBrush.Capture(owner.Document, layer, brush.Diameter, token))
+                        ? (blurCapture is { } blur ? blur(owner.Document, layer, brush.Diameter, token) : owner.EditMask ? BlurBrush.CaptureMask(owner.Document, layer, brush.Diameter, token) : BlurBrush.Capture(owner.Document, layer, brush.Diameter, token))
                         : capture is null ? CloneStamp.Capture(owner.Document, layer, settings, token) : capture(owner.Document, layer, settings, token);
-                    token.ThrowIfCancellationRequested();return new CloneStroke(owner.Document, layer, brush, sample, offset);
+                    token.ThrowIfCancellationRequested();
+                    var source = owner.Document.Layers.First(l => l.Id == layer);
+                    var selection = owner.EditMask && owner.Document.Selection is { } selected ? SelectionCoverage.Create(selected, owner.Document.Width, owner.Document.Height) : null;
+                    return owner.EditMask
+                        ? (Image: (CloneStroke?)null, Mask: new MaskStroke(source, brush, owner.Document.Width, owner.Document.Height, selection, sample))
+                        : (Image: new CloneStroke(owner.Document, layer, brush, sample, offset), Mask: (MaskStroke?)null);
                 }
                 finally { cloneWorkerGate.Release(); }
             });
@@ -63,11 +69,11 @@ public sealed partial class EditorCanvas
             {
                 var points = owner.Points.ToArray();owner.Points.Clear();
                 if (points.Length == 0) break;
-                await Task.Run(() => { foreach (var point in points) { token.ThrowIfCancellationRequested();prepared.Append(point); } }, token);
+                await Task.Run(() => { foreach (var point in points) { token.ThrowIfCancellationRequested();if (prepared.Image is { } image) image.Append(point);else prepared.Mask!.Append(point); } }, token);
             }
             if (!OwnsClone(owner) || token.IsCancellationRequested) return false;
-            clonePreparation = null;cloneStroke = prepared;installed = true;
-            owner.Session.Preview(prepared.Document);
+            clonePreparation = null;cloneStroke = prepared.Image;maskStroke = prepared.Mask;installed = true;
+            owner.Session.Preview(prepared.Image?.Document ?? owner.Document.Replace(owner.Document.Layers.First(l => l.Id == layer) with { Mask = prepared.Mask!.Mask }));
             if (owner.Ended) EndPointer(true);
             return true;
         }

@@ -28,3 +28,13 @@ ClonePreparation을tool소유자가있는frozen-sample준비로확장해Blur가�
 공통명령대기에CloneCompletion을포함해Blur/Clone준비중저장/내보내기가준비결과를기다린다. busy Esc도공유준비를취소한다. 실제WPF Blur검사통과:queued입력/단일UndoRedo/프로젝트왕복/PNG-composite일치,지연capture중Esc·명령대기/UI잠금과복원,lateworker가새transaction을닫지않음. 기존Clone단독회귀와16tool startup scrollbar숨김/compactscroll/복원·title/canvas고정검사도통과했다. Release0경고/오류,제품코어변경없음·695코어검증유지.
 
 마스크Blur·대형실측/중간Gaussian취소·실제MacCoreImage동등성/원본softstamp농도·물리입력/새패키지배포는잔여다. 이번BlurUI는개발Release빌드에만반영됐으며기존publish-healing-cancellable패키지에는없다.
+
+## 마스크 샘플과 UI 연결
+
+BlurBrush.CaptureMask는기존MaskPlacement.Resolve로마스크를문서좌표에배치한다. 원본LayerMask.background와같이thumbnailedge평균을기준으로경계밖white/black을선택한다. sigma규칙은이미지와같고GaussianClamp를사용해문서경계의톤을유지한다. 1×1 상수mask는문서크기editing pixels로확장한다. disabled/missing mask는거부한다.
+
+MaskStroke에선택적고정softenedSample을추가했다. graycontrol색대신sample을coverage×opacity source-over하고기존mask의Placement/Linked/Enabled와image pixels를유지한다. 비동기소유자에EditMask를고정해worker가이미지CloneStroke 또는MaskStroke를준비하고현재target이같을때만설치한다. Blur는EditMask에서도선택가능하며Clone/Healing의image-onlyguard는유지한다.
+
+코어699개통과:0/128/255 상수mask의문서edge·gray/opaque채널,독립placement32px흑백경계blur·반불투명·원본·image불변·selection제외·UndoRedo·취소·disabled거부. 실제Blur WPF에서masktarget/async단일Undo/grayedge/image참조불변/.comp합성왕복/Undo검사통과. 이전이미지Blurqueued/대기명령/Esc/newgeneration과Clone회귀도통과. Release0경고/오류.
+
+현재MaskStroke는기존mask격자안에서편집한다. 원본BrushStroke의mask바깥stroke격자확장/새영역background/독립placement규칙까지완료한것은아니며기존maskbrush와함께후속검증·구현한다. 회전/flip·복합feather·group/adjustment mask선택지원의원본범위,Gaussian중간취소/대형실측·원본누적농도·새패키지배포도잔여다. 이번변경은개발Release에만반영됐다.

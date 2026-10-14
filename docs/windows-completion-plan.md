@@ -365,3 +365,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Blur 원본BlurTool/BrushStroke source-over·stroke당고정raw문서sample·sigma크기규칙대조. BlurBrush/BlurStroke 이미지코어연결·Clone확장/선택/metadata/Undo공유. 코어695·tile경계/독립opacity수식/다음stroke재샘플/원본/transparent확장·linkedmask검사통과. 도구UI/마스크Blur/대형async/저장WPF·CoreImage샘플링/성능·배포후속. 전체70/30관리추정재산정전유지,상세blur-brush.md.
 
 - Blur(R) rail/공유sliders·고정sample async준비·queued입력·tool/session/doc/gen보호·Esc·단일Undo·공통명령준비대기연결. 실제Blur/Clone/16tool scrollbar·고정layout WPF회귀통과·695코어검증유지. 마스크Blur/Smudge/Liquify·대형성능/원본soft농도/배포후속. 전체70/30관리추정은최근작업가중치재산정전유지하며MVP구현100/검증96+보류4와별도다.
+
+- Blur마스크문서sample/edge배경·GaussianClamp·maskstroke고정sample·EditMask소유자worker/UI연결. 코어699/상수0·128·255·독립placement·opacity·selection·image불변·Undo검사,실제Blur이미지/마스크·저장/Undo/Esc/late 및Clone회귀통과. 마스크밖격자확장/회전복합/그룹범위·大형/원본농도·배포는잔여. 전체70/30관리추정재산정전유지.

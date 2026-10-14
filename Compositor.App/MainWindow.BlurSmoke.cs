@@ -42,6 +42,17 @@ public partial class MainWindow
             Check(!await Canvas.CloneCompletion && session.InTransaction && generation == session.TransactionGeneration, "Late blur closed a new transaction.");session.Cancel();Canvas.CancelInteraction();
         }
         finally { release.TrySetResult();Canvas.BlurCaptureOverride = null;Canvas.CancelInteraction(); }
+        var mask = LayerMask.Solid(64, 64);var tiles = mask.Pixels.Tiles.ToBuilder();var gray = tiles[new(0, 0)].Bytes.ToArray();
+        for (int y = 0; y < 64; y++) for (int x = 32; x < 64; x++) { int p = (y * 256 + x) * 4;gray[p] = gray[p + 1] = gray[p + 2] = 0; }
+        tiles[new(0, 0)] = new(gray);mask = mask.WithPixels(new(64, 64, tiles.ToImmutable()));
+        var masked = doc.Replace(doc.Layers[0] with { Mask = mask });session.Load(masked);session.EditMask = true;
+        Canvas.BeginPointer(new(31.5, 32.5), ModifierKeys.None);Canvas.EndPointer(true);
+        Check(await Canvas.CloneCompletion && session.UndoCount == 1 && session.EditMask, "Mask Blur did not finish as one mask edit.");
+        var maskResult = session.Document;Check(ReferenceEquals(maskResult.Layers[0].Pixels, masked.Layers[0].Pixels), "Mask Blur changed image pixels.");
+        Check(maskResult.Layers[0].Mask!.Pixels.ToRgba()[(32 * 64 + 31) * 4] < 255, "Mask Blur did not soften the gray edge.");
+        ProjectStore.Save(maskResult, session.ActiveLayerId, report + ".mask.comp");
+        Check(CompositePixels(maskResult).SequenceEqual(CompositePixels(ProjectStore.Load(report + ".mask.comp").Document)), "Mask Blur round trip changed output.");
+        session.Undo();Check(ReferenceEquals(session.Document, masked), "Mask Blur Undo lost source.");
         File.WriteAllText(report, JsonSerializer.Serialize(new { passed = true, checks = new[] { "Blur controls", "queued stroke", "single Undo/Redo", "project/output pixels", "Esc while capturing", "late generation protection" } }));
         foreach (var tab in workspace.Documents) tab.Session.MarkSaved();Close();
     }

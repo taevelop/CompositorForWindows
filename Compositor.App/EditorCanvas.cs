@@ -253,7 +253,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         if (Session.ActiveLayer is not { } layer || Tool == EditorTool.Hand) return;
         if (Tool is EditorTool.Brush or EditorTool.Eraser or EditorTool.CloneStamp or EditorTool.SpotHealing or EditorTool.Blur)
         {
-            if (Tool is EditorTool.CloneStamp or EditorTool.SpotHealing or EditorTool.Blur && Session.EditMask) throw new InvalidOperationException("This tool edits image pixels. Select the image thumbnail first.");
+            if (Tool is EditorTool.CloneStamp or EditorTool.SpotHealing && Session.EditMask) throw new InvalidOperationException("This tool edits image pixels. Select the image thumbnail first.");
             if (layer.IsAdjustment && !Session.EditMask) throw new InvalidOperationException("Adjustment layers have no image pixels. Select Edit mask to paint coverage.");
             if (layer.IsGroup) throw new InvalidOperationException("Select an image layer inside the group before painting.");
             if (!LayerHierarchy.Entries(Session.Document).First(e => e.Layer.Id == layer.Id).Visible) throw new InvalidOperationException("Show the layer and its parent groups before painting.");
