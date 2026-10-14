@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Media;
 using Compositor.Core;
 using Compositor.Imaging;
@@ -6,7 +6,7 @@ namespace Compositor.App;
 public partial class MainWindow
 {
     private CancellationTokenSource? fillCancellation;
-    private void CancelFill(object? sender,RoutedEventArgs e)=>fillCancellation?.Cancel();
+    private void CancelFill(object? sender,RoutedEventArgs e)=> (subjectCancellation??fillCancellation)?.Cancel();
     private async void FillForeground(object sender,RoutedEventArgs e)=>await FillPalette(false);
     private async void FillBackground(object sender,RoutedEventArgs e)=>await FillPalette(true);
     private async Task FillPalette(bool background)
@@ -48,3 +48,4 @@ public partial class MainWindow
         finally{session.Load(original);RestoreTabTools(tools);Refresh();}
     }
 }
+

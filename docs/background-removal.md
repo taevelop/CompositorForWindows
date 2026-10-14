@@ -71,3 +71,6 @@ Release 경고/오류 0, 코어 634개 및 일반 WPF 회귀 통과.
 Select → Subject의 교체/추가/빼기 UI 연결, gradient/transform 확정·busy worker·세션/문서 참조 확인 뒤 결과 적용. 활성 이미지가 아니라 캔버스 전체를 분석하며 선택은 기존처럼 저장되지 않는다. 실제 ONNX 피사체 메뉴/WPF 윤곽/입력·취소/저장 비저장정책·대형 추적 성능은 후속이다. 원본에 있는 Load Mask/Layer Selection은 이 단계에서 아직 연결하지 않았다.
 
 Release 경고/오류0·코어641개·기존WPF회귀통과. ONNX 피사체 메뉴 자체의 검증 증거와 구분한다.
+
+피사체 선택 UI 작업 검증: Replace/Add/Subtract Routed 메뉴를 실제 공통 handler/worker로 실행하고 단일 Undo/Redo·작업 중 Cancel subject selection 버튼/토큰·busy 복원·늦은 결과 다른 문서 폐기를 WPF에서 확인했다. Esc는 기존 busy 입력 경로에 같은 취소 핸들러를 연결했으나 물리 키 입력 검증은 아니다. 선택용 worker는 원본 세션/문서 참조를 확인해 적용한다. cancel은 오류 안내 대신 원본을 유지한다.
+실제 u2netp/987×1481 자연 이미지 전용 WPF 검증도 Select 메뉴를 Routed 실행(검증 경로 predictor override는 실제 모델)해 추론1회·모델마스크/선택윤곽 동일·Undo 및 .comp 재열기에 selection 미저장 정책을 확인했다. 배경+피사체 전체 검사2527ms/누적managed459.7MiB/작업후WS381.6MiB, 성능/피크 기준이나 품질 통과가 아니다. 모델 선택file/setup 자체는 다른 검사로 구분한다. Release 경고/오류0·코어641개·확장WPF통과. physical입력·대형윤곽복잡도·모델품질/메모리 및 레이어/마스크 선택load는 잔여다.

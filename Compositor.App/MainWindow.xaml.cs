@@ -298,7 +298,7 @@ public partial class MainWindow : Window
     private void ActualPixels(object? sender, RoutedEventArgs e) { Canvas.ActualPixels(); Refresh(); }
     private async void WindowKeyDown(object sender, KeyEventArgs e)
     {
-        if (busy){if(e.Key==Key.Escape&&Canvas.IsShapePreparing){Canvas.CancelInteraction();e.Handled=true;}else if(e.Key==Key.Escape&&fillCancellation is not null){CancelFill(null,e);e.Handled=true;}return;}
+        if (busy){if(e.Key==Key.Escape&&Canvas.IsShapePreparing){Canvas.CancelInteraction();e.Handled=true;}else if(e.Key==Key.Escape&&(fillCancellation is not null||subjectCancellation is not null)){CancelFill(null,e);e.Handled=true;}return;}
         if (Canvas.IsTransforming && e.Key == Key.Escape) { CancelTransform(null, e); e.Handled = true; return; }
         if (Canvas.Tool == EditorTool.Crop && e.Key == Key.Escape) { CancelCrop(null, e); e.Handled = true; return; }
         if (e.Key == Key.Escape && Canvas.HasInteraction) { Canvas.CancelInteraction(); e.Handled = true; return; }
@@ -411,6 +411,7 @@ public partial class MainWindow : Window
         await ShapeSmokeTest(Path.ChangeExtension(screenshot,".shapes.json"));
         await FilterSmokeTest(Path.ChangeExtension(screenshot,".filters.json"));
         await ModelSetupSmoke(Path.ChangeExtension(screenshot,".model-setup.json"));
+        await SubjectSelectionSmoke(Path.ChangeExtension(screenshot,".subject-selection.json"));
         await GroupSmokeTest(Path.ChangeExtension(screenshot, ".groups.json"));
         await AdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".adjustments.json"));
         await ExposureSmokeTest(Path.ChangeExtension(screenshot, ".exposure.json"));
@@ -456,5 +457,7 @@ public partial class MainWindow : Window
         if (IsVisible) throw new InvalidOperationException("Clean window did not close.");
     }
 }
+
+
 
 

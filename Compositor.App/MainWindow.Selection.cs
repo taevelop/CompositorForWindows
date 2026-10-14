@@ -7,17 +7,34 @@ namespace Compositor.App;
 
 public partial class MainWindow
 {
+    private CancellationTokenSource? subjectCancellation;
+    private Func<Raster,CancellationToken,LayerMask>? subjectPredictorOverride;
+    private Task subjectPending=Task.CompletedTask;
     private async void SelectSubject(object sender,RoutedEventArgs e)
     {
         if(!await ResolveGradientBeforeAction())return;
         if(!busy&&Canvas.IsTransforming)Canvas.CommitTransform();if(busy||session.InTransaction)return;
         string directory=System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"CompositorForWindows","Models");
         string path=System.IO.Path.Combine(directory,BackgroundModelStore.FileName);
-        if(!System.IO.File.Exists(path)){var setup=new BackgroundModelSetupWindow(directory){Owner=this};if(setup.ShowDialog()!=true)return;}
+        if(subjectPredictorOverride is null&&!System.IO.File.Exists(path)){var setup=new BackgroundModelSetupWindow(directory){Owner=this};if(setup.ShowDialog()!=true)return;}
         var mode=sender is MenuItem {Tag:string tag}&&Enum.TryParse<Compositor.Core.SelectionMode>(tag,out var selected)?selected:Compositor.Core.SelectionMode.Replace;
-        var target=session;var original=target.Document;Document? result=null;
-        if(!await Work("Selecting foreground subject…",()=>{using var predictor=new U2NetPredictor(path);result=SubjectSelection.Compute(original,predictor.Predict,mode);}))return;
-        if(ReferenceEquals(session,target)&&ReferenceEquals(target.Document,original)&&!target.InTransaction&&result is not null)target.Apply(_=>result);
+        LayerMask Predict(Raster pixels,CancellationToken token){using var predictor=new U2NetPredictor(path);return predictor.Predict(pixels,token);}
+        subjectPending=SelectSubjectAsync(mode,subjectPredictorOverride??Predict);await subjectPending;
+    }
+    private async Task SelectSubjectAsync(Compositor.Core.SelectionMode mode,Func<Raster,CancellationToken,LayerMask> predict)
+    {
+        if(busy||session.InTransaction)return;
+        var target=session;var original=target.Document;
+        using var owner=new CancellationTokenSource();subjectCancellation=owner;busy=true;Editor.IsEnabled=false;
+        FillCancelButton.Content="Cancel subject selection";FillCancelButton.Visibility=Visibility.Visible;Status.Text="Selecting foreground subject…";
+        try
+        {
+            var result=await Task.Run(()=>SubjectSelection.Compute(original,predict,mode,owner.Token));owner.Token.ThrowIfCancellationRequested();
+            if(ReferenceEquals(session,target)&&ReferenceEquals(target.Document,original)&&!target.InTransaction)target.Apply(_=>result);
+        }
+        catch(OperationCanceledException) when(owner.IsCancellationRequested){}
+        catch(Exception error){ShowError(error.Message);}
+        finally{subjectCancellation=null;busy=false;Editor.IsEnabled=true;FillCancelButton.Content="Cancel fill";FillCancelButton.Visibility=Visibility.Collapsed;Refresh();Canvas.Focus();}
     }
     private void SelectionCenterChanged(object sender, RoutedEventArgs e)
     { Canvas.CancelInteraction(); Canvas.SelectionFromCenter = SelectionCenter.IsChecked == true; }
