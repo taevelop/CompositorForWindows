@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Windows;
@@ -398,6 +398,23 @@ public partial class MainWindow : Window
 
     internal async Task SmokeTest(string screenshot)
     {
+        var stageLog = Path.ChangeExtension(screenshot, ".stages.jsonl");
+        File.WriteAllText(stageLog, string.Empty);
+        var totalClock = System.Diagnostics.Stopwatch.StartNew();
+        void Record(string stage, string state, double elapsedMs = 0)
+            => File.AppendAllText(stageLog, System.Text.Json.JsonSerializer.Serialize(new { stage, state, elapsedMs, totalMs = totalClock.Elapsed.TotalMilliseconds }) + Environment.NewLine);
+        async Task TimedAsync(string stage, Func<Task> action)
+        {
+            Record(stage, "start"); var clock = System.Diagnostics.Stopwatch.StartNew();
+            try { await action(); Record(stage, "passed", clock.Elapsed.TotalMilliseconds); }
+            catch { Record(stage, "failed", clock.Elapsed.TotalMilliseconds); throw; }
+        }
+        void Timed(string stage, Action action)
+        {
+            Record(stage, "start"); var clock = System.Diagnostics.Stopwatch.StartNew();
+            try { action(); Record(stage, "passed", clock.Elapsed.TotalMilliseconds); }
+            catch { Record(stage, "failed", clock.Elapsed.TotalMilliseconds); throw; }
+        }
         session.Load(Document.Create(800, 600));
         Canvas.Fit();
         Canvas.BeginPointer(new(140, 200)); Canvas.MovePointer(new(650, 390)); Canvas.EndPointer(true);
@@ -407,48 +424,48 @@ public partial class MainWindow : Window
         ApplyLayer(this, new());
         Canvas.Tool = EditorTool.Move; Canvas.BeginPointer(new(0, 0)); Canvas.MovePointer(new(25, 15)); Canvas.EndPointer(true);
         if (session.ActiveLayer!.Transform.X != 25) throw new InvalidOperationException("UI move gesture failed.");
-        await StabilitySmokeTest(Path.ChangeExtension(screenshot, ".checks.json"));
-        await MaskSmokeTest(Path.ChangeExtension(screenshot, ".masks.json"));
-        await ShapeSmokeTest(Path.ChangeExtension(screenshot,".shapes.json"));
-        await FilterSmokeTest(Path.ChangeExtension(screenshot,".filters.json"));
-        await ModelSetupSmoke(Path.ChangeExtension(screenshot,".model-setup.json"));
-        await SubjectSelectionSmoke(Path.ChangeExtension(screenshot,".subject-selection.json"));
-        await MaskCopySmoke(Path.ChangeExtension(screenshot,".mask-copy.json"));
-        await WandSmoke(Path.ChangeExtension(screenshot,".wand.json"));
-        await GroupSmokeTest(Path.ChangeExtension(screenshot, ".groups.json"));
-        await AdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".adjustments.json"));
-        await ExposureSmokeTest(Path.ChangeExtension(screenshot, ".exposure.json"));
-        await BlackWhiteSmokeTest(Path.ChangeExtension(screenshot, ".blackwhite.json"));
-        ExtendedAdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".extended-adjustments.json"));
-            GradientMapSmokeTest(Path.ChangeExtension(screenshot, ".gradient-map.json"));
-            HueSaturationSmokeTest(Path.ChangeExtension(screenshot, ".hue-saturation.json"));
-            PixelAdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".pixel-adjustments.json"));
-        await ImageSizeSmokeTest(Path.ChangeExtension(screenshot, ".image-size.png"));
-        await CanvasSizeSmokeTest(Path.ChangeExtension(screenshot, ".canvas-size.png"));
-        CropSmokeTest(Path.ChangeExtension(screenshot, ".crop.png"));
-        TransformSmokeTest(Path.ChangeExtension(screenshot, ".transform.png"));
-        PaletteSmokeTest();
-        await FillSmokeTest();
-        EyedropperSmokeTest();
-        await GradientSmokeTest();
-        await RenderPreparationSmokeTest();
-        await WorkspaceSmokeTest(Path.ChangeExtension(screenshot, ".workspace.png"));
-        await TabPresentationSmokeTest();
-        await TabDropSmokeTest();
-        TabLayerTransferSmokeTest();
-        await ProjectDropSmokeTest();
-        LayerCopySmokeTest();
-        ClipboardSmokeTest(Path.ChangeExtension(screenshot, ".clipboard.json"));
-        await SelectionAutoScrollSmokeTest();
-        await SelectionSmokeTest(Path.ChangeExtension(screenshot, ".selection.json"));
-        await LevelsSmokeTest(Path.ChangeExtension(screenshot, ".levels.json"));
-        await CurvesSmokeTest(Path.ChangeExtension(screenshot, ".curves.json"));
-        await ColorOverlaySmokeTest(Path.ChangeExtension(screenshot, ".overlay.json"));
-        ShadowSmokeTest(Path.ChangeExtension(screenshot, ".shadow.json"));
-        StrokeSmokeTest(Path.ChangeExtension(screenshot, ".stroke.json"));
-        InnerShadowSmokeTest(Path.ChangeExtension(screenshot, ".inner-shadow.json"));
-        OuterGlowSmokeTest(Path.ChangeExtension(screenshot, ".glow.json"));
-        await ToolControlsSmokeTest(Path.ChangeExtension(screenshot, ".tools.json"));
+        await TimedAsync("StabilitySmokeTest", () => StabilitySmokeTest(Path.ChangeExtension(screenshot, ".checks.json")));
+        await TimedAsync("MaskSmokeTest", () => MaskSmokeTest(Path.ChangeExtension(screenshot, ".masks.json")));
+        await TimedAsync("ShapeSmokeTest", () => ShapeSmokeTest(Path.ChangeExtension(screenshot,".shapes.json")));
+        await TimedAsync("FilterSmokeTest", () => FilterSmokeTest(Path.ChangeExtension(screenshot,".filters.json")));
+        await TimedAsync("ModelSetupSmoke", () => ModelSetupSmoke(Path.ChangeExtension(screenshot,".model-setup.json")));
+        await TimedAsync("SubjectSelectionSmoke", () => SubjectSelectionSmoke(Path.ChangeExtension(screenshot,".subject-selection.json")));
+        await TimedAsync("MaskCopySmoke", () => MaskCopySmoke(Path.ChangeExtension(screenshot,".mask-copy.json")));
+        await TimedAsync("WandSmoke", () => WandSmoke(Path.ChangeExtension(screenshot,".wand.json")));
+        await TimedAsync("GroupSmokeTest", () => GroupSmokeTest(Path.ChangeExtension(screenshot, ".groups.json")));
+        await TimedAsync("AdjustmentSmokeTest", () => AdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".adjustments.json")));
+        await TimedAsync("ExposureSmokeTest", () => ExposureSmokeTest(Path.ChangeExtension(screenshot, ".exposure.json")));
+        await TimedAsync("BlackWhiteSmokeTest", () => BlackWhiteSmokeTest(Path.ChangeExtension(screenshot, ".blackwhite.json")));
+        Timed("ExtendedAdjustmentSmokeTest", () => ExtendedAdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".extended-adjustments.json")));
+            Timed("GradientMapSmokeTest", () => GradientMapSmokeTest(Path.ChangeExtension(screenshot, ".gradient-map.json")));
+            Timed("HueSaturationSmokeTest", () => HueSaturationSmokeTest(Path.ChangeExtension(screenshot, ".hue-saturation.json")));
+            Timed("PixelAdjustmentSmokeTest", () => PixelAdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".pixel-adjustments.json")));
+        await TimedAsync("ImageSizeSmokeTest", () => ImageSizeSmokeTest(Path.ChangeExtension(screenshot, ".image-size.png")));
+        await TimedAsync("CanvasSizeSmokeTest", () => CanvasSizeSmokeTest(Path.ChangeExtension(screenshot, ".canvas-size.png")));
+        Timed("CropSmokeTest", () => CropSmokeTest(Path.ChangeExtension(screenshot, ".crop.png")));
+        Timed("TransformSmokeTest", () => TransformSmokeTest(Path.ChangeExtension(screenshot, ".transform.png")));
+        Timed("PaletteSmokeTest", () => PaletteSmokeTest());
+        await TimedAsync("FillSmokeTest", () => FillSmokeTest());
+        Timed("EyedropperSmokeTest", () => EyedropperSmokeTest());
+        await TimedAsync("GradientSmokeTest", () => GradientSmokeTest());
+        await TimedAsync("RenderPreparationSmokeTest", () => RenderPreparationSmokeTest());
+        await TimedAsync("WorkspaceSmokeTest", () => WorkspaceSmokeTest(Path.ChangeExtension(screenshot, ".workspace.png")));
+        await TimedAsync("TabPresentationSmokeTest", () => TabPresentationSmokeTest());
+        await TimedAsync("TabDropSmokeTest", () => TabDropSmokeTest());
+        Timed("TabLayerTransferSmokeTest", () => TabLayerTransferSmokeTest());
+        await TimedAsync("ProjectDropSmokeTest", () => ProjectDropSmokeTest());
+        Timed("LayerCopySmokeTest", () => LayerCopySmokeTest());
+        Timed("ClipboardSmokeTest", () => ClipboardSmokeTest(Path.ChangeExtension(screenshot, ".clipboard.json")));
+        await TimedAsync("SelectionAutoScrollSmokeTest", () => SelectionAutoScrollSmokeTest());
+        await TimedAsync("SelectionSmokeTest", () => SelectionSmokeTest(Path.ChangeExtension(screenshot, ".selection.json")));
+        await TimedAsync("LevelsSmokeTest", () => LevelsSmokeTest(Path.ChangeExtension(screenshot, ".levels.json")));
+        await TimedAsync("CurvesSmokeTest", () => CurvesSmokeTest(Path.ChangeExtension(screenshot, ".curves.json")));
+        await TimedAsync("ColorOverlaySmokeTest", () => ColorOverlaySmokeTest(Path.ChangeExtension(screenshot, ".overlay.json")));
+        Timed("ShadowSmokeTest", () => ShadowSmokeTest(Path.ChangeExtension(screenshot, ".shadow.json")));
+        Timed("StrokeSmokeTest", () => StrokeSmokeTest(Path.ChangeExtension(screenshot, ".stroke.json")));
+        Timed("InnerShadowSmokeTest", () => InnerShadowSmokeTest(Path.ChangeExtension(screenshot, ".inner-shadow.json")));
+        Timed("OuterGlowSmokeTest", () => OuterGlowSmokeTest(Path.ChangeExtension(screenshot, ".glow.json")));
+        await TimedAsync("ToolControlsSmokeTest", () => ToolControlsSmokeTest(Path.ChangeExtension(screenshot, ".tools.json")));
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         UpdateLayout();
         var bitmap = new RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, PixelFormats.Pbgra32);

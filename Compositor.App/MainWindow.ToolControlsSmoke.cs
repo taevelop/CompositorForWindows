@@ -16,6 +16,10 @@ public partial class MainWindow
     {
         void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
 
+        // UI layout/palette checks use their own fixture, rather than repeatedly rendering
+        // the final effect regression document into every toolbar/menu screenshot.
+        session.Load(Document.Create(800, 600)); Canvas.Fit(); Refresh();
+
         void Capture(FrameworkElement element, string suffix)
         {
             element.UpdateLayout();
@@ -27,7 +31,7 @@ public partial class MainWindow
         UpdateLayout();
         var titleOrigin = ToolTitle.TranslatePoint(new Point(), this);
         double canvasTop = Canvas.TranslatePoint(new Point(), this).Y;
-        foreach (int tool in new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 })
+        foreach (int tool in new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 })
         {
             ToolPicker.SelectedIndex = tool; UpdateLayout();
             Check((ToolTitle.TranslatePoint(new Point(), this) - titleOrigin).Length < .1, "Tool title moves when switching tools.");

@@ -313,3 +313,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - CloneStamp 원본 소스 정렬/aligned·raw/composite 불변샘플 기반 및 독립 코어검사 추가. Release경고/오류0·코어654개통과. 아직 clone스트로크/UI는 미연결. 전체WPF30초timeout2회(진행표본inner-shadow), 원인미확정 품질잔여유지. 상세 clone-stamp.md, 전체70/30 추정유지.
 
 - Clone stroke source-over/고정sample·premulbilinear·coverage/선택 연결, 반투명참조·반복·tile경계·선택/소수offset 검사 코어657개통과. UI/래스터확장/Undo연결후속, 전체WPF30초timeout재발 원인진단잔여. 전체70/30관리추정유지.
+
+- WPF단계별 timing JSONL 추가/30초제한유지. InnerShadow/OuterGlow 완료 후 ToolControls 시작(누적28.5초/27.5초)에서 timeout 관측. toolUI 독립fixture/13도구layout 검사로 이전effect문서누출 제거했으나 미해결, 상세 wpf-smoke-timing.md. Release0경고/오류·코어657개통과, 전체WPF미통과유지.
