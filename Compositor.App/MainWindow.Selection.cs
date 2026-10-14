@@ -13,6 +13,7 @@ public partial class MainWindow
     private async void ThumbnailClicked(object sender,RoutedEventArgs e)
     {
         if(sender is not Button {DataContext:LayerRow row,Tag:string tag})return;
+        if(tag=="Mask"&&maskDragConsumed){maskDragConsumed=false;e.Handled=true;return;}
         await HandleThumbnail(row.Id,tag=="Mask",System.Windows.Input.Keyboard.Modifiers);e.Handled=true;
     }
     private async Task HandleThumbnail(Guid id,bool mask,System.Windows.Input.ModifierKeys keys)
@@ -124,6 +125,7 @@ public partial class MainWindow
         session.Apply(_ => next);
     });
 }
+
 
 
 

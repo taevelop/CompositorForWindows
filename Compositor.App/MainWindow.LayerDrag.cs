@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -95,15 +95,17 @@ public partial class MainWindow
     private bool OwnLayerDrag(DragEventArgs e)=>layerDragPayload is not null&&e.Data.GetDataPresent(LayerDragFormat)&&ReferenceEquals(e.Data.GetData(LayerDragFormat),layerDragPayload);
     private void LayerDragOver(object sender,DragEventArgs e)
     {
+        if(OwnMaskDrag(e)){MaskDragOver(e);return;}
         if(!OwnLayerDrag(e))return;
         e.Handled=true;e.Effects=DragDropEffects.None;
         long now=Environment.TickCount64;bool copy=CopyLayerDrag(e.KeyStates);
         TrackLayerDrag(e.GetPosition(Layers),copy,now);
         if(RefreshLayerDragTarget(now))e.Effects=copy?DragDropEffects.Copy:DragDropEffects.Move;
     }
-    private void LayerDragLeave(object sender,DragEventArgs e){if(OwnLayerDrag(e)){StopLayerDragAssist();ClearLayerDropMark();}}
+    private void LayerDragLeave(object sender,DragEventArgs e){if(OwnMaskDrag(e)){ClearLayerDropMark();e.Handled=true;return;}if(OwnLayerDrag(e)){StopLayerDragAssist();ClearLayerDropMark();}}
     private void DropLayerRows(object sender,DragEventArgs e)
     {
+        if(OwnMaskDrag(e)){DropMask(e);return;}
         if(!OwnLayerDrag(e))return;
         e.Handled=true;e.Effects=DragDropEffects.None;StopLayerDragAssist();ClearLayerDropMark();
         try

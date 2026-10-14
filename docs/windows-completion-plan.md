@@ -292,3 +292,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - 레이어 alpha/마스크 dark 선택load·원본50% threshold·회전/뒤집기/독립배치·Select 메뉴 3연산 연결. 코어643개·WPF Routed메뉴/Undo통과. 원본 썸네일 Ctrl/Shift/Alt 바로가기·대형/물리입력은 후속, 전체추정70/30유지.
 
 - 레이어/image/mask 32px tile-sampled cached 썸네일 UI, Ctrl-load/Shift-add/Alt-subtract(Alt우선)·기본편집target 연결. modifier주입/cache/패널시각 및 기존다중선택·드래그WPF/코어643개통과. physical입력·추가maskdragcopy후속, 전체추정70/30유지.
+
+- 마스크 Alt-drag 복사 원본문서위치 pin·Linked/Enabled보존·불변공유·대상교체 연결. 전용OLEpayload/타깃표시/ownership 제한, 코어646개·WPF commit/Undo/저장·stale/self 검사통과. 실제OLE/물리입력·배포갱신 잔여, 전체추정70/30유지.
