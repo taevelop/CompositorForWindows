@@ -36,3 +36,11 @@ mouseup후graycoverage추출/원본기반Compute를serialworker에서실행한�
 WPF단독3모드/washdraft·원본에서보정(wash를결과로쓰지않음)·UndoRedo/mask·gesturecancel·Esc/늦은worker·새transaction보호·mode snapshot복원 통과, 화면검토통과. 15도구가기본높이에맞도록rail높이32/margin3,1/padding4로조정했으며도구UI 최초scroll없음/최소크기palette접근/높이복원검사통과. 코어673/Release0경고오류. 전체WPF 첫실행SelectionAutoScrollSmoke의outline size실패, 같은조건재검사는마지막stage27.03초/exit0. 원인미확정품질항목으로유지하고반복안정성완료로표시하지않는다.
 
 현재stroke는layer의기존raster크기내수집이다. 경계밖확장·회전/flip/feather복합·저장/출력전용WPF·pendingSave/탭전환·대형ROI/자연texture/softcoverage원본동등성·실기·배포갱신이후속이다. 사용자도구전체완료로판정하지않는다.
+
+## 보정 중 저장/명령 대기
+
+공통ResolveGradientBeforeAction에HealingCompletion대기를추가했다. 저장/내보내기등이pendingwash를직접쓰지않고보정성공·동일session/documentID·transaction종료를확인한후진행한다. 대기중Editor입력을잠그고finally에복원한다. busy상태에서도Healing준비중Esc를허용해작업과후속저장을취소한다.
+
+지연주입WPF에서Save요청시파일없음/Task미완료/UI잠금→release후단일Undo·saved상태·.comp최종픽셀을검사했다. 실제UI닫기/재열기와PNG전체픽셀이canvas와같음을확인했다. 대기중Esc는원본/활성UI를복원하고취소destination에프로젝트를만들지않았다. fixture는별도문서tab에격리하고원래tab/path를유지한다. 최초fixturetimeout은재열기후기본Brush로초기화된상태에서Healingworker진입을기다린테스트오류였고J/brush설정을다시지정해수정했다.
+
+최신Release0경고오류·Healing단독WPF통과. 이번단계core연산은변경없으며이전673개검증을유지한다. 기존raster범위/경계확장·복합선택/회전·대형/자연이미지품질·실기/배포갱신은계속후속이다. fullWPF의autoscroll간헐실패/30초timeout품질항목을이검사로대체하지않는다.

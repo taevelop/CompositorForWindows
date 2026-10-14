@@ -347,3 +347,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - SpotHealing 문서명령최종selection blend·imageguard·metadata/원본보존·Undo예산·저장왕복연결. 코어673/전체빌드0경고오류통과. stroke수집/확장·J UI/wash/worker/Esc·WPF·성능은후속, 전체70/30관리추정유지.
 
 - SpotHealing J/3모드/sliders·darkwash/원본coverage분리·끝연산serialworker/단일Undo·Esc/늦은결과/새txn보호·TabTools 연결. 단독WPF/시각/15도구startupscroll검사통과·코어673. fullWPF1차outlineautoscroll실패/재검사27초통과, 원인미확정유지. layer경계확장/복합/저장pending/대형품질·배포/실기후속, 전체70/30관리추정유지.
+
+- SpotHealing pendingSave/공통명령완료대기·동일session/doc확인·busy Esc취소/UI복원. WPF파일쓰기전대기→완료결과저장/실제재열기/PNG픽셀일치·Esc취소시파일없음검사통과. fixture별도tab격리·최신빌드0경고오류. 경계확장/복합/대형품질·실기/배포후속, 전체70/30관리추정유지.

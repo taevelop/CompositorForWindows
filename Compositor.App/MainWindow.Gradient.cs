@@ -42,6 +42,12 @@ public partial class MainWindow
     private async Task<bool> ResolveGradientBeforeAction()
     {
         if (busy) return false;
+        if (Canvas.IsHealingPreparing)
+        {
+            var target = session;var documentId = session.Document.Id;busy = true;Editor.IsEnabled = false;
+            try { return await Canvas.HealingCompletion && ReferenceEquals(session, target) && session.Document.Id == documentId && !session.InTransaction; }
+            finally { busy = false;Editor.IsEnabled = true;Refresh(); }
+        }
         if(Canvas.IsShapePreparing)
         {
             busy=true;Editor.IsEnabled=false;
