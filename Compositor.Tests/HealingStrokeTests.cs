@@ -5,6 +5,39 @@ using Xunit;
 namespace Compositor.Tests;
 public class HealingStrokeTests
 {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void ExpandingWorkMatchesFullReplayAndPreservesEarlierSnapshots(bool selected, bool reverse)
+    {
+        var doc = Document.Create(1024, 512);
+        // Cropping a solid tile leaves nonzero physical padding outside the logical source.
+        var pixels = RasterReframe.Apply(ShapeRaster.Create(new(ShapeKind.Rectangle, .3, .5, .7), 256, 256), new(0, 0, 64, 64));
+        var source = doc.Layers[0] with { Pixels = pixels, Transform = new(100, 100, 64, 64) };
+        doc = doc.Replace(source);
+        if (selected) doc = doc with { Selection = SelectionGeometry.Box(180, 100, 240, 70, false, true) with { Feather = 3 } };
+        var settings = new BrushSettings(40, .7, .6, 0, 0, 0);
+        var stroke = new HealingStroke(doc, source.Id, settings, HealingMode.CreateTexture, 123);
+        var points = Enumerable.Range(0, 48).Select(i => new PointD(reverse ? 140.5 - i * 2 : 140.5 + i * 8, 140.5 + i % 3)).ToArray();
+        stroke.Append(points[0]);var snapshot = stroke.Preview.Layers[0].Pixels;var saved = snapshot.ToRgba();
+        foreach (var point in points.Skip(1)) stroke.Append(point);
+        var basis = stroke.Base.Layers[0];
+        var full = new BrushStroke(basis with { Pixels = new Raster(basis.Pixels.Width, basis.Pixels.Height), Mask = null }, settings with { Opacity = 1, Red = 255, Green = 255, Blue = 255 }, 1024, 512);
+        var selection = doc.Selection is { } geometry ? SelectionCoverage.Create(geometry, 1024, 512) : null;
+        var wash = new BrushStroke(basis, settings with { Opacity = .45, Red = 31, Green = 31, Blue = 31 }, 1024, 512, selection);
+        foreach (var point in points) { full.Append(point);wash.Append(point); }
+        var expected = full.Pixels.ToRgba();var coverage = stroke.Coverage();
+        for (int i = 0; i < coverage.Length; i++) Assert.Equal(expected[i * 4 + 3], coverage[i]);
+        Assert.Equal(wash.Pixels.ToRgba(), stroke.Preview.Layers[0].Pixels.ToRgba());
+        Assert.Equal(saved, snapshot.ToRgba());Assert.Same(pixels, source.Pixels);
+        var reference = SpotHealing.Compute(stroke.Base, source.Id, coverage, .6, HealingMode.CreateTexture, 123).Layers[0];
+        var completed = stroke.Complete().Layers[0];
+        var origin = basis.Transform.ToPixels(completed.Transform.ToDocument(new(0, 0), completed.Pixels.Width, completed.Pixels.Height), basis.Pixels.Width, basis.Pixels.Height);
+        var cropped = RasterReframe.Apply(reference.Pixels, new((int)Math.Round(origin.X), (int)Math.Round(origin.Y), completed.Pixels.Width, completed.Pixels.Height));
+        Assert.Equal(cropped.ToRgba(), completed.Pixels.ToRgba());
+    }
+
     [Fact]
     public void RotatedFlippedExpandedStrokeAppliesFeatherToFinalHealingOnce()
     {

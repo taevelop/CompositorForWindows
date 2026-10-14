@@ -17,8 +17,10 @@ internal static class HealingBenchmark
         double inputMs = clock.Elapsed.TotalMilliseconds;clock.Restart();var result = stroke.Complete();double completeMs = clock.Elapsed.TotalMilliseconds;
         result.Validate();if (ReferenceEquals(result, doc) || !ReferenceEquals(source, doc.Layers[0].Pixels)) throw new InvalidOperationException("Healing benchmark changed source or did not heal.");
         using var process = Process.GetCurrentProcess();process.Refresh();
-        File.WriteAllText(report, JsonSerializer.Serialize(new { count, diameter, expansion, inputMs, maximumMs, completeMs, allocatedMiB = (GC.GetTotalAllocatedBytes(true) - allocated) / 1048576d,
-            peakMiB = process.PeakWorkingSet64 / 1048576d, note = "One synthetic 4K core stroke with small black defect; dense source or 64px source expansion. Source setup excluded from allocation but included in peak. Not WPF latency or natural texture quality." }, new JsonSerializerOptions { WriteIndented = true }));
+        double allocatedMiB = (GC.GetTotalAllocatedBytes(true) - allocated) / 1048576d;
+        string pixelHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(result.Layers[0].Pixels.ToRgba()));
+        File.WriteAllText(report, JsonSerializer.Serialize(new { count, diameter, expansion, inputMs, maximumMs, completeMs, allocatedMiB,
+            peakMiB = process.PeakWorkingSet64 / 1048576d, pixelHash, note = "One synthetic 4K core stroke with small black defect; dense source or 64px source expansion. Source setup excluded from allocation but included in peak. Not WPF latency or natural texture quality." }, new JsonSerializerOptions { WriteIndented = true }));
     }
     public static void Natural(string sourcePath, string report, int? centerX = null, int? centerY = null)
     {

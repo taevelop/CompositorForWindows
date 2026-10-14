@@ -71,7 +71,7 @@ public sealed class CloneStroke
                 BrushStroke replay;
                 if (relative.Left % 256 == 0 && relative.Top % 256 == 0)
                 {
-                    replay = stroke.ReframeClone(grown, relative); replay.Append(point);
+                    replay = stroke.ReframeAligned(grown, relative); replay.Append(point);
                 }
                 else
                 {

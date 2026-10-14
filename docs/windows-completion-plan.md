@@ -353,3 +353,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - HealingStroke 원본/coverage/wash공유확장격자·raster/mask배치·끝kernel/선택/crop·예산연결. 코어677/rotationFlip+feather전픽셀참조·linked독립mask/선택무변경/Undo검사통과. 실제J16→17px/WPF끝worker·mask·Undo·UI저장통과. 연속frame재생/대형품질·native취소·실기/배포후속, 전체관리70/30유지.
 
 - Healing4K dense40/800px48입력core측정 및natural한사진3위치/radius3 defect·outside불변/3모드확대검토CLI. dense800입력526ms/끝543ms, 작은source확장40px입력239ms이나managed755MiB할당잔여. 자연CA/Proximity결함감소·detail복원불완전/Texturegrain자국, 일반품질통과아님. WPF/대형/취소·할당·배포/실기후속, 제품경로변경없음·전체70/30관리추정유지.
+
+- Healing 정렬확장 coverage/wash 작업 재사용·비정렬 전체재생 fallback·정확한 kernel frame 유지. 코어680/부분tile padding·feather새셀·tile경계·전체재생픽셀/스냅샷 불변·실제 Healing WPF 회귀 통과. 동일확장 probe 할당755.5→170.1MiB/입력257→88.7ms/최종SHA동일; 최대지연 개선은 미입증. dense대형/UI/native취소·자연품질·배포/실기 후속. 전체70/30은 재산정 전 관리추정 유지.

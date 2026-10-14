@@ -51,7 +51,7 @@ HealingStroke가시작document/source/settings/mode/seed를고정하고coverage�
 
 코어677개통과: source16→17/new alpha·linked/independent mask·원본/UndoRedo·selection제외/no-op·취소, rotation37/FlipXY/feather1의rawhealed+최종selection참조와전pixel1LSB이내합성검사. 실제J WPF에서도16→17px draft/complete mask·Undo/Redo·UI저장canvas출력일치검사통과. 최신Release0경고오류·기존3모드/Esc/lateworker/pendingSave/재열기PNG회귀통과. 입력중selectioncoverage를중복생성하지않게정리했다.
 
-현재frame변경은points재생이므로긴확장stroke/큰tip의preview비용이남는다. nativekernel 중간취소는없다. dense/대형ROI·자연texture/색공간/softcoverage원본동등성·budget극한·실기·배포갱신 및fullWPF간헐항목은후속이며전체Healing품질완료로판정하지않는다.
+비정렬 frame변경은points재생이므로긴확장stroke/큰tip의preview비용이남는다. nativekernel 중간취소는없다. dense/대형ROI·자연texture/색공간/softcoverage원본동등성·budget극한·실기·배포갱신 및fullWPF간헐항목은후속이며전체Healing품질완료로판정하지않는다.
 
 ## 코어 성능·자연 사진 품질 probe
 
@@ -60,3 +60,11 @@ HealingStroke가시작document/source/settings/mode/seed를고정하고coverage�
 4Kdense/48입력: 40px input35.6ms/최대2.13ms/complete83.7ms/managed131.6MiB/peak322MiB; 800px input526ms/최대19.8ms/complete543ms/managed400.7MiB/peak439MiB. 작은64px source를계속확장한40px48입력은239ms/최대10.4ms/complete37.9ms이지만managed755MiB/peak64MiB로누적할당이높다. managed는source준비제외,peak는준비포함이고각1회core이다. WPFframe/취소응답을입증하지않는다. expand는성능probe이며투명영역보정의자연품질을대체하지않는다.
 
 고정seed123 자연probe RMSE(원본0–255 RGB 대비): 평탄부 손상174.8→ContentAware/Proximity1.10, CreateTexture43.2; wood76.2→17.6/17.6/27.5; leaf154.4→16.0/22.6/47.8. 순서는ContentAware/Proximity/CreateTexture이며원본미손상pixels는세모드모두같다. 확대검토에서ContentAware/Proximity는결함을줄였으나원래결/잎디테일복원은불완전, CreateTexture는grain자국이눈에띈다. 한사진세위치/작은합성결함이며일반품질·실제Mac동등성통과가아니다. 다중사진/큰선택/에지/전처리·대형UI/취소/할당최적화·배포검증은잔여다. 이번변경은benchmark만이며제품연산은그대로다.
+
+## 정렬된 확장 작업 재사용
+
+Healing의 상대 frame 원점이 256px 타일에 정렬되면 BrushStroke.ReframeAligned로 coverage와 wash의 작업 버퍼/이전 입력을 옮기고 현재 segment만 적용한다. 원점이 비정렬이면 기존 전체 재생 경로를 유지한다. native 보정에 전달하는 frame은 계속 정확한 필요 크기이며 ROI/seed를 바꾸는 여유 영역을 추가하지 않는다. 부분 edge tile은 새 base에서 original/output을 구성하고 기존 논리 범위만 복사하며 새 영역의 selection weights를 다시 계산한다. Clone도 같은 이전 작업 전달 계약을 사용한다.
+
+코어 680개 통과: solid tile을64px로crop해 남긴 비영 padding,48point의256px경계 확장, feather 선택과 새 셀, 왼쪽 비정렬 fallback, 전체 재생 대비 coverage/wash/최종 CreateTexture 픽셀 일치, 이전 preview스냅샷 불변. 기존 Clone·mask·rotationFlip검사 포함. Release0경고/오류, 단독 실제 Healing WPF의3모드/취소/late worker/대기저장/왕복/경계확장검사 통과. fullWPF간헐 실패의 해결 증거로 사용하지 않는다.
+
+동일4K canvas/64px source/40px tip/48point/seed123 측정: 이전 input257.0ms/최대13.0ms/완료40.4ms/누적할당755.5MiB, 최종 input88.7ms/최대15.3ms/완료38.8ms/할당170.1MiB. 누적할당 약77.5% 감소. 이전 측정의 해시용 작은RGBA 할당 약0.1MiB는 포함됐으며 최종 측정은 해시 계산 전 할당값을 고정한다. 결과 SHA256은 둘 다 A9D244361781046B83740DF2B1060D8D5ED4AA42445DA014885BE2A6DBA66991. 각 단일 core 실행이며 최대 입력 지연 개선은 입증하지 못했다. dense800px/UI응답/native취소/자연품질/비정렬 확장 비용은 계속 잔여다.

@@ -49,7 +49,15 @@ public sealed class HealingStroke
             if (next != frame)
             {
                 CheckBudget(next);var grown = RasterReframe.Apply(source, next);
-                (coverage, wash) = Create(grown);foreach (var painted in points) { coverage.Append(painted);wash.Append(painted); }
+                var relative = new RasterFrame(next.Left - frame.Left, next.Top - frame.Top, next.Width, next.Height);
+                if (relative.Left % 256 == 0 && relative.Top % 256 == 0)
+                {
+                    // Keep the exact kernel frame and transfer aligned work instead of replaying the stroke.
+                    coverage = coverage.ReframeAligned(grown with { Pixels = new Raster(next.Width, next.Height), Mask = null }, relative);
+                    wash = wash.ReframeAligned(grown, relative);
+                    coverage.Append(point);wash.Append(point);
+                }
+                else { (coverage, wash) = Create(grown);foreach (var painted in points) { coverage.Append(painted);wash.Append(painted); } }
                 expanded = grown;frame = next;
             }
             else { coverage.Append(point);wash.Append(point); }

@@ -60,11 +60,11 @@ public sealed class BrushStroke
     private readonly PointD cloneOffset;
     private PointD? previous;
     public Raster Pixels { get; private set; }
-    internal BrushStroke ReframeClone(Layer grown, RasterFrame relative)
+    internal BrushStroke ReframeAligned(Layer grown, RasterFrame relative)
     {
-        if (cloneSample is null || relative.Left % 256 != 0 || relative.Top % 256 != 0 || relative.Left > 0 || relative.Top > 0 ||
+        if (relative.Left % 256 != 0 || relative.Top % 256 != 0 || relative.Left > 0 || relative.Top > 0 ||
             relative.Left + relative.Width < Pixels.Width || relative.Top + relative.Height < Pixels.Height)
-            throw new ArgumentException("Clone work transfer requires tile-aligned expansion.");
+            throw new ArgumentException("Brush work transfer requires tile-aligned expansion.");
         var next = new BrushStroke(grown, settings, canvasWidth, canvasHeight, selection, cloneSample, cloneOffset)
         { Pixels = ReferenceEquals(Pixels, layer.Pixels) ? grown.Pixels : RasterReframe.Apply(Pixels, relative), previous = previous };
         foreach (var (key, tile) in work)
