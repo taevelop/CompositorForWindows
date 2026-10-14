@@ -27,7 +27,7 @@
 - 선택/변형: 사각/타원/올가미/크롭·선택 픽셀/클립보드·피사체/레이어/마스크 선택load·기본 변형은 연결됐다. Magic Wand 기본 UI도 연결됐다. 남음: Wand 복잡 윤곽/취소 성능, 왜곡·원근/이동 스냅 상세 범위, 외부 클립보드 호환, 큰 선택/윤곽 성능과 물리 입력.
 - 추가 도구: 도형·그라디언트·색상 채우기·스포이트는 연결됐다. 원본 NavigationTool 및 소스에서 확인한 미구현은 Spot Healing, Blur/Smudge/Liquify, Type, Zoom 전용 도구다. Clone Stamp의 기본 UI·worker·확장·이력·저장 경로는 연결됐으며 입력 지연·복합/실기 품질은 남아 있다. 영역 채우기 도구와 기타 확장 범위는 기존 요구를 유지하며 원본과 별도 대조한다.
 - 텍스트: 편집 가능한 텍스트 모델·글꼴·배치·저장·inline 편집 UI 미구현.
-- 작업 공간: 문서 탭·그룹·다중 선택·계층 드래그는 기본 UI가 연결됐다. 남음: 탭/환경 설정 고급 범위, 드래그 복합 입력/모니터·DPI 실기, 캔버스 Alt-drag 복제 및 추가 썸네일 동작. 마스크 Alt-drag는 연결됐지만 실제 OLE/물리 입력은 미검증이다.
+- 작업 공간: 문서 탭·그룹·다중 선택·계층 드래그는 기본 UI가 연결됐다. 남음: 원본 그룹 마스크의 모델·합성·저장·편집, 탭/환경 설정 고급 범위, 드래그 복합 입력/모니터·DPI 실기, 캔버스 Alt-drag 복제 및 추가 썸네일 동작. 마스크 Alt-drag는 연결됐지만 실제 OLE/물리 입력은 미검증이다.
 - PSD: 현재 ImageCodec는 PNG/JPEG만 허용한다. PSD 구조/지원 요소 가져오기와 미지원 안내는 미구현; PSD 저장은 범위 제외.
 - RAW/AI: RAW importer는 미구현. ONNX 기반 배경 제거/피사체 선택·설치 UI는 연결됐으나 품질·원본 동등성·대형 메모리/지연과 설치 실기가 남았다. 파일·모델 해시/라이선스·실행 의존성 기록을 유지한다.
 - 품질/성능: 대형 문서 전체 버퍼/피크, 브러시 입력/농도·샘플링, GPU 경로 필요성 판단, 간헐적 WPF 타임아웃 원인 규명. 100MP 한 번의 코어 실행은 장시간 복합 문서 안정성 완료가 아니다.
@@ -367,3 +367,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Blur(R) rail/공유sliders·고정sample async준비·queued입력·tool/session/doc/gen보호·Esc·단일Undo·공통명령준비대기연결. 실제Blur/Clone/16tool scrollbar·고정layout WPF회귀통과·695코어검증유지. 마스크Blur/Smudge/Liquify·대형성능/원본soft농도/배포후속. 전체70/30관리추정은최근작업가중치재산정전유지하며MVP구현100/검증96+보류4와별도다.
 
 - Blur마스크문서sample/edge배경·GaussianClamp·maskstroke고정sample·EditMask소유자worker/UI연결. 코어699/상수0·128·255·독립placement·opacity·selection·image불변·Undo검사,실제Blur이미지/마스크·저장/Undo/Esc/late 및Clone회귀통과. 마스크밖격자확장/회전복합/그룹범위·大형/원본농도·배포는잔여. 전체70/30관리추정재산정전유지.
+
+- 원본BrushStroke mask extent/affected clip을확인해이전mask바깥확장잔여항목정정:원본도고정mask격자다. 코어700/rotation37·FlipXY·feather3·독립blend수식/범위밖no-op·snapshot검사통과. 원본groupmask편집허용과Windows모델거부차이를확인해groupmask모델/합성/저장/UI를잔여명시. publish-blur-ui에이미지·마스크Blur갱신. 대형/원본농도/Gaussian품질·그룹mask·전체기능잔여,70/30관리추정재산정전유지.

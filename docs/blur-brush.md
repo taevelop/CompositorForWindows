@@ -38,3 +38,15 @@ MaskStroke에선택적고정softenedSample을추가했다. graycontrol색대신s
 코어699개통과:0/128/255 상수mask의문서edge·gray/opaque채널,독립placement32px흑백경계blur·반불투명·원본·image불변·selection제외·UndoRedo·취소·disabled거부. 실제Blur WPF에서masktarget/async단일Undo/grayedge/image참조불변/.comp합성왕복/Undo검사통과. 이전이미지Blurqueued/대기명령/Esc/newgeneration과Clone회귀도통과. Release0경고/오류.
 
 현재MaskStroke는기존mask격자안에서편집한다. 원본BrushStroke의mask바깥stroke격자확장/새영역background/독립placement규칙까지완료한것은아니며기존maskbrush와함께후속검증·구현한다. 회전/flip·복합feather·group/adjustment mask선택지원의원본범위,Gaussian중간취소/대형실측·원본누적농도·새패키지배포도잔여다. 이번변경은개발Release에만반영됐다.
+
+## 원본 고정 마스크 격자 확인 및 회전 검사
+
+위의마스크바깥격자확장잔여설명을정정한다. 원본BrushStroke.swift init의`extent = mask ? originalBounds : ...`는mask격자를원본범위로고정하고,continuousKeys(약317행)/dab(약515행)의affected는`CGRect(x:0,y:0,width:width,height:height)`에교차한다. image와같은mask격자확장은원본요구가아니다. 현재MaskStroke의범위밖편집no-op/고정dimensions를유지한다. canvas밖은별도canvasclip계약이다.
+
+코어700개통과:독립maskplacement37도/FlipXY/feather3/opacity.6를문서좌표bilinear sample+독립합성식과비교(1LSB이내),전채널opaque gray,격자32×32/Placement유지,범위밖입력no-op/이전snapshot불변. 이번제품연산변경없음.
+
+원본EditorSession+Brush.swift canPaint는group도mask선택이면허용한다. WindowsLayerHierarchy.Validate는groupmask자체를거부한다. groupmask는모델·group합성·저장필드·선택/transform·brush/blur/UI를함께구현해야하는미지원기능이다. guard만열어완료로표시하지않았다. adjustment mask와대형/원본누적농도/Gaussian동등성검증도계속잔여다.
+
+이미지·마스크Blur(R)를포함한새패키지경로는 `artifacts/publish-blur-ui/Compositor.Windows.exe`다. 기존패키지는유지한다. 배포검증결과는아래에기록한다.
+
+Release0경고/오류·배포본Blur단독WPF검사(이미지/마스크・단일Undo・저장/출력・queued/cancel/late generation・공통명령대기)통과. portable45초gate1회도공백경로copy/제한PATH·패키지내CLR/Skia/C로드観測/전체WPF회귀에서통과했다. 같은개발PC이며보류된별도PC실기나일반30초gate안정화검증을대체하지않는다.
