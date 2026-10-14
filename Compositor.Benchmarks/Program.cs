@@ -5,6 +5,8 @@ using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 
+if(args.Length>0&&args[0]=="--clone-preview"){ClonePreviewBenchmark.Run(args[1],args.Length>2?int.Parse(args[2]):4000);return;}
+
 if(args.Length>0&&args[0]=="--wand"){WandBenchmark.Run(args[1],args.Length>2?int.Parse(args[2]):4000);return;}
 if(args.Length>0&&args[0]=="--download-background-model"){using var client=new System.Net.Http.HttpClient();Console.WriteLine(await BackgroundModelStore.DownloadAsync(args[1],client,true));return;}
 if(args.Length>0&&args[0]=="--install-background-model"){Console.WriteLine(BackgroundModelStore.Install(args[1],args[2]));return;}

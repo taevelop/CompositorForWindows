@@ -45,3 +45,9 @@ Clone source crosshair/브러시범위원을 device크기 일정한 black/white 
 원본clonePreview의 화면해상도/1024px한변상한과 raw/all-visible 규칙을 대조했다. source-offset으로 이동한 작은영역만 표시bitmap에 렌더하고 tip radialcoverage/hardness·opacity를 premultipliedRGBA에 적용한다. idle에서만 표시하며 stroke진행/Alt누름에는숨긴다. pointer/samplecenter·Document/activeLayer·settings·deviceZoom key의 단일SKImage캐시로 동일state는재사용하고 session변경/Dispose에서해제한다. 숫자invalid draft는Paint를중단하지않고 tip표시만생략한다.
 
 반투명/opacity·raw/all-visible·1024상한·원본보존·취소검사 코어658개통과. 최신빌드0경고오류·Clone단독WPF source/Undo/cancel/tab/저장/PNG와 tip시각검토통과. fullWPF는이번단계재검사하지않았으며 이전30초timeout미해결을유지한다. 축소tip와CoreGraphics medium보간동등성·복합문서대형hover/frame비용·입력/샘플worker·renderer캐시/메모리·target raster확장 및 배포갱신은잔여다. 출력bitmap상한이source/effect렌더메모리상한을뜻하지않는다.
+
+## 대형 raw tip 미리보기 측정
+
+--clone-preview report [side] 벤치마크 추가: 합성ellipse·800px tip·세개의인접 sourcecenter, 출력800px/중앙alpha204·원본Raster참조보존을검사한다. 4K 기존경로최초45ms/후속17ms, 재측정47/18/18ms·managed각10.23MiB·프로세스피크276MiB. 100MP는47/19/19ms·각10.33MiB·피크1517MiB. 피크는전체합성source생성과3회실행을포함하며 preview만의메모리로해석하지 않는다.
+
+CanvasRenderer는transform하의 LocalClipBounds에교차하는tile만 TileImage로변환한다. rawpreview가전체sourcebitmap을매hover복사한다는가정은이번소스/측정에서지지되지 않았다. managed직접bilinear실험은4K최초197/후속72·63ms로느려지고피크차이도작아되돌렸다. 최종제품알고리즘은기존경로를유지한다. 코어측정은 WPFframe·100MP복합효과·all-layer·지속hover·stroke시작fullcapture·취소성능을증명하지 않는다. target raster확장과이들항목은계속잔여다.

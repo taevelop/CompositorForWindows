@@ -323,3 +323,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Clone sourcecrosshair/brush범위원·leave/session hoverreset 및 전용WPF CLI. sourceoffset/Undo/cancel/tab·.comp재열기·PNG출력픽셀일치·시각검토통과. 코어657/빌드0경고오류, fullWPF30초timeout잔여. 확장/tippreview/대형·물리입력은후속, 전체70/30관리추정유지.
 
 - Clone 팁source이미지preview 1024화면해상도상한·hardness/opacity·idle/Alt규칙·단일SKImage캐시연결. 코어658/빌드0경고오류·단독WPF저장출력 및 tip시각검토통과. 대형hover/원본보간/target확장/배포후속, fullWPF30초timeout잔여유지. 전체70/30관리추정유지.
+
+- Clone800px rawtip 벤치마크추가/4K·100MP각3인접sourcecenter결과및원본참조검사. 기존cliptile렌더4K47/18/18ms·100MP47/19/19ms·managed각10.3MiB. 느려진직접managedsampling실험은폐기, 제품경로유지. 피크276/1517MiB는source준비포함, WPF/all-layer/지속hover완료아님. 전체관리70/30유지.
