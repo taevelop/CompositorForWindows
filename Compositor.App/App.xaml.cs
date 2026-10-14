@@ -8,12 +8,12 @@ public partial class App : Application
     {
         base.OnStartup(e);
         var window = new MainWindow(); MainWindow = window;
-        if(e.Args.Length==3&&e.Args[0] is "--clone-benchmark" or "--healing-benchmark")
+        if(e.Args.Length==3&&e.Args[0] is "--clone-benchmark" or "--healing-benchmark" or "--warp-benchmark")
         {
             ShutdownMode=ShutdownMode.OnExplicitShutdown;window.ShowInTaskbar=false;window.Left=-10000;window.Top=-10000;
             window.Loaded+=async(_,_)=>
             {
-                try{if(e.Args[0]=="--healing-benchmark")await window.HealingBenchmark(e.Args[1],int.Parse(e.Args[2]));else await window.CloneBenchmark(e.Args[1],int.Parse(e.Args[2]));Shutdown(0);}
+                try{if(e.Args[0]=="--warp-benchmark")await window.WarpBenchmark(e.Args[1],int.Parse(e.Args[2]));else if(e.Args[0]=="--healing-benchmark")await window.HealingBenchmark(e.Args[1],int.Parse(e.Args[2]));else await window.CloneBenchmark(e.Args[1],int.Parse(e.Args[2]));Shutdown(0);}
                 catch(Exception error){System.IO.File.WriteAllText(e.Args[1]+".error.txt",error.ToString());window.CloseSmokeOnFailure();Shutdown(1);}
             };
         }

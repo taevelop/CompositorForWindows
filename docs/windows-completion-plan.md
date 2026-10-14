@@ -379,3 +379,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Warp actual Save중입력큐마무리/준비대기·파일쓰기전잠금·단일Undo saved결과·UI재열기픽셀동일, busyEsc원본/UI복원·프로젝트없음·late/newgen검사통과. publish-smear-ui에세모드패키지갱신. 제품연산변경없음·709코어검증유지. 복합/대형·자연품질/원본농도·mode cycling/나머지Type·Zoom·text·PSD·RAW·배포범위잔여,전체70/30관리추정재산정전유지.
 
 - Warp rotation37/FlipXY·복합feather2·linked/독립mask 전픽셀합성회귀·코어713통과. 4K/40px/12입력probe 추가 및Append전체Raster변환→수정tile snapshot공유:두모드최종SHA동일,할당1.6GiB→207~221MiB/입력310~342→10~13ms. 합성core단일측정이며WPF/800px/100MP/자연품질완료아님. 초기capture/큰brush·preview/연속·배포후속,전체70/30관리추정재산정전유지.
+
+- Warp actualWPF4K/800px/48입력 dev·publish 측정/단일Undo·원본복원·Esc검사. 배포완료Smudge671ms/Liquify1470ms, 최대Dispatcher106/70ms·EscUI3.5/.6ms로성능개선잔여. 입력은queue등록시간/정확한취소phase미확정·3paint빠른batch조건. publish-smear-tiles에수정tile최적화갱신·배포Save/reopen회귀통과·713코어검증유지. 대형/자연품질/장시간·원본농도/모드cycling·전체Type/Zoom/text/PSD/RAW/groupmask/배포잔여,70/30관리추정재산정전유지.

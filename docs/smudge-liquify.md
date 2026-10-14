@@ -76,3 +76,23 @@ Esc·mode/tool/tab/session/Dispose 변경은 owner token과 transaction을 취�
 최종SHA는각모드전후동일: Smudge169C2A1A3A445E7BE46A4D808A6850EAD764485A6BD578AED8D36D627C03798C, Liquify6EEFABAC4188A2A1AA735817C8C31ABD902F5C5EC2030BBB72A52BF7663CEBFC. core713검사에변하지않은edge tile 공유도포함한다. 이표는단일합성core이며WPF응답/물리입력/800px·100MP·자연품질완료가아니다. 초기fullcanvas캡처와큰brush/장시간·preview rendering은후속이다. publish-smear-ui는이전b8fe821단계이며이번최적화의배포갱신은후속이다.
 
 최적화 후 Release0경고/오류·실제warp WPF 미리보기/UndoRedo/실제Save대기·재열기/PNG/탭/Esc/새generation 회귀도통과했다. 성능 표는여전히코어측정이며이기능회귀를UI응답시간측정으로대체하지않는다.
+
+## 실제 WPF 800px 측정과 최적화 배포
+
+`Compositor.Windows.exe --warp-benchmark report 4000`은 dense4K red/green split에서각모드800px/48point를실행한다. 첫표시후 Background Dispatcher를진행하며입력을큐에넣고 worker완료·단일Undo/원본복원·Dispatcher timer 진행을검사한다. Esc는새owner가활성인상태에서10ms뒤전송하며원본/UItransaction즉시복원과늦은결과폐기를검사한다. 정확한capture/dab/wait위치에서취소됐는지는입증하지않는다.
+
+| 각1회 실제WPF | Smudge 개발 / 배포 | Liquify 개발 / 배포 |
+|---|---:|---:|
+| 입력 시작부터 최종 커밋 | 524 / 671ms | 1005 / 1470ms |
+| 입력 큐 등록 합계 | 14.8 / 21.7ms | 4.14 / 4.44ms |
+| 최대 단일 입력 등록 | 5.51 / 7.38ms | .181 / .166ms |
+| 최대 Dispatcher 간격 | 86.5 / 106.4ms | 50.4 / 69.6ms |
+| 최대 canvas paint | 62.1 / 87.2ms | 45.2 / 67.9ms |
+| Esc UI 복원 | 2.44 / 3.50ms | .637 / .615ms |
+| 취소 worker 정리 | 5.97 / 10.1ms | 7.54 / 3.81ms |
+
+queued입력시간은알고리즘처리시간이아니다. 완료에는capture/dab/최종copy/UIcommit이포함된다. 개발/배포모두3paint만관측됐고빠른입력이worker batch로묶인조건이며물리입력frame/장시간preview를입증하지않는다. paint는WPFbitmap표시비용을제외한다. 배포 누적할당약240/259MiB는취소/검증포함,processpeak는678/836MiB로두모드·setup전체수명누적최대다. 모드간/코어표와직접비교하지않는다. 배포측정의최대106msUIgap과Liquify약1.47초완료는여전히성능개선대상이다.
+
+최신수정타일최적화·세모드패키지는 `artifacts/publish-smear-tiles/Compositor.Windows.exe`다. 기존패키지를유지한다. Release0경고/오류·개발/배포actual4KWPF검사와배포warp 실제Save대기/재열기/PNG/Undo/Esc/newgen회귀통과. 코어제품변경없음·713검증유지. portable검사결과는아래에기록한다. 100MP/800px자연품질·복합장시간/원본농도·모드cycling·제품설치/서명·실기범위는계속잔여다.
+
+이패키지의portable45초gate1회도통과했다. 공백경로copy/제한PATH·패키지내CLR/Skia/C관측·전체WPF회귀는같은개발PC에서수행했다. 보류된실제Mac왕복·별도Windows실기나일반30초gate안정화를대체하지않는다.
