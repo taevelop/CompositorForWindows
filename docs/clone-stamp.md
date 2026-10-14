@@ -21,3 +21,9 @@
 ## 검증 기록
 
 Release build 경고/오류0, 코어654개 통과. 전체 WPF 검사는 동일30초 제한 두 번 모두 timeout: 마지막 표본은 inner-shadow 패널까지 진행했다. 기존 간헐적 timeout의 원인과 단계별 시간은 미확정이며 이번 단계의 전체WPF 통과로 표시하지 않는다. 새 Clone 코드는 아직 WPF에서 호출하지 않는다.
+
+## 스트로크 기반 연결
+
+BrushStroke의 optional clone sample/offset 경로를 추가했다. 고정 source를 document 좌표의 premultiplied bilinear로 읽고 maximum swept coverage·opacity·selection을 곱해 시작 pixels에 source-over 합성한다. transparent sample은 no-op, copy-mode Blur/Smudge는 별도다. 동일 point 반복은 density를 증가시키지 않는다. 기존 paint/erase 경로는 그대로 사용한다. source/target snapshot 보존·반투명 수치 참조·흰색 target·타일경계·selection·소수 offset 검사를 포함해 코어657개 통과. 전체WPF30초timeout 재발로 미통과 유지.
+
+현재는 기존 layer raster 크기 안에서 stroke 기반만 연결됐다. raster 확장/변형 마스크 예산·S 도구/UI·문서별source·Undo/저장·직접입력은 후속이다. CoreGraphics medium interpolation과 Windows bilinear의 실제Mac 결과 동등성은 아직 검증하지 않았다.

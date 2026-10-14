@@ -7,6 +7,46 @@ namespace Compositor.Tests;
 public class CloneStampTests
 {
     [Fact]
+    public void SelectionClipsCloneAndFractionalOffsetsInterpolatePremultipliedPixels()
+    {
+        var document = Document.Create(4, 2);var layer = document.Layers[0];
+        var bytes = new byte[32];bytes[0] = 100;bytes[3] = 128;
+        var selection = SelectionCoverage.Create(new DocumentSelection("M2 0L3 0L3 1L2 1Z") { Antialiased = false }, 4, 2);
+        var stroke = new BrushStroke(layer, new(3, 1, 1, 0, 0, 0), 4, 2, selection, Raster.FromRgba(4, 2, bytes), new(-1.5, 0));
+        stroke.Append(new(2.5, .5));var result = stroke.Pixels.ToRgba();
+        Assert.Equal(new byte[] { 50, 0, 0, 64 }, result.Skip(8).Take(4).ToArray());
+        for (int p = 0; p < 8; p++) if (p != 2) Assert.Equal((byte)0, result[p * 4 + 3]);
+    }
+
+    [Fact]
+    public void StrokeUsesFrozenSampleSourceOverAndDoesNotAccumulateOpacity()
+    {
+        var document = Document.Create(4, 2);
+        var original = Enumerable.Repeat(new byte[] { 255, 255, 255, 255 }, 8).SelectMany(x => x).ToArray();
+        var layer = document.Layers[0] with { Pixels = Raster.FromRgba(4, 2, original) };
+        var sampleBytes = new byte[32];sampleBytes[0] = 100;sampleBytes[3] = 128;
+        var sample = Raster.FromRgba(4, 2, sampleBytes);
+        var stroke = new BrushStroke(layer, new(1, 1, .5, 255, 255, 255), 4, 2, cloneSample: sample, cloneOffset: new(-2, 0));
+        stroke.Append(new(2.5, .5));var result = stroke.Pixels.ToRgba();
+        Assert.Equal(new byte[] { 241, 191, 191, 255 }, result.Skip(8).Take(4).ToArray());
+        stroke.Append(new(2.5, .5));Assert.Equal(result, stroke.Pixels.ToRgba());
+        Assert.Equal(original, layer.Pixels.ToRgba());Assert.Equal(sampleBytes, sample.ToRgba());
+        var transparent = new BrushStroke(layer, new(1, 1, 1, 0, 0, 0), 4, 2, cloneSample: sample, cloneOffset: new(100, 0));
+        transparent.Append(new(2.5, .5));Assert.Same(layer.Pixels, transparent.Pixels);
+    }
+
+    [Fact]
+    public void CloneCrossesTileBoundaryAndOnlyChangesSweptPixels()
+    {
+        var document = Document.Create(260, 2);var layer = document.Layers[0];
+        var bytes = Enumerable.Repeat(new byte[] { 60, 20, 10, 255 }, 520).SelectMany(x => x).ToArray();
+        var stroke = new BrushStroke(layer, new(1, 1, 1, 0, 0, 0), 260, 2, cloneSample: Raster.FromRgba(260, 2, bytes));
+        stroke.Append(new(254.5, .5));stroke.Append(new(257.5, .5));var result = stroke.Pixels.ToRgba();
+        for (int x = 254; x <= 257; x++) Assert.Equal(new byte[] { 60, 20, 10, 255 }, result.Skip(x * 4).Take(4).ToArray());
+        Assert.Equal((byte)0, result[253 * 4 + 3]);Assert.Equal((byte)0, result[258 * 4 + 3]);Assert.Empty(layer.Pixels.Tiles);
+    }
+
+    [Fact]
     public void AlignmentTracksStrokesAndNewSourceResetsIt()
     {
         var source = new CloneSource();

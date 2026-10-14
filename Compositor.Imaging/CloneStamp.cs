@@ -39,6 +39,25 @@ public sealed class CloneSource
 
 public static class CloneStamp
 {
+    internal readonly record struct Color(double Red, double Green, double Blue, double Alpha);
+    // Premultiplied bilinear sampling, pixel centers at n+.5; transparent beyond the canvas.
+    internal static Color Sample(Raster raster, PointD point)
+    {
+        double px = point.X - .5, py = point.Y - .5;
+        if (px < -1 || py < -1 || px >= raster.Width || py >= raster.Height) return default;
+        int left = (int)Math.Floor(px), top = (int)Math.Floor(py);
+        double fx = px - left, fy = py - top, red = 0, green = 0, blue = 0, alpha = 0;
+        for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++)
+        {
+            int sx = left + x, sy = top + y;
+            if (sx < 0 || sy < 0 || sx >= raster.Width || sy >= raster.Height || !raster.Tiles.TryGetValue(new(sx / 256, sy / 256), out var tile)) continue;
+            double weight = (x == 0 ? 1 - fx : fx) * (y == 0 ? 1 - fy : fy);
+            int p = ((sy % 256) * 256 + sx % 256) * 4; var bytes = tile.Bytes;
+            red += bytes[p] * weight; green += bytes[p + 1] * weight; blue += bytes[p + 2] * weight; alpha += bytes[p + 3] * weight;
+        }
+        return new(red, green, blue, alpha);
+    }
+
     /// <summary>Raw active pixels ignore masks/effects/opacity; all-layers samples the visible composite.</summary>
     public static Raster Capture(Document document, Guid? activeLayerId, CloneSettings settings, CancellationToken cancellation = default)
     {

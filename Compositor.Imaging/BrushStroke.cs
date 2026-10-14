@@ -50,9 +50,11 @@ public sealed class BrushStroke
     private readonly BrushSettings settings;
     private readonly int canvasWidth, canvasHeight;
     private readonly double[] mapping;
+    private readonly Raster? cloneSample;
+    private readonly PointD cloneOffset;
     private PointD? previous;
     public Raster Pixels { get; private set; }
-    public BrushStroke(Layer layer, BrushSettings settings, int canvasWidth, int canvasHeight, SelectionCoverage? selection = null)
+    public BrushStroke(Layer layer, BrushSettings settings, int canvasWidth, int canvasHeight, SelectionCoverage? selection = null, Raster? cloneSample = null, PointD cloneOffset = default)
     {
         if (!double.IsFinite(settings.Diameter) || settings.Diameter is < 1 or > 2000 ||
             !double.IsFinite(settings.Hardness) || settings.Hardness is < 0 or > 1 ||
@@ -60,6 +62,9 @@ public sealed class BrushStroke
             throw new ArgumentOutOfRangeException(nameof(settings));
         if (layer.IsAdjustment) throw new InvalidOperationException("Adjustment layers have no image pixels. Select Edit mask to paint their coverage.");
         if (layer.IsGroup) throw new InvalidOperationException("Groups cannot be painted directly.");
+        if (cloneSample is not null && (settings.Erase || cloneSample.Width != canvasWidth || cloneSample.Height != canvasHeight ||
+            !double.IsFinite(cloneOffset.X) || !double.IsFinite(cloneOffset.Y))) throw new ArgumentException("Invalid clone sample or offset.");
+        this.cloneSample = cloneSample; this.cloneOffset = cloneOffset;
         this.selection = selection;
         this.layer = layer; this.settings = settings; this.canvasWidth = canvasWidth; this.canvasHeight = canvasHeight;
         Pixels = layer.Pixels;
@@ -106,9 +111,31 @@ public sealed class BrushStroke
                 Math.Min(256, Pixels.Width - tx * 256), Math.Min(256, Pixels.Height - ty * 256), mapping,
                 start.X, start.Y, point.X, point.Y, radius, settings.Hardness, settings.Opacity,
                 settings.Red, settings.Green, settings.Blue, settings.Erase ? 1 : 0, canvasWidth, canvasHeight);
-            if (updated == 0) continue;
+            if (updated == 0 && cloneSample is null) continue;
             byte[] output = tile.Output;
-            if (tile.Selection is { } weights)
+            if (cloneSample is not null)
+            {
+                output = new byte[PixelTile.ByteCount];
+                tile.Original.CopyTo(output, 0);
+                for (int y = 0; y < Math.Min(256, Pixels.Height - ty * 256); y++)
+                for (int x = 0; x < Math.Min(256, Pixels.Width - tx * 256); x++)
+                {
+                    int index = y * 256 + x;
+                    double amount = tile.Coverage[index] * settings.Opacity * (tile.Selection?[index] ?? 1);
+                    if (amount <= 0) continue;
+                    var mapped = layer.Transform.ToDocument(new(tx * 256 + x + .5, ty * 256 + y + .5), Pixels.Width, Pixels.Height);
+                    var sampled = CloneStamp.Sample(cloneSample, new(mapped.X + cloneOffset.X, mapped.Y + cloneOffset.Y));
+                    double inverse = 1 - sampled.Alpha * amount / 255;
+                    for (int c = 0; c < 4; c++)
+                    {
+                        double channel = c switch { 0 => sampled.Red, 1 => sampled.Green, 2 => sampled.Blue, _ => sampled.Alpha };
+                        output[index * 4 + c] = (byte)Math.Clamp(Math.Round(channel * amount + tile.Original[index * 4 + c] * inverse, MidpointRounding.AwayFromZero), 0, 255);
+                    }
+                }
+                if (tiles.TryGetValue(key, out var current) && current.Bytes.SequenceEqual(output)) continue;
+                if (!tiles.ContainsKey(key) && output.AsSpan().IndexOfAnyExcept((byte)0) < 0) continue;
+            }
+            else if (tile.Selection is { } weights)
             {
                 // Always blend the accumulated raw stroke against its initial pixels. Do not
                 // multiply feather coverage into the previous preview on every pointer event.
