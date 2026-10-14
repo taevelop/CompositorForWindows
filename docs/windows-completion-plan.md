@@ -258,3 +258,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - 배경 제거 u2netp SHA256 byte[] 검증·로드, 자연 식물 사진 추론/출력 시각 검토. 실제 282ms이나 작은 피사체 누락 및 낮은 농도 색상 이상 발견, 품질 미통과로 유지. 코어 624개/WPF 회귀 통과. UI/Advanced/모델 배포 잔여, 전체 70/30 유지.
 
 - 배경 제거 전체 픽셀/PNG 참조 오차 0 확인 및 정규 U2Net 해시 고정 비교. 정규 CPU 515ms이나 식물 누락은 여전히 있어 품질 미통과, Advanced/전처리/모델 배포/UI 잔여. 코어 624개/WPF 통과. 전체 관리 추정 70/30 유지.
+
+- 배경 제거 Advanced guided filter 산술 기반: 원본 epsilon/경계 평균·guide covariance 유지, 독립 평균·상수/경계·취소 검사. 코어 628개 및 WPF 회귀 통과. gray 변환·실제 마스크/contrast/shift/UI 및 대형 메모리는 잔여, 전체 관리 추정 70/30 유지.

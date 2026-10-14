@@ -21,3 +21,7 @@ ONNX CPU 연결: Microsoft.ML.OnnxRuntime 1.30.0 고정 및 종속 잠금 파일
 정규 U2Net 비교(2026-10-14): rembg 공식 u2net.py의 릴리스 다운로드/MD5(https://raw.githubusercontent.com/danielgatis/rembg/main/rembg/sessions/u2net.py) 대조. MD5 60024c5c889badc19c04ad937298a77b 일치, SHA256 8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491. 해시가 고정된 소형/정규 두 모델만 허용하며 크기 상한 192MiB. 정규 모델도 검증 artifacts에만 두고 배포하지 않는다. 동일 식물 사진 CPU 515.2ms(모델 로드 제외), 합성 및 PNG 최대 오차 0. 흰 배경 시각 비교에서 아래 화분은 개선되나 위 식물 일부는 더 누락돼 전체 품질 개선이나 제품 품질 통과로 주장하지 않는다. Advanced 정제와 모델/전처리 후보 검증은 후속이며 실제 Mac/별도 PC 보류 유지.
 
 정규 모델 허용 후 Release 경고/오류 0, 코어 624개 및 전체 WPF 회귀 통과.
+
+Advanced 연산 기반: 원본 GuidedMatte.swift의 두 축 running-sum box 평균과 scalar guided filter를 C#으로 구현했다. clamp 경계, variance/covariance, epsilon 1e-4 및 0–1 clamp를 유지한다. 행/열/65,536픽셀 단위 취소를 추가한다. 반경 1/4/250의 독립 2차원 평균 계산, 상수 마스크 보존·가이드 경계·범위/취소 검사가 통과했다. 큰 이미지에서 여러 float 배열이 필요하므로 피크 메모리/1400px 표시 축소/원본 해상도 적용은 후속 검증이다. Raster→gray 색공간·정규화·정제 마스크 변환·contrast/shift edge·UI는 아직 연결하지 않았다. 자연 이미지의 피사체 누락을 해결했다고 주장하지 않는다.
+
+Release 경고/오류 0, 코어 628개 및 전체 WPF 회귀 통과.
