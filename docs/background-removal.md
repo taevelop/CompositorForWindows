@@ -15,3 +15,5 @@ ONNX CPU 연결: Microsoft.ML.OnnxRuntime 1.30.0 고정 및 종속 잠금 파일
 
 모델 무결성: U2NetPredictor는 검증한 u2netp SHA256을 요구하고 16MiB 크기 제한 후 동일 byte[]를 해시·로드하여 파일 교체 경합을 피한다. 다른 모델 지원은 별도 검증 후 추가한다.
 자연 이미지 probe: rembg examples/plants-1.jpg(https://raw.githubusercontent.com/danielgatis/rembg/main/examples/plants-1.jpg) 검증용 다운로드. 987×1481 실제 CPU 추론 281.6ms(모델 로드/출력 인코딩 제외), mask와 cutout PNG 확인. 주요 화분 일부는 잡지만 잎/작은 식물을 많이 놓쳐 품질 통과로 처리하지 않는다. cutout의 낮은 농도 경계에 색상 이상도 보여 마스크 premultiplied 합성/PNG/뷰어 경로 조사가 필요하다. 처음 518ms 값은 출력 작업 포함이어서 순수 추론 시간으로 사용하지 않는다. 품질 문제가 해결되기 전 배경 제거 전체 완료로 계산하지 않는다. 코어 624개/기존 WPF 회귀 통과, UI/Advanced/모델 배포와 라이선스 고정은 계속 잔여다.
+
+2026-10-14 중단 후 진단 확인: --subject-probe에 명시적 RGBA premultiplied sRGB ReadPixels와 전체 source×mask 참조 검사를 추가했다. 식물 사진 전체 합성 최대 채널 오차 0, PNG 재디코딩 오차 0. 흰 배경 JPEG도 시각 확인해 앞선 투명 뷰의 강한 색상 이상은 실제 합성/PNG 데이터 손상으로 재현되지 않았다. 원인을 특정 뷰어로 확정하지 않으며, 작은 피사체 누락과 흐린 마스크 품질은 여전히 미통과다. 처음 SKBitmap.FromImage의 암묵적 형식 비교는 오차 138이었으나 명시적 형식에서는 0이므로 진단에는 명시적 형식을 사용한다. 오차 1 초과 시 probe를 실패 처리한다.

@@ -10,7 +10,12 @@ if (args.Length > 0 && args[0] == "--subject-probe")
     using var predictor = new U2NetPredictor(args[1]);
     var source = args.Length>3?ImageCodec.Load(args[3]):ShapeRaster.Create(new(ShapeKind.Ellipse,.8,.2,.1),320,320);
     var timer = Stopwatch.StartNew();var mask = predictor.Predict(source);double inferenceMs=timer.Elapsed.TotalMilliseconds;
-    if(args.Length>3){ImageCodec.SaveRaster(mask.Pixels,args[2]+".mask.png");var doc=Document.Create(source.Width,source.Height);doc=doc.Replace(doc.Layers[0] with{Pixels=source});ImageCodec.Export(SubjectMask.Apply(doc,doc.Layers[0].Id,mask),args[2]+".cutout.png",false);}
+    if(args.Length>3){ImageCodec.SaveRaster(mask.Pixels,args[2]+".mask.png");var doc=Document.Create(source.Width,source.Height);doc=doc.Replace(doc.Layers[0] with{Pixels=source});var masked=SubjectMask.Apply(doc,doc.Layers[0].Id,mask);ImageCodec.Export(masked,args[2]+".cutout.png",false);ImageCodec.Export(masked,args[2]+".white.jpg",true);
+        using var renderer=new CanvasRenderer();using var image=renderer.Flatten(masked);using var rendered=new SKBitmap(CanvasRenderer.Info(source.Width,source.Height));if(!image.ReadPixels(rendered.Info,rendered.GetPixels(),rendered.RowBytes,0,0))throw new IOException("Cannot read diagnostic pixels.");var actual=rendered.GetPixelSpan();var original=source.ToRgba();var matte=mask.Pixels.ToRgba();int maximumError=0;
+        for(int p=0;p<original.Length;p+=4)for(int c=0;c<4;c++)maximumError=Math.Max(maximumError,Math.Abs(actual[p+c]-(original[p+c]*matte[p]+127)/255));
+        var decoded=ImageCodec.Load(args[2]+".cutout.png").ToRgba();int pngMaximumError=0;for(int i=0;i<decoded.Length;i++)pngMaximumError=Math.Max(pngMaximumError,Math.Abs(decoded[i]-actual[i]));
+        if(maximumError>1||pngMaximumError>1)throw new InvalidOperationException("Subject mask rendering or PNG roundtrip differs from premultiplied reference.");
+        File.WriteAllText(args[2]+".render-check.json",JsonSerializer.Serialize(new{maximumError,pngMaximumError,note="Full-resolution premultiplied flatten vs independent per-channel source × mask."}));}
     File.WriteAllText(args[2],JsonSerializer.Serialize(new{elapsedMs=inferenceMs,width=mask.Pixels.Width,height=mask.Pixels.Height,minimum=mask.Pixels.ToRgba().Where((_,i)=>i%4==0).Min(),maximum=mask.Pixels.ToRgba().Where((_,i)=>i%4==0).Max(),note=args.Length>3?"Natural image inference probe; visual review required, no quality ground truth.":"Synthetic ellipse CPU inference probe; not natural-image quality validation."}));
     return;
 }
@@ -130,6 +135,10 @@ File.WriteAllText(output, JsonSerializer.Serialize(new { timeUtc = DateTimeOffse
     architecture = RuntimeInformation.ProcessArchitecture.ToString(), processors = Environment.ProcessorCount,
     description = "Release CPU model plus offscreen Skia 1000x1000 render; 4000x4000 document, 800px soft brush, 120 updates/pass. Not WPF presentation or input-to-photon latency.", runs }, new JsonSerializerOptions { WriteIndented = true }));
 Console.WriteLine(File.ReadAllText(output));
+
+
+
+
 
 
 
