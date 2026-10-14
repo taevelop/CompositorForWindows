@@ -6,6 +6,17 @@
 #include "NoisePixels.h"
 #include "LensPixels.h"
 #include "ContentFill.h"
+#include "WandPixels.h"
+#include <stdlib.h>
+
+__declspec(dllexport) int64_t compositor_wand_mask(const uint8_t *pixels,int32_t width,int32_t height,int32_t x,int32_t y,int32_t radius,int32_t tolerance,int32_t contiguous,uint8_t *mask) {
+    return (int64_t)wand_mask(pixels,(size_t)width,(size_t)height,(size_t)width*4,(size_t)x,(size_t)y,(size_t)radius,tolerance,contiguous,mask);
+}
+__declspec(dllexport) int32_t compositor_wand_trace(const uint8_t *mask,int32_t width,int32_t height,int32_t **points,int64_t *pointCount,int32_t **loops,int64_t *loopCount) {
+    size_t pc=0,lc=0;int status=wand_trace(mask,(size_t)width,(size_t)height,points,&pc,loops,&lc);
+    *pointCount=(int64_t)pc;*loopCount=(int64_t)lc;return status;
+}
+__declspec(dllexport) void compositor_free(void *pointer) { free(pointer); }
 
 __declspec(dllexport) int32_t compositor_content_fill(uint8_t *pixels, const uint8_t *mask, int32_t width, int32_t height) {
     return content_fill(pixels, (size_t)width * 4, mask, (size_t)width, width, height);

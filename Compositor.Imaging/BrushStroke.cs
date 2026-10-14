@@ -6,6 +6,12 @@ namespace Compositor.Imaging;
 public sealed record BrushSettings(double Diameter, double Hardness, double Opacity, byte Red, byte Green, byte Blue, bool Erase = false);
 public static class NativePixels
 {
+    [DllImport("Compositor.Native",EntryPoint="compositor_wand_mask",CallingConvention=CallingConvention.Cdecl)]
+    internal static extern long WandMask(byte[] pixels,int width,int height,int x,int y,int radius,int tolerance,int contiguous,[Out]byte[] mask);
+    [DllImport("Compositor.Native",EntryPoint="compositor_wand_trace",CallingConvention=CallingConvention.Cdecl)]
+    internal static extern int WandTrace(byte[] mask,int width,int height,out IntPtr points,out long pointCount,out IntPtr loops,out long loopCount);
+    [DllImport("Compositor.Native",EntryPoint="compositor_free",CallingConvention=CallingConvention.Cdecl)]
+    internal static extern void Free(IntPtr pointer);
     [DllImport("Compositor.Native", EntryPoint="compositor_content_fill", CallingConvention=CallingConvention.Cdecl)]
     internal static extern int ContentFill([In,Out] byte[] pixels,[In] byte[] mask,int width,int height);
     [DllImport("Compositor.Native", EntryPoint="compositor_lens", CallingConvention=CallingConvention.Cdecl)]
