@@ -26,7 +26,7 @@
 - 효과/조정: 원본 9종 비파괴 조정과 6종 공간/자동 필터의 기본 편집 경로가 연결됐다. 남음: 기존 패널 슬라이더 일관성, 원본 샘플링/보간 비교, AI 피사체 누락/흐린 경계 품질과 대형 메모리·지연.
 - 선택/변형: 사각/타원/올가미/크롭·선택 픽셀/클립보드·피사체/레이어/마스크 선택load·기본 변형은 연결됐다. Magic Wand 기본 UI도 연결됐다. 남음: Wand 복잡 윤곽/취소 성능, 왜곡·원근/이동 스냅 상세 범위, 외부 클립보드 호환, 큰 선택/윤곽 성능과 물리 입력.
 - 추가 도구: 도형·그라디언트·색상 채우기·스포이트·Healing·Clone·Smear(Liquify/Blur/Smudge)의 기본 UI·worker·이력·저장 경로와 Zoom(Z)·Smear Tab 순환이 연결됐다. 남음: 대형/복합·자연품질/원본soft누적 농도·커스텀cursor/실기, Type 도구. 영역 채우기 도구와 기타 확장 범위는 기존 요구를 유지하며 원본과 별도 대조한다.
-- 텍스트: 편집 가능한 텍스트 모델·글꼴·배치·저장·inline 편집 UI 미구현.
+- 텍스트: 원본 style 모델·검증·cached PNG/JSON 저장 왕복 기반을 연결했다. 남음: 글꼴 해결·다국어 shaping/배치·실제 렌더링·Type/inline 편집 UI·재렌더 명령/Undo/저장 확정·품질/배포.
 - 작업 공간: 문서 탭·그룹·다중 선택·계층 드래그는 기본 UI가 연결됐다. 남음: 원본 그룹 마스크의 모델·합성·저장·편집, 탭/환경 설정 고급 범위, 드래그 복합 입력/모니터·DPI 실기, 캔버스 Alt-drag 복제 및 추가 썸네일 동작. 마스크 Alt-drag는 연결됐지만 실제 OLE/물리 입력은 미검증이다.
 - PSD: 현재 ImageCodec는 PNG/JPEG만 허용한다. PSD 구조/지원 요소 가져오기와 미지원 안내는 미구현; PSD 저장은 범위 제외.
 - RAW/AI: RAW importer는 미구현. ONNX 기반 배경 제거/피사체 선택·설치 UI는 연결됐으나 품질·원본 동등성·대형 메모리/지연과 설치 실기가 남았다. 파일·모델 해시/라이선스·실행 의존성 기록을 유지한다.
@@ -387,3 +387,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Zoom(Z)클릭2×/Alt½·100px scrub·anchor/cancel뷰복원·0.1–3200%slider/input·Smear Tab순환가드연결. 실제Zoom/document·history불변/17tool startupscroll·고정layout/Smear회귀통과·시각확인·716코어검증유지. publish-zoom-ui갱신. 커스텀cursor/DPI실기·나머지Type/text/PSD/RAW/groupmask·대형품질/제품배포잔여,70/30관리추정재산정전유지.
 
 - Zoom Up/Down1%·Shift10%/Enter·Esc입력적용검사통과. 최종publish-zoom-controls에배포·Zoom/모드순환/portable45초gate1회통과(동일개발PC). 제품core불변·716검증유지,70/30관리추정재산정전유지.
+
+- TypeTool 원본style/cachedimage/livetext계약대조·LayerTextStyle/TextJson·Layer.Text/cachedPNG 보존저장·pixel편집래스터화연결. 코어718/Unicode전체style·원본pixel왕복·transform/mask유지·Undo·unknown/duplicate/invalid와손상덮어쓰기원본보존검사통과. 렌더러/font/shaping·Type/inline UI/재렌더·품질/배포후속. 70/30관리추정재산정전유지,상세editable-text.md.

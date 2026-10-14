@@ -161,8 +161,11 @@ public sealed class EditorTests : IDisposable
         string manifest = Path.Combine(path, "manifest.json"); var json = JsonNode.Parse(File.ReadAllText(manifest))!;
         json["layers"]![0]![field] = field == "maskPlacement" ? new JsonObject { ["futurePlacement"] = true } : field == "shape" ? new JsonObject { ["kind"] = "FutureShape" } : field == "effects" ? new JsonObject { ["futureEffect"] = new JsonObject() } : new JsonObject();
         File.WriteAllText(manifest, json.ToJsonString()); byte[] before = File.ReadAllBytes(manifest);
-        Assert.Throws<NotSupportedException>(() => ProjectStore.Load(path));
-        Assert.Throws<NotSupportedException>(() => ProjectStore.Save(doc, null, path)); Assert.Equal(before, File.ReadAllBytes(manifest));
+        if (field == "text")
+        { Assert.Throws<InvalidDataException>(() => ProjectStore.Load(path));Assert.Throws<InvalidDataException>(() => ProjectStore.Save(doc, null, path)); }
+        else
+        { Assert.Throws<NotSupportedException>(() => ProjectStore.Load(path));Assert.Throws<NotSupportedException>(() => ProjectStore.Save(doc, null, path)); }
+        Assert.Equal(before, File.ReadAllBytes(manifest));
     }
     [Fact] public void UnsafeAssetPathAndDuplicateIdsAreRejected()
     {

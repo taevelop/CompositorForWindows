@@ -13,7 +13,7 @@ public static class ProjectStore
     private static readonly string[] RootFields = ["format", "version", "colorSpace", "resolution", "documentID", "width", "height", "activeLayerID", "layers", "guides"];
     private static readonly string[] LayerFields = ["id", "name", "isVisible", "transform", "imageFile", "parentID", "isGroup", "opacity", "blendMode",
         "maskFile", "maskEnabled", "maskSourceID", "adjustment", "maskPlacement", "maskLinked", "shape", "effects", "text"];
-    private static readonly string[] UnsupportedFields = ["maskSourceID", "text"];
+    private static readonly string[] UnsupportedFields = ["maskSourceID"];
 
     public static LoadedProject LoadRecovery(string path)
     {
@@ -51,6 +51,9 @@ public static class ProjectStore
                         throw new NotSupportedException($"Layer '{l.GetProperty("name").GetString()}' contains unsupported {field}. Nothing was opened or changed.");
                 var adjustment = AdjustmentJson.Read(l);
                 var shape = ShapeJson.Read(l);
+                var text = TextJson.Read(l);
+                if (text is not null && (OptionalBool(l, "isGroup") == true || adjustment is not null || shape is not null || OptionalString(l, "imageFile") is null))
+                    throw new InvalidDataException("Text requires a pixel layer with imageFile and no shape metadata.");
                 if (shape is not null && (OptionalBool(l, "isGroup") == true || adjustment is not null || OptionalString(l, "imageFile") is null))
                     throw new InvalidDataException("Shapes require a pixel layer with imageFile.");
                 var effects = EffectsJson.Read(l);
@@ -130,7 +133,7 @@ public static class ProjectStore
                     usedMaskPixels += (long)mask.Pixels.Width * mask.Pixels.Height;
                 }
                 if (adjustment is not null && mask is not null && (mask.Pixels.Width > 1 || mask.Pixels.Height > 1)) raster = new(mask.Pixels.Width, mask.Pixels.Height);
-                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask, parent, isGroup, adjustment?.Exposure, adjustment?.Levels, adjustment?.Curves, effects, adjustment?.Invert ?? false, adjustment?.BlackWhite, adjustment?.ColorBalance, adjustment?.Grain, adjustment?.GradientMap, adjustment?.HueSaturation) { Shape = ShapeJson.Read(l) });
+                layers.Add(new(id, name, raster, transform, l.GetProperty("isVisible").GetBoolean(), opacity, blend, mask, parent, isGroup, adjustment?.Exposure, adjustment?.Levels, adjustment?.Curves, effects, adjustment?.Invert ?? false, adjustment?.BlackWhite, adjustment?.ColorBalance, adjustment?.Grain, adjustment?.GradientMap, adjustment?.HueSaturation) { Shape = ShapeJson.Read(l), Text = TextJson.Read(l) });
             }
             var document = new Document(m.GetProperty("documentID").GetGuid(), width, height, OptionalDouble(m, "resolution", 72), layers.ToImmutable());
             document.Validate();
@@ -188,6 +191,7 @@ public static class ProjectStore
                 });
                 checkpoint?.Invoke(SaveCheckpoint.AssetWritten);
                 if (l.Shape is not null) records[^1]!["shape"] = ShapeJson.Write(l.Shape);
+                if (l.Text is not null) records[^1]!["text"] = TextJson.Write(l.Text);
                 if (l.Effects is not null) records[^1]!["effects"] = EffectsJson.Write(l.Effects);
                 if (l.HueSaturation is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.HueSaturation);
                 else if (l.GradientMap is not null) records[^1]!["adjustment"] = AdjustmentJson.Write(l.GradientMap);
