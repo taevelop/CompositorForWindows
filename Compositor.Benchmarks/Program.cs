@@ -5,6 +5,19 @@ using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 
+if(args.Length>0&&args[0]=="--clone-capture-cancel")
+{
+    int side=args.Length>2?int.Parse(args[2]):4000;var document=Document.Create(side,side);
+    using var cancellation=new CancellationTokenSource();var clock=Stopwatch.StartNew();cancellation.CancelAfter(5);
+    try { CloneStamp.Capture(document,document.Layers[0].Id,new(),cancellation.Token);throw new InvalidOperationException("Capture completed before cancellation was observed."); }
+    catch(OperationCanceledException) when(cancellation.IsCancellationRequested)
+    {
+        if(document.Layers[0].Pixels.Tiles.Count!=0)throw new InvalidOperationException("Cancelled capture changed source.");
+        File.WriteAllText(args[1],JsonSerializer.Serialize(new{side,requestedAfterMs=5,elapsedMs=clock.Elapsed.TotalMilliseconds,note="Actual timed capture cancellation; phase may be bitmap preparation, rendering or tile copy. Source remained empty; not WPF input verification."}));
+    }
+    return;
+}
+
 if(args.Length>0&&args[0]=="--pixel-diff")
 {
     var first=ImageCodec.Load(args[1]);var second=ImageCodec.Load(args[2]);

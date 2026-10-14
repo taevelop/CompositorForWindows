@@ -89,3 +89,11 @@ compositor_clone_coverage 고정폭export를추가했다. sweptgeometry/linearha
 초기측정은800px48입력952ms/최대170ms이나이전PNG와536pixels·최대1LSB차이가있어동일성불통과로진단했다. sample위치를다른frame폭에의존한나눗셈대신nativecoverage와동일affine식으로계산해half-opacity부동소수반올림을안정화했다. 최종측정912ms/최대163ms·complete8.96ms·managed97.3MiB·peak368MiB. 이전PNG와912pixels/최대1LSB차이를명시한다(이전경로와bit-exact주장안함). --pixel-diff 두파일 report 로RGBA변경수/최대오차/예시좌표를재현한다. 비교이미지16Mpixel이며source준비/PNG조건은기존benchmark와동일하다.
 
 수학적reference로canvaspixelcenter의128alpha/halfRGB·확장전후불변, 잘린200px tile의nonzero padding이newmargin에누출되지않는것, 기존gradient/삼각coverage/source-over·core667개 검사통과. 최신빌드0경고오류·Clone단독WPF source/Undo/cancel/tab/확장/mask/저장검사통과. 163ms최대도낮은입력지연완료로판정하지않으며반복/회전복합확장·worker샘플준비/취소·배포/물리입력과fullWPF30초timeout은잔여다.
+
+## 샘플 타일 복사 취소 기반
+
+Raster.FromRgba의선택적CancellationToken을추가해시작/각256px tile복사/최종immutable반환직전에검사한다. CloneStamp.Capture/Preview가렌더링·tip계산뿐아니라최종tile스냅샷복사에도동일token을전달한다. 취소중의부분builder는게시하지않으며기존호출자는default token으로같은출력을유지한다.
+
+사전취소/입력buffer불변·257×263tile경계출력·완료Raster의외부입력변경격리 검사포함해core668개통과. 전체Release0경고오류·Clone단독WPF Undo/cancel/tab/확장/mask/저장통과. --clone-capture-cancel report [side=4000]은실제Capture에5ms후취소요청을보내28.5ms/OCE및빈source불변을확인했다. 정확한취소phase는bitmap준비/render/tilecopy중어디인지증명하지않으므로copy중취소또는WPF Esc응답으로대체해주장하지 않는다.
+
+현재캔버스의큰sample Capture는아직동기호출이다. background worker/입력queue·문서/transaction세대보호·진행표시/Esc/캡처상실취소연결·실기·배포갱신이후속이며UI응답완료로표시하지않는다. fullWPF30초timeout별도유지.

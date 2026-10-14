@@ -65,7 +65,7 @@ public static class CloneStamp
                 for (int c = 0; c < 4; c++) bytes[(y * side + x) * 4 + c] = (byte)Math.Round(bytes[(y * side + x) * 4 + c] * coverage * brush.Opacity, MidpointRounding.AwayFromZero);
             }
         }
-        return Raster.FromRgba(side, side, bytes);
+        return Raster.FromRgba(side, side, bytes, cancellation);
     }
 
     private static Document SampleDocument(Document document, Guid? activeLayerId, CloneSettings settings)
@@ -106,6 +106,6 @@ public static class CloneStamp
             canvas.Clear(SKColors.Transparent); renderer.DrawCancellable(canvas, sample, cancellation); canvas.Flush();
         }
         cancellation.ThrowIfCancellationRequested();
-        return Raster.FromRgba(document.Width, document.Height, bitmap.GetPixelSpan());
+        return Raster.FromRgba(document.Width, document.Height, bitmap.GetPixelSpan(), cancellation);
     }
 }

@@ -33,21 +33,24 @@ public sealed class Raster
         if (Tiles.Keys.Any(k => k.X < 0 || k.Y < 0 || k.X * 256 >= width || k.Y * 256 >= height))
             throw new ArgumentException("Tile is outside the image.");
     }
-    public static Raster FromRgba(int width, int height, ReadOnlySpan<byte> pixels)
+    public static Raster FromRgba(int width, int height, ReadOnlySpan<byte> pixels, CancellationToken cancellation = default)
     {
         Limits.CheckDimensions(width, height);
         if (pixels.Length != checked(width * height * 4)) throw new ArgumentException("Invalid pixel length.");
+        cancellation.ThrowIfCancellationRequested();
         var tiles = ImmutableDictionary.CreateBuilder<TileKey, PixelTile>();
         for (int y = 0; y < height; y += 256)
         for (int x = 0; x < width; x += 256)
         {
+            cancellation.ThrowIfCancellationRequested();
             var data = new byte[PixelTile.ByteCount];
             for (int row = 0; row < Math.Min(256, height - y); row++)
                 pixels.Slice(((y + row) * width + x) * 4, Math.Min(256, width - x) * 4)
                     .CopyTo(data.AsSpan(row * PixelTile.Stride));
             if (data.AsSpan().IndexOfAnyExcept((byte)0) >= 0) tiles[new(x / 256, y / 256)] = new(data);
         }
-        return new(width, height, tiles.ToImmutable());
+        var raster = new Raster(width, height, tiles.ToImmutable());
+        cancellation.ThrowIfCancellationRequested(); return raster;
     }
     public byte[] ToRgba()
     {
