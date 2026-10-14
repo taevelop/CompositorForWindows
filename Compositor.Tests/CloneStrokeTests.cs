@@ -6,6 +6,22 @@ namespace Compositor.Tests;
 public class CloneStrokeTests
 {
     [Fact]
+    public void CompletionTrimsOnlyNewTransparentMarginsAndKeepsSourceRectangle()
+    {
+        var doc = Document.Create(16, 16);var source = doc.Layers[0] with { Pixels = Red(2, 2), Transform = new(0, 0, 2, 2), Mask = LayerMask.Solid(2, 2) };doc = doc.Replace(source);
+        var stroke = new CloneStroke(doc, source.Id, new(4, 0, 1, 0, 0, 0), Red(16, 16), new());stroke.Append(new(8.5, 8.5));
+        var before = stroke.Document;Assert.Equal(11, before.Layers[0].Pixels.Width);
+        var complete = stroke.Complete();var layer = complete.Layers[0];Assert.Equal(10, layer.Pixels.Width);Assert.Equal(10, layer.Pixels.Height);
+        Assert.Equal(10, layer.Mask!.Pixels.Width);Assert.Equal(0, layer.Transform.X);Assert.Equal(0, layer.Transform.Y);
+        using var renderer = new CanvasRenderer();using var imageBefore = renderer.Flatten(before);using var imageAfter = renderer.Flatten(complete);
+        using var bitmapBefore = new SkiaSharp.SKBitmap(CanvasRenderer.Info(16, 16));using var bitmapAfter = new SkiaSharp.SKBitmap(CanvasRenderer.Info(16, 16));
+        Assert.True(imageBefore.ReadPixels(bitmapBefore.Info, bitmapBefore.GetPixels(), bitmapBefore.RowBytes, 0, 0));
+        Assert.True(imageAfter.ReadPixels(bitmapAfter.Info, bitmapAfter.GetPixels(), bitmapAfter.RowBytes, 0, 0));Assert.Equal(bitmapBefore.Bytes, bitmapAfter.Bytes);
+        Assert.Same(complete, stroke.Complete());Assert.Throws<InvalidOperationException>(() => stroke.Append(new(1, 1)));
+        Assert.Equal(2, source.Pixels.Width);Assert.Equal(new byte[] { 100, 20, 10, 255 }, layer.Pixels.ToRgba().Take(4).ToArray());
+    }
+
+    [Fact]
     public void RotatedFlippedExpansionKeepsOriginalPixelsAtTheirDocumentPositions()
     {
         var doc = Document.Create(128, 128);var source = doc.Layers[0] with { Pixels = Red(4, 4), Transform = new(40, 40, 8, 8, 37, true, true) };doc = doc.Replace(source);

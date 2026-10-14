@@ -59,3 +59,9 @@ CloneStroke는stroke시작문서/source/sample/offset을고정하고 문서canva
 EditorCanvas Clone경로에연결하고cancel/end에서worker상태를해제한다. Core662개통과: 경계성장/기존coverage·white mask·source보존·UndoRedo·독립mask핀·transparent무변경·예산실패·회전+FlipXY16원본픽셀문서위치 검사. 최신WPF단독Clone30초내exit0: 작은layer밖clone/linkedmask/Undo/저장재열기까지통과. 빌드경고/오류0. fullWPF30초timeout및실제Mac/별도PC보류는그대로유지한다.
 
 반복frame변경은point list를재생하므로긴확장stroke성능/할당·최종alpha경계trim·큰sourcecapture/취소worker·all-layer/선택/복합mask추가검증·배포갱신·물리입력은후속이다. 기본확장경로연결로전체도구품질완료를주장하지 않는다.
+
+## 최종 경계 정리
+
+원본 paintSnapshot은 sourceRect를항상유지하고새coverage alpha영역과union한다. CloneStroke.Complete도원본사각형을유지하고확장margin의tile만native AlphaBounds로스캔해crop한다. 원본내부tile은스캔하지않고 RasterReframe으로transform·linkedmask/독립placement를보존한다. 확정결과검증/Undo예산검사후게시하며중복Complete는동일참조를반환하고이후Append는거부한다. 취소는정리하지않고원본문서로복원한다.
+
+Core663개통과: 11×11초안을10×10으로정리하면서원본rect/white mask유지, 전후16×16canvas모든채널일치·원본/완료불변 검사. WPF단독Clone30초내exit0: 큰softtip draft7px→mouseup확정5px·mask·Undo/Redo·저장재열기검사. 최신빌드0경고오류. fullWPF30초timeout및Mac/별도PC보류는여전히별도다. 긴확장stroke재생비용·큰samplecapture/worker·복합sample·물리입력·배포후속이다.

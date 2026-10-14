@@ -15,6 +15,7 @@ public sealed class CloneStroke
     private RasterFrame frame;
     private Layer expanded;
     private BrushStroke stroke;
+    private bool completed;
     public Document Document { get; private set; }
 
     public CloneStroke(Document document, Guid layerId, BrushSettings settings, Raster sample, PointD offset)
@@ -30,6 +31,7 @@ public sealed class CloneStroke
 
     public void Append(PointD point)
     {
+        if (completed) throw new InvalidOperationException("Clone stroke is already complete.");
         if (!double.IsFinite(point.X) || !double.IsFinite(point.Y)) throw new ArgumentException("Invalid clone pointer.");
         if (selection?.IsEmpty == true) return;
         var previous = points.Count == 0 ? point : points[^1]; double radius = settings.Diameter / 2;
@@ -76,5 +78,32 @@ public sealed class CloneStroke
             if (layer.Mask is { } m) mask += (long)m.Pixels.Width * m.Pixels.Height;
         }
         if (image > Limits.MaxPixels || mask > Limits.MaxPixels) throw new InvalidDataException("Clone expansion exceeds the project's image or mask budget.");
+    }
+
+    public Document Complete()
+    {
+        if (completed) return Document;
+        if (ReferenceEquals(Document, original)) { completed = true; return original; }
+        var layer = Document.Layers.First(l => l.Id == source.Id); var pixels = layer.Pixels;
+        // Original paintSnapshot always retains the existing source rectangle; only newly
+        // allocated margins can be trimmed. Interior source tiles need no alpha scan.
+        int left = -frame.Left, top = -frame.Top, right = left + source.Pixels.Width, bottom = top + source.Pixels.Height;
+        int sourceLeft = left, sourceTop = top, sourceRight = right, sourceBottom = bottom;
+        foreach (var (key, tile) in pixels.Tiles)
+        {
+            int x = key.X * 256, y = key.Y * 256, width = Math.Min(256, pixels.Width - x), height = Math.Min(256, pixels.Height - y);
+            if (x >= sourceLeft && y >= sourceTop && x + width <= sourceRight && y + height <= sourceBottom) continue;
+            var bounds = new int[4]; NativePixels.AlphaBounds(tile.Bytes.ToArray(), width, height, PixelTile.Stride, bounds);
+            if (bounds[2] <= bounds[0] || bounds[3] <= bounds[1]) continue;
+            left = Math.Min(left, x + bounds[0]); top = Math.Min(top, y + bounds[1]);
+            right = Math.Max(right, x + bounds[2]); bottom = Math.Max(bottom, y + bounds[3]);
+        }
+        var crop = new RasterFrame(left, top, right - left, bottom - top);
+        var trimmed = RasterReframe.Apply(layer, crop);
+        if (ReferenceEquals(trimmed, layer)) { completed = true; return Document; }
+        var result = Document.Replace(trimmed); result.Validate();
+        if (EditorSession.UndoBytesRequired(original, result) > EditorSession.MaxHistoryBytes)
+            throw new InvalidOperationException("Clone stroke exceeds the 256 MiB Undo limit.");
+        completed = true; return Document = result;
     }
 }

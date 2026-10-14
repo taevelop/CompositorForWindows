@@ -39,7 +39,9 @@ public partial class MainWindow
             }
             var small = Document.Create(8, 4); var smallBytes = new byte[16]; smallBytes[0] = 100; smallBytes[3] = 255;
             small = small.Replace(small.Layers[0] with { Pixels = Raster.FromRgba(2, 2, smallBytes), Transform = new(0, 0, 2, 2), Mask = LayerMask.Solid(2, 2) }); session.Load(small);
-            Canvas.BeginPointer(new(.5, .5), ModifierKeys.Alt);Canvas.BeginPointer(new(4.5, .5), ModifierKeys.None);Canvas.EndPointer(true);
+            BrushSize.Text = "4";BrushHardness.Text = "0";
+            Canvas.BeginPointer(new(.5, .5), ModifierKeys.Alt);Canvas.BeginPointer(new(4.5, .5), ModifierKeys.None);
+            Check(session.ActiveLayer!.Pixels.Width == 7, "Clone draft did not include brush bounds.");Canvas.EndPointer(true);
             Check(session.ActiveLayer!.Pixels.Width == 5 && session.ActiveLayer.Pixels.ToRgba()[16] == 100 && session.ActiveLayer.Mask!.Pixels.Width == 5,
                 "Clone canvas stroke did not expand pixels and linked mask.");
             session.Undo();Check(ReferenceEquals(small, session.Document), "Expanded clone Undo lost source dimensions.");session.Redo();

@@ -368,6 +368,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         if (commit && selectionStart is { } start && gestureSelectionMode == SelectionMode.Replace &&
             (movingSelection ? ReferenceEquals(start, Session.Document) : drawnSelection?.IsEmpty != false))
             Session.Preview(start with { Selection = null });
+        if (commit && cloneStroke is not null) Session.Preview(cloneStroke.Complete());
         bool editing = originalLayer is not null || selectionStart is not null;
         pixelMove?.Dispose(); pixelMove = null;
         selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear(); polygonCursor = null;
