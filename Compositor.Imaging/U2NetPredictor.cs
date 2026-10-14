@@ -1,4 +1,4 @@
-using Compositor.Core;
+﻿using Compositor.Core;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using SkiaSharp;
@@ -14,10 +14,11 @@ public sealed class U2NetPredictor : IDisposable
     public U2NetPredictor(string modelPath)
     {
         var file = new FileInfo(modelPath);
-        if (file.Length > 16 * 1024 * 1024) throw new InvalidDataException("Unexpected U2Netp model size.");
+        if (file.Length > 192 * 1024 * 1024) throw new InvalidDataException("Unexpected U2Net model size.");
         var model = File.ReadAllBytes(modelPath);
-        if (!Convert.ToHexString(SHA256.HashData(model)).Equals(ModelSha256, StringComparison.Ordinal))
-            throw new InvalidDataException("The U2Netp model checksum does not match the verified release.");
+        string hash=Convert.ToHexString(SHA256.HashData(model));
+        if (hash!=ModelSha256&&hash!="8D10D2F3BB75AE3B6D527C77944FC5E7DCD94B29809D47A739A7A728A912B491")
+            throw new InvalidDataException("The U2Net model checksum does not match the verified release.");
         // Load the bytes that were verified, avoiding a file replacement between hash and load.
         session = new InferenceSession(model);
         var shape = session.InputMetadata.Values.First().Dimensions;
@@ -67,3 +68,4 @@ public sealed class U2NetPredictor : IDisposable
     }
     public void Dispose()=>session.Dispose();
 }
+
