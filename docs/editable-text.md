@@ -32,3 +32,15 @@ actual --text-render-smoke 통과:Latin/한글/아랍어/emoji/결합문자/다�
 Release0경고/오류·제품core변경없음·718코어검증유지. Type/inline UI·font선택/fallback안내·새text렌더command·단일Undo/저장확정·backgroundSTA준비/성능과새패키지배포는계속잔여다. 이번코드는개발Release에만반영됐다.
 
 API기준은 Microsoft [FormattedText](https://learn.microsoft.com/en-us/dotnet/api/system.windows.media.formattedtext?view=windowsdesktop-10.0), [LineHeight](https://learn.microsoft.com/en-us/dotnet/api/system.windows.media.formattedtext.lineheight?view=windowsdesktop-10.0) 문서다. 자간/추가glyph제어는 [GlyphRun](https://learn.microsoft.com/dotnet/api/system.windows.media.glyphrun) 경로를후속으로검토한다.
+
+## 설치 글꼴 PostScript face 연결
+
+OpenTypeFontNames는SFNT(TTF/OTF)와TTC 컬렉션의name table을읽는다. family/subfamily/full-name/PostScript/typographic family·face(ID1/2/4/6/16/17)를Unicode big-endian(platform0/3)에서수집한다. Mac platform1의ASCII이름도읽지만비ASCII MacRoman은근사decode하지않는다. 표/문자offset과길이·Unicode짝수길이·컬렉션size를검사하고glyph data나font file을프로젝트에복사하지않는다.
+
+TextFontResolver는family/localizedfamily를먼저조회한다. 그외이름은설치Typeface의GlyphTypeface.GetFontStream에서읽은name을사용한다. TTC안의다른font를혼동하지않도록family와face가현재GlyphTypeface와맞는경우에만full-name/PostScript alias를연결한다. exact Typeface의weight/style/stretch를그대로FormattedText에전달한다. 없으면기존MissingFont flag/systemfallback을유지하고requested name/기존cachedPNG는자동변경하지않는다. unreadable/미지원font metadata는alias인덱스에서건너뛰고family경로는계속사용한다.
+
+코어720개통과:합성SFNT Unicode/PostScript와독립TTC regular/bold face,잘린table·잘못된offset/collectioncount/홀수UTF16길이거부. actualWPF에서ArialMT/Arial-BoldMT/Arial Bold의family·굵기매핑/요청명유지,실제설치TTC face의weight/style유지및기존다국어·문단·fallback·cachedPNG회귀도통과했다. Release0경고/오류.
+
+현재alias인덱스는첫비family요청때생성/캐시된다. 글꼴설치변경refresh·background/cancellation·large catalog·variation named instances/FVAR추가이름·모든locale/font collection의동등성은후속이다. 비영tracking/컬러emoji/Type·inline UI/재렌더명령/배포도계속잔여다. 이번변경은개발Release에만반영됐다.
+
+필드기준은Microsoft [OpenType name table](https://learn.microsoft.com/en-us/typography/opentype/otspec182/name), collection offset기준은 [OpenType font file](https://learn.microsoft.com/en-us/typography/opentype/otspec181/otff) 문서다.

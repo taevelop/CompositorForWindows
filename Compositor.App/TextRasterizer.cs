@@ -7,7 +7,8 @@ using Alignment = System.Windows.TextAlignment;
 
 namespace Compositor.App;
 
-internal sealed record TextRasterResult(Raster Pixels, string RequestedFont, string ResolvedFamily, bool MissingFont);
+internal sealed record TextRasterResult(Raster Pixels, string RequestedFont, string ResolvedFamily, bool MissingFont)
+{ internal string ResolvedFace { get; init; } = ""; }
 
 /// <summary>WPF shaping/fallback and word layout, producing UI-independent premultiplied RGBA pixels.</summary>
 internal static class TextRasterizer
@@ -16,10 +17,9 @@ internal static class TextRasterizer
     {
         style.Validate();cancellation.ThrowIfCancellationRequested();
         if (style.Tracking != 0) throw new NotSupportedException("Tracked text rendering is not connected yet. Existing text pixels remain unchanged.");
-        var family = Fonts.SystemFontFamilies.FirstOrDefault(f => f.Source.Equals(style.FontName, StringComparison.OrdinalIgnoreCase) || f.FamilyNames.Values.Any(n => n.Equals(style.FontName, StringComparison.OrdinalIgnoreCase)));
-        bool missing = family is null;family ??= SystemFonts.MessageFontFamily;
+        var resolved = TextFontResolver.Resolve(style.FontName);var family = resolved.Typeface.FontFamily;bool missing = resolved.MissingFont;
         var brush = new SolidColorBrush(Color.FromRgb((byte)Math.Round(style.Red * 255), (byte)Math.Round(style.Green * 255), (byte)Math.Round(style.Blue * 255)));brush.Freeze();
-        var text = new FormattedText(style.Content, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface(family, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), style.FontSize, brush, 1)
+        var text = new FormattedText(style.Content, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, resolved.Typeface, style.FontSize, brush, 1)
         {
             LineHeight = style.LineHeight,
             TextAlignment = style.Alignment switch { Compositor.Core.TextAlignment.Center => Alignment.Center, Compositor.Core.TextAlignment.Right => Alignment.Right, _ => Alignment.Left },
@@ -51,6 +51,6 @@ internal static class TextRasterizer
             cancellation.ThrowIfCancellationRequested();
             for (int x = 0; x < width; x++) { int p = (y * width + x) * 4;(bytes[p], bytes[p + 2]) = (bytes[p + 2], bytes[p]); }
         }
-        return new(Raster.FromRgba(width, height, bytes, cancellation), style.FontName, family.Source, missing);
+        return new(Raster.FromRgba(width, height, bytes, cancellation), style.FontName, family.Source, missing) { ResolvedFace = resolved.Typeface.ToString() ?? family.Source };
     }
 }

@@ -12,6 +12,20 @@ public partial class MainWindow
         void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         var rows = new List<object>();
+        var regular = TextFontResolver.Resolve("ArialMT");var bold = TextFontResolver.Resolve("Arial-BoldMT");
+        Check(!regular.MissingFont && !bold.MissingFont && regular.Typeface.FontFamily.Source.Contains("Arial") && bold.Typeface.Weight.ToOpenTypeWeight() > regular.Typeface.Weight.ToOpenTypeWeight(), "PostScript font aliases lost installed face/weight.");
+        var fullName = TextFontResolver.Resolve("Arial Bold");Check(!fullName.MissingFont && fullName.Typeface.Weight == bold.Typeface.Weight, "Full font name lost weight.");
+        var faceRender = TextRasterizer.Render(new("Bold alias", "Arial-BoldMT", 32));Check(!faceRender.MissingFont && faceRender.RequestedFont == "Arial-BoldMT", "Renderer did not retain requested PostScript name.");
+        bool collectionChecked = false;
+        foreach (var face in System.Windows.Media.Fonts.SystemTypefaces)
+        {
+            if (!face.TryGetGlyphTypeface(out var glyph) || !glyph.FontUri.AbsolutePath.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase)) continue;
+            using var fontStream = glyph.GetFontStream();var names = OpenTypeFontNames.Read(fontStream);
+            var match = names.FirstOrDefault(n => n.Get(1).Concat(n.Get(16)).Any(name => glyph.FamilyNames.Values.Contains(name, StringComparer.OrdinalIgnoreCase)) && n.Get(2).Concat(n.Get(17)).Any(name => glyph.FaceNames.Values.Contains(name, StringComparer.OrdinalIgnoreCase)));
+            var alias = match?.Get(6).FirstOrDefault();if (alias is null) continue;
+            var resolved = TextFontResolver.Resolve(alias);Check(!resolved.MissingFont && resolved.Typeface.Weight == face.Weight && resolved.Typeface.Style == face.Style, "Collection face alias lost its style.");collectionChecked = true;break;
+        }
+        Check(collectionChecked, "No installed TTC face was validated.");
         foreach (var content in new[] { "Hello World", "한글 테스트", "مرحبا بالعالم", "Emoji 😀", "e\u0301 café", "first\nsecond" })
         {
             var style = new LayerTextStyle(content, "Segoe UI", 32, .8, .2, .1);var result = TextRasterizer.Render(style);var bytes = result.Pixels.ToRgba();
