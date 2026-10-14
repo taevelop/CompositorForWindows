@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using Compositor.Core;
 using Compositor.Imaging;
@@ -7,6 +7,18 @@ namespace Compositor.App;
 
 public partial class MainWindow
 {
+    private async void SelectSubject(object sender,RoutedEventArgs e)
+    {
+        if(!await ResolveGradientBeforeAction())return;
+        if(!busy&&Canvas.IsTransforming)Canvas.CommitTransform();if(busy||session.InTransaction)return;
+        string directory=System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"CompositorForWindows","Models");
+        string path=System.IO.Path.Combine(directory,BackgroundModelStore.FileName);
+        if(!System.IO.File.Exists(path)){var setup=new BackgroundModelSetupWindow(directory){Owner=this};if(setup.ShowDialog()!=true)return;}
+        var mode=sender is MenuItem {Tag:string tag}&&Enum.TryParse<Compositor.Core.SelectionMode>(tag,out var selected)?selected:Compositor.Core.SelectionMode.Replace;
+        var target=session;var original=target.Document;Document? result=null;
+        if(!await Work("Selecting foreground subject…",()=>{using var predictor=new U2NetPredictor(path);result=SubjectSelection.Compute(original,predictor.Predict,mode);}))return;
+        if(ReferenceEquals(session,target)&&ReferenceEquals(target.Document,original)&&!target.InTransaction&&result is not null)target.Apply(_=>result);
+    }
     private void SelectionCenterChanged(object sender, RoutedEventArgs e)
     { Canvas.CancelInteraction(); Canvas.SelectionFromCenter = SelectionCenter.IsChecked == true; }
     private void NudgeSelectedPixels(System.Windows.Input.Key key, int distance) => Safe(() =>
@@ -68,3 +80,4 @@ public partial class MainWindow
         session.Apply(_ => next);
     });
 }
+

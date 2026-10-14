@@ -66,3 +66,8 @@ Release 경고/오류 0, 코어 634개 및 일반 WPF 회귀 통과.
 다운로드 setup 이후 Release 경고/오류 0, 코어638개 및 WPF회귀 통과. 배포본 artifacts/publish-shape-ui 갱신·portable1/1 및 다운로드한 설치 모델을 사용하는 실제 배포 앱 --background-smoke 성공: 추론1회·Advanced전체참조·Undo/저장, 전체1662ms/누적managed337.9MiB(개발PC1회). 배포본 공지에 옵션 모델 출처·상위라이선스/해시정책·가중치미포함을 반영했다. 별도PC/Mac·직접setup다운로드클릭/취소·정규버튼·모델품질과 높은100MP피크는 잔여다.
 
 모델 setup 모달 UI 회귀: 다운로드 경계만 주입하고 실제 Compact/Standard/Cancel RoutedEvent를 실행했다. 소형/정규 선택값·1MB 진행 표시·다운로드 중 버튼 잠금·완료 후 설치 경로/모달 닫기·활성 다운로드 토큰 취소·체크섬 실패 후 retry·닫기 후 늦은 성공 결과 폐기를 확인했다. 실제 네트워크 다운로드 검증과 구분하며 물리 마우스/file picker·정규 live다운로드 버튼 실행이 아니다. artifacts/ui-smoke.model-setup.json 및 PNG 캡처를 확인해 설명/버튼 정렬/색상을 시각 검토했다. 내부 Pending 작업과 다운로드 테스트 경계를 추가했으며 제품 기본 경로는 그대로다. Release 경고/오류0·코어638개·확장WPF회귀통과. 피사체 선택 연결, 품질/대형메모리/외부실기는 잔여다.
+
+피사체 선택 1차 연결: 원본 MaskTracing.swift의 >=128 gray threshold·시계 방향 외곽/반시계 구멍·직선 중간 점 제거를 이식했다. WhitePixels는 픽셀 가장자리 선택 SVG로 변환하며 기존 1M path/복잡도 제한을 초과하면 원본 보존 오류로 중단한다. 구멍/대각 접점/256px 타일 경계의 모든 픽셀 중심 포함 여부를 마스크와 비교했다. SubjectSelection.Compute는 전용 CanvasRenderer로 현재 문서의 보이는 합성을 추론에 전달한다. 숨긴 레이어 제외·문서 전체 좌표·원본 pixels 참조/Undo·빈 subject 오류를 검사했다.
+Select → Subject의 교체/추가/빼기 UI 연결, gradient/transform 확정·busy worker·세션/문서 참조 확인 뒤 결과 적용. 활성 이미지가 아니라 캔버스 전체를 분석하며 선택은 기존처럼 저장되지 않는다. 실제 ONNX 피사체 메뉴/WPF 윤곽/입력·취소/저장 비저장정책·대형 추적 성능은 후속이다. 원본에 있는 Load Mask/Layer Selection은 이 단계에서 아직 연결하지 않았다.
+
+Release 경고/오류0·코어641개·기존WPF회귀통과. ONNX 피사체 메뉴 자체의 검증 증거와 구분한다.
