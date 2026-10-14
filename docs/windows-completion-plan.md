@@ -341,3 +341,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Clone1MP이상sample/selection/queue worker·mouseup단일확정·ownership(session/document/generation/layer/tool)·Esc/전환/Dispose취소연결. 주입지연WPF queuedpoint/Undo/Esc/늦은결과/새transaction보호·기존Clone회귀통과, 전체빌드0경고오류. 실제4K/100MP dispatcher/진행시각·queue/실기/배포후속, fullWPF30초timeout잔여. 전체관리70/30유지.
 
 - 실제Clone4K/100MP WPF worker48입력/단일Undo/활성Esc·Dispatcher검증CLI. begin6.7/7.6ms·완료1.55/1.70초·maxgap54/48ms·Esc13/54ms(sparse64pxsource각1회). 코어668/fullWPF30초내1회통과, 반복timeout미해결유지. 새publish-clone-ui/portable1/1·배포앱4K실행/Undo/Esc통과(maxgap76ms). Clone기본경로연결·품질잔여유지, 다음SpotHealing. 전체70/30관리추정유지.
+
+- SpotHealing 원본C해시동일·3모드고정폭ABI·원본ROI/tile스냅샷연산기반. 코어672/빌드0경고오류·기존Clone WPF통과. tile경계/coverage밖/원본·tile공유·반투명/opacity·CreateTexture독립noise수식검사. J/stroke wash/선택/Undo/worker/저장/성능·배포는후속, 전체70/30관리추정유지.

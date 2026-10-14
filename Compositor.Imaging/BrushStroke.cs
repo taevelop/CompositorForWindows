@@ -6,6 +6,8 @@ namespace Compositor.Imaging;
 public sealed record BrushSettings(double Diameter, double Hardness, double Opacity, byte Red, byte Green, byte Blue, bool Erase = false);
 public static class NativePixels
 {
+    [DllImport("Compositor.Native", EntryPoint="compositor_spot_heal", CallingConvention=CallingConvention.Cdecl)]
+    internal static extern int SpotHeal([In,Out] byte[] pixels, byte[] coverage, int width, int height, float opacity, int mode, uint seed);
     [DllImport("Compositor.Native", EntryPoint="compositor_clone_coverage", CallingConvention=CallingConvention.Cdecl)]
     internal static extern int CloneCoverage([In,Out] float[] coverage, [Out] byte[] delta,
         int tileX, int tileY, int width, int height, double[] map, double ax, double ay, double bx, double by,
