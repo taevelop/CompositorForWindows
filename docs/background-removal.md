@@ -79,3 +79,6 @@ Release 경고/오류0·코어641개·기존WPF회귀통과. ONNX 피사체 메�
 Select 메뉴 Load layer pixels / Load hidden mask areas의 세 연산을 취소 가능한 공통 선택 worker에 연결했다. WPF Routed 메뉴는 layer alpha가 mask를 무시함·독립1px mask Placement·Undo를 확인한다. 원본의 Ctrl+thumbnail/Shift-add/Alt-subtract 입력은 후속이며 아직 메뉴를 그 바로가기 완료로 계산하지 않는다. 대형추적/물리입력·모델품질/메모리·Mac/별도PC보류 유지.
 
 Release 경고/오류0·코어643개·레이어/마스크 Routed 메뉴 확장WPF회귀통과.
+
+썸네일 선택load 연결: Windows 레이어 행에 없던 image/mask 썸네일을 추가했다. LayerThumbnail은 32px premultiplied BGRA를 원본 타일 4점 bilinear sampling으로 만들고 전체 RGBA 복사를 피한다. Frozen BitmapSource를 ConditionalWeakTable<Raster,...>로 공유한다. 그룹/조정 image thumb는 숨기고 mask존재시에만 mask thumb를 표시한다.
+Ctrl 썸네일 클릭은 source layer/mask 선택load를 원본처럼 실행하고 Ctrl+Shift add/Ctrl+Alt subtract(Alt우선)를 사용한다. 기본 클릭은 image/mask 편집target을 선택하며 image의 Shift/Alt만 있는 클릭은 기본target 강제 변경을 하지 않는다. 기존 row body 다중선택 및 ButtonBase 드래그 제외 경로를 유지한다. 공통 입력 처리 함수에 modifier를 주입해 3연산/우선순위·기본target·cache를 WPF검사했다. 실제 keyboard/mouse 입력의 증거는 아니다. 패널 PNG의 썸네일/이름정렬·색상을 시각 확인, 코어643개/전체WPF다중선택·드래그회귀통과. 썸네일 Alt-drag mask복사 등 원본 추가동작 및 물리입력은 후속이다.

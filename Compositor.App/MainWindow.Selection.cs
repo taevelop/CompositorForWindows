@@ -10,6 +10,22 @@ public partial class MainWindow
     private CancellationTokenSource? subjectCancellation;
     private Func<Raster,CancellationToken,LayerMask>? subjectPredictorOverride;
     private Task subjectPending=Task.CompletedTask;
+    private async void ThumbnailClicked(object sender,RoutedEventArgs e)
+    {
+        if(sender is not Button {DataContext:LayerRow row,Tag:string tag})return;
+        await HandleThumbnail(row.Id,tag=="Mask",System.Windows.Input.Keyboard.Modifiers);e.Handled=true;
+    }
+    private async Task HandleThumbnail(Guid id,bool mask,System.Windows.Input.ModifierKeys keys)
+    {
+        if(!await ResolveGradientBeforeAction())return;
+        if(!busy&&Canvas.IsTransforming)Canvas.CommitTransform();if(busy||session.InTransaction)return;
+        if(keys.HasFlag(System.Windows.Input.ModifierKeys.Control))
+        {
+            var mode=keys.HasFlag(System.Windows.Input.ModifierKeys.Alt)?Compositor.Core.SelectionMode.Subtract:keys.HasFlag(System.Windows.Input.ModifierKeys.Shift)?Compositor.Core.SelectionMode.Add:Compositor.Core.SelectionMode.Replace;
+            subjectPending=RunSelectionAsync("Loading thumbnail selection…",(document,token)=>MaskTracing.LoadSelection(document,id,mask,mode,token));await subjectPending;
+        }
+        else if(mask||!keys.HasFlag(System.Windows.Input.ModifierKeys.Shift)&&!keys.HasFlag(System.Windows.Input.ModifierKeys.Alt)){session.SelectLayers(new[]{id},id);session.EditMask=mask;Refresh();}
+    }
     private async void SelectSubject(object sender,RoutedEventArgs e)
     {
         if(!await ResolveGradientBeforeAction())return;
@@ -108,5 +124,6 @@ public partial class MainWindow
         session.Apply(_ => next);
     });
 }
+
 
 

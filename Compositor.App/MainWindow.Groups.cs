@@ -15,6 +15,10 @@ public partial class MainWindow
         public Visibility ExpandVisibility => Layer.IsGroup ? Visibility.Visible : Visibility.Hidden;
         public Thickness Indent => new(Depth * 14, 0, 0, 0);
         public double RowOpacity => Visible ? 1 : .45;
+        public System.Windows.Media.Imaging.BitmapSource ImageThumbnail=>LayerThumbnail.Get(Layer.Pixels);
+        public System.Windows.Media.Imaging.BitmapSource? MaskThumbnail=>Layer.Mask is {} mask?LayerThumbnail.Get(mask.Pixels):null;
+        public Visibility ImageThumbnailVisibility=>Layer.IsGroup||Layer.IsAdjustment?Visibility.Collapsed:Visibility.Visible;
+        public Visibility MaskThumbnailVisibility=>Layer.Mask is null?Visibility.Collapsed:Visibility.Visible;
     }
     private sealed record ParentOption(Guid? Id, string Label);
     private readonly HashSet<Guid> collapsedGroups = [];

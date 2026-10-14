@@ -37,9 +37,21 @@ public partial class MainWindow
             session.Undo();Check(ReferenceEquals(session.Document,loaded),"Layer selection Undo failed.");
             LoadMaskReplaceMenu.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));await subjectPending;
             Check(SelectionGeometry.Contains(session.Document.Selection!,new(7,7))&&!SelectionGeometry.Contains(session.Document.Selection!,new(3,3)),"Hidden mask selection menu ignored independent placement.");
-            File.WriteAllText(report,JsonSerializer.Serialize(new{checks=new[]{"routed Replace/Add/Subtract menus","single Undo/Redo","running cancellation button","late result different document discarded","layer alpha menu ignores mask/Undo","hidden mask menu independent placement"},note="Injected predictor WPF; actual ONNX selection quality and physical input separate."}));
+            session.Load(loaded);await HandleThumbnail(image.Id,false,System.Windows.Input.ModifierKeys.Control);
+            Check(SelectionGeometry.Contains(session.Document.Selection!,new(3,3)),"Ctrl image thumbnail did not load alpha.");
+            await HandleThumbnail(image.Id,true,System.Windows.Input.ModifierKeys.Control|System.Windows.Input.ModifierKeys.Shift);
+            Check(SelectionGeometry.Contains(session.Document.Selection!,new(3,3))&&SelectionGeometry.Contains(session.Document.Selection!,new(7,7)),"Ctrl+Shift mask thumbnail did not add.");
+            await HandleThumbnail(image.Id,false,System.Windows.Input.ModifierKeys.Control|System.Windows.Input.ModifierKeys.Shift|System.Windows.Input.ModifierKeys.Alt);
+            Check(!SelectionGeometry.Contains(session.Document.Selection!,new(3,3))&&SelectionGeometry.Contains(session.Document.Selection!,new(7,7)),"Ctrl+Alt thumbnail priority did not subtract.");
+            await HandleThumbnail(image.Id,true,System.Windows.Input.ModifierKeys.None);Check(session.EditMask&&session.ActiveLayerId==image.Id,"Normal mask thumbnail did not target mask.");
+            await HandleThumbnail(image.Id,false,System.Windows.Input.ModifierKeys.None);Check(!session.EditMask,"Normal image thumbnail did not target image.");
+            Check(ReferenceEquals(LayerThumbnail.Get(image.Pixels),LayerThumbnail.Get(image.Pixels)),"Immutable raster thumbnail cache was not reused.");
+            UpdateLayout();var panelBitmap=new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(Layers.ActualWidth),(int)Math.Ceiling(Layers.ActualHeight),96,96,System.Windows.Media.PixelFormats.Pbgra32);panelBitmap.Render(Layers);
+            var panelPng=new System.Windows.Media.Imaging.PngBitmapEncoder();panelPng.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(panelBitmap));using(var file=File.Create(report+".thumbnails.png"))panelPng.Save(file);
+            File.WriteAllText(report,JsonSerializer.Serialize(new{checks=new[]{"routed Replace/Add/Subtract menus","single Undo/Redo","running cancellation button","late result different document discarded","layer alpha menu ignores mask/Undo","hidden mask menu independent placement","thumbnail modifier Replace/Add/Subtract priority","normal image/mask target","thumbnail raster cache reuse"},note="Injected predictor WPF; actual ONNX selection quality and physical input separate."}));
         }
         finally{subjectPredictorOverride=null;session.Load(saved,active);Refresh();}
     }
 }
+
 

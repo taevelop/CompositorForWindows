@@ -197,9 +197,11 @@
      </StackPanel>
             <ListBox Grid.Row="2" x:Name="Layers" AllowDrop="True" PreviewMouseLeftButtonDown="LayerDragDown" PreviewMouseLeftButtonUp="LayerDragUp" PreviewMouseMove="LayerDragMove" DragOver="LayerDragOver" DragLeave="LayerDragLeave" QueryContinueDrag="LayerDragContinue" Drop="DropLayerRows" SelectionMode="Extended" Background="#191B20" Foreground="White" BorderThickness="0" MinHeight="100" SelectionChanged="LayerSelected" Margin="0,6,0,6">
               <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource LayerListItem}"/></ListBox.ItemContainerStyle><ListBox.ItemTemplate><DataTemplate>
-                <Grid Margin="{Binding Indent}" Opacity="{Binding RowOpacity}"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Grid Margin="{Binding Indent}" Opacity="{Binding RowOpacity}"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                   <Button Content="{Binding Disclosure}" IsEnabled="{Binding CanExpand}" Visibility="{Binding ExpandVisibility}" Tag="{Binding Id}" Click="ToggleGroup" Width="22" Padding="0" Margin="0,1,4,1"/>
-                  <StackPanel Grid.Column="1"><TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Label}"/><TextBlock Text="{Binding Kind}" Foreground="{StaticResource MutedInk}" FontSize="10" Margin="0,3,0,0"/></StackPanel>
+                  <Button Grid.Column="1" Width="36" Height="36" Padding="1" Margin="0,1,4,1" Visibility="{Binding ImageThumbnailVisibility}" Tag="Image" Click="ThumbnailClicked" ToolTip="Ctrl-click: load pixels · Ctrl+Shift: add · Ctrl+Alt: subtract"><Image Source="{Binding ImageThumbnail}"/></Button>
+                  <Button Grid.Column="2" Width="36" Height="36" Padding="1" Margin="0,1,4,1" Visibility="{Binding MaskThumbnailVisibility}" Tag="Mask" Click="ThumbnailClicked" ToolTip="Ctrl-click: load hidden mask areas · Ctrl+Shift: add · Ctrl+Alt: subtract"><Image Source="{Binding MaskThumbnail}"/></Button>
+                  <StackPanel Grid.Column="3"><TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Label}"/><TextBlock Text="{Binding Kind}" Foreground="{StaticResource MutedInk}" FontSize="10" Margin="0,3,0,0"/></StackPanel>
                 </Grid>
               </DataTemplate></ListBox.ItemTemplate>
 
@@ -250,6 +252,7 @@
   </Grid>
  </DockPanel>
 </Window>
+
 
 
 
