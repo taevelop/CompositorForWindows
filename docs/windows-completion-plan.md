@@ -389,3 +389,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Zoom Up/Down1%·Shift10%/Enter·Esc입력적용검사통과. 최종publish-zoom-controls에배포·Zoom/모드순환/portable45초gate1회통과(동일개발PC). 제품core불변·716검증유지,70/30관리추정재산정전유지.
 
 - TypeTool 원본style/cachedimage/livetext계약대조·LayerTextStyle/TextJson·Layer.Text/cachedPNG 보존저장·pixel편집래스터화연결. 코어718/Unicode전체style·원본pixel왕복·transform/mask유지·Undo·unknown/duplicate/invalid와손상덮어쓰기원본보존검사통과. 렌더러/font/shaping·Type/inline UI/재렌더·품질/배포후속. 70/30관리추정재산정전유지,상세editable-text.md.
+
+- WPFFormattedText family/fallback·tracking0 point/paragraph/leading/alignment·96dpi premulRGBA 렌더기반. 실제textCLI다국어/nonempty/premul·wordwrap/box·leading·fallbackflag·empty/cancel·명시적trackingguard·cache저장검사통과·아랍어/단색emoji시각확인. PostScriptfont/비영tracking/컬러emoji·metrics/Typeinline/명령/async·품질/배포후속,718core검증유지·70/30관리추정재산정전유지.
