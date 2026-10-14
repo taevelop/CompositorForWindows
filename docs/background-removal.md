@@ -60,3 +60,7 @@ Release 경고/오류 0, 코어 634개 및 일반 WPF 회귀 통과.
 검증: 잘못된 모델/사전 취소 시 이전 파일·임시 파일 정리 검사, 실제 u2netp를 artifacts/installed-model-check에 설치해 합성 입력 추론 약200ms/320px/0–255 성공. 패키지에 가중치를 포함하거나 재배포한 것은 아니다. U²-Net 저장소 Apache-2.0(https://raw.githubusercontent.com/xuebinqin/U-2-Net/master/LICENSE) 및 rembg 릴리스 출처는 유지하며 자동 설치/배포에는 출처/공지·검증 파일을 연결해야 한다. 모델 품질/대형 메모리 및 Mac/별도 PC 보류 유지.
 
 최종 Release 경고/오류 0, 코어 636개 및 전체 WPF 회귀 통과.
+
+모델 setup 다운로드 UI: 소형(~5MB)/정규(~176MB) 다운로드 및 검증 파일 가져오기, 진행 MB·Cancel·오류 표시를 제공한다. 고정 rembg v0.0.0 HTTPS 릴리스만 다운로드하며 응답/스트리밍 크기 192MiB 상한·알려진 SHA256·원자 설치를 사용한다. 이미지 전송 없이 로컬 추론이다. 잘못된 응답 체크섬/Content-Length 초과가 이전 설치 파일을 보존하고 임시 파일을 제거하는 검사를 추가했다. 실제 앱과 같은 DownloadAsync로 소형 모델을 artifacts/downloaded-model-check에 설치해 합성 320px 추론약205ms 성공. 정규 모델의 같은 다운로드 버튼 경로·직접 클릭/다운로드 도중 취소 실기는 아직 미검증이다. 가중치는 패키지에 포함하지 않고 첫 실행에서 사용자가 선택해 받는다.
+
+다운로드 setup 이후 Release 경고/오류 0, 코어638개 및 WPF회귀 통과. 배포본 artifacts/publish-shape-ui 갱신·portable1/1 및 다운로드한 설치 모델을 사용하는 실제 배포 앱 --background-smoke 성공: 추론1회·Advanced전체참조·Undo/저장, 전체1662ms/누적managed337.9MiB(개발PC1회). 배포본 공지에 옵션 모델 출처·상위라이선스/해시정책·가중치미포함을 반영했다. 별도PC/Mac·직접setup다운로드클릭/취소·정규버튼·모델품질과 높은100MP피크는 잔여다.

@@ -4,7 +4,7 @@ using System.Windows;
 namespace Compositor.App;
 public partial class MainWindow
 {
-    private async void EditRemoveBackground(object sender,RoutedEventArgs e)
+    private void EditRemoveBackground(object sender,RoutedEventArgs e)
     {
         if(!busy&&Canvas.IsTransforming)Canvas.CommitTransform();
         if(busy||session.InTransaction)return;
@@ -12,9 +12,7 @@ public partial class MainWindow
         string path=System.IO.Path.Combine(directory,BackgroundModelStore.FileName);
         if(!System.IO.File.Exists(path))
         {
-            var chooser=new Microsoft.Win32.OpenFileDialog{Title="Install a background removal model (one-time setup)",Filter="U2Net ONNX model|*.onnx"};
-            if(chooser.ShowDialog(this)!=true)return;
-            if(!await Work("Installing background removal model…",()=>BackgroundModelStore.Install(chooser.FileName,directory)))return;
+            var setup=new BackgroundModelSetupWindow(directory){Owner=this};if(setup.ShowDialog()!=true)return;
         }
         Safe(()=>
         {
@@ -23,14 +21,11 @@ public partial class MainWindow
             try{dialog.ShowDialog();}finally{if(dialog.IsVisible)dialog.Close();Refresh();Canvas.Focus();}
         });
     }
-    private async void ChangeBackgroundModel(object sender,RoutedEventArgs e)
+    private void ChangeBackgroundModel(object sender,RoutedEventArgs e)=>Safe(()=>
     {
-        if(!busy&&Canvas.IsTransforming)Canvas.CommitTransform();if(busy||session.InTransaction)return;
-        var chooser=new Microsoft.Win32.OpenFileDialog{Title="Change background removal model",Filter="U2Net ONNX model|*.onnx"};
-        if(chooser.ShowDialog(this)!=true)return;
         string directory=System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"CompositorForWindows","Models");
-        await Work("Installing background removal model…",()=>BackgroundModelStore.Install(chooser.FileName,directory));
-    }
+        new BackgroundModelSetupWindow(directory){Owner=this}.ShowDialog();
+    });
     private void EditLensCorrection(object sender,RoutedEventArgs e)=>Safe(()=>
     {
         var dialog=new PixelFilterWindow(session,Canvas.ShowFilterPreview,PixelFilterKind.LensCorrection){Owner=this};
@@ -57,6 +52,7 @@ public partial class MainWindow
         try{dialog.ShowDialog();}finally{if(dialog.IsVisible)dialog.Close();Refresh();Canvas.Focus();}
     });
 }
+
 
 
 

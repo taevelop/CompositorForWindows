@@ -13,3 +13,6 @@ Upstream native binaries include additional third-party components. Preserve the
 
 ## ONNX Runtime
 Microsoft.ML.OnnxRuntime 1.30.0 / Microsoft.ML.OnnxRuntime.Managed — MIT license. Source and license: https://github.com/microsoft/onnxruntime . Native CPU inference dependency. U2Net weights are currently development verification artifacts and are not included in the distributed package.
+
+## Optional U²-Net background models
+Models are downloaded on demand from the rembg v0.0.0 GitHub release or imported by the user; weights are not bundled. Upstream project: https://github.com/xuebinqin/U-2-Net . Upstream repository license: Apache-2.0, https://github.com/xuebinqin/U-2-Net/blob/master/LICENSE . ONNX distribution and input reference: https://github.com/danielgatis/rembg . Only the two SHA-256 pinned model files are supported; provenance and hashes are recorded in docs/background-removal.md. Model prediction can miss subjects; this is not an Apple Vision equivalent-quality guarantee.
