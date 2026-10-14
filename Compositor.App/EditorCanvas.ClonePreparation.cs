@@ -11,6 +11,7 @@ public sealed partial class EditorCanvas
         public Document Document { get; } = document;
         public long Generation { get; } = generation;
         public Guid Layer { get; } = layer;
+        public EditorTool Tool { get; init; }
         public CancellationTokenSource Cancellation { get; } = new();
         public List<PointD> Points { get; } = [];
         public bool Ended { get; set; }
@@ -20,15 +21,16 @@ public sealed partial class EditorCanvas
     internal Task<bool> CloneCompletion { get; private set; } = Task.FromResult(true);
     internal bool IsClonePreparing => clonePreparation is not null;
     internal Func<Document, Guid, CloneSettings, CancellationToken, Raster>? CloneCaptureOverride { get; set; }
+    internal Func<Document, Guid, double, CancellationToken, Raster>? BlurCaptureOverride { get; set; }
     private static bool OwnsCloneTransaction(ClonePreparation owner) => owner.Session.InTransaction && owner.Session.TransactionGeneration == owner.Generation && ReferenceEquals(owner.Session.Document, owner.Document);
     private bool OwnsClone(ClonePreparation owner) => !canvasDisposed && ReferenceEquals(clonePreparation, owner) && ReferenceEquals(Session, owner.Session)
-        && Tool == EditorTool.CloneStamp && owner.Session.ActiveLayerId == owner.Layer && !owner.Session.EditMask && OwnsCloneTransaction(owner);
+        && Tool == owner.Tool && owner.Session.ActiveLayerId == owner.Layer && !owner.Session.EditMask && OwnsCloneTransaction(owner);
 
     private void BeginClonePreparation(Layer layer, BrushSettings brush, CloneSettings settings, PointD offset, PointD point)
     {
-        Session.Begin();var owner = new ClonePreparation(Session, Session.Document, Session.TransactionGeneration, layer.Id);
+        Session.Begin();var owner = new ClonePreparation(Session, Session.Document, Session.TransactionGeneration, layer.Id) { Tool = Tool };
         owner.Points.Add(point);clonePreparation = owner;
-        CloneCompletion = PrepareCloneAsync(owner, layer.Id, brush, settings, offset, CloneCaptureOverride);InvalidateVisual();
+        CloneCompletion = PrepareCloneAsync(owner, layer.Id, brush, settings, offset, CloneCaptureOverride, BlurCaptureOverride);InvalidateVisual();
     }
     private void CancelClonePreparation()
     {
@@ -39,7 +41,8 @@ public sealed partial class EditorCanvas
         if (!canvasDisposed) InvalidateVisual();
     }
     private async Task<bool> PrepareCloneAsync(ClonePreparation owner, Guid layer, BrushSettings brush, CloneSettings settings, PointD offset,
-        Func<Document, Guid, CloneSettings, CancellationToken, Raster>? capture)
+        Func<Document, Guid, CloneSettings, CancellationToken, Raster>? capture,
+        Func<Document, Guid, double, CancellationToken, Raster>? blurCapture)
     {
         var token = owner.Cancellation.Token;bool installed = false;
         try
@@ -49,7 +52,9 @@ public sealed partial class EditorCanvas
                 await cloneWorkerGate.WaitAsync(token);
                 try
                 {
-                    var sample = capture is null ? CloneStamp.Capture(owner.Document, layer, settings, token) : capture(owner.Document, layer, settings, token);
+                    var sample = owner.Tool == EditorTool.Blur
+                        ? (blurCapture is { } blur ? blur(owner.Document, layer, brush.Diameter, token) : BlurBrush.Capture(owner.Document, layer, brush.Diameter, token))
+                        : capture is null ? CloneStamp.Capture(owner.Document, layer, settings, token) : capture(owner.Document, layer, settings, token);
                     token.ThrowIfCancellationRequested();return new CloneStroke(owner.Document, layer, brush, sample, offset);
                 }
                 finally { cloneWorkerGate.Release(); }
@@ -82,6 +87,6 @@ public sealed partial class EditorCanvas
         using var background = new SKPaint { Color = new SKColor(28, 30, 34, 230) };
         using var ink = new SKPaint { Color = new SKColor(220, 230, 245), IsAntialias = true };using var font = new SKFont { Size = 13 };
         canvas.DrawRoundRect(new SKRect(12, 12, 300, 44), 4, 4, background);
-        canvas.DrawText("Preparing clone sample · Esc to cancel", 22, 33, SKTextAlign.Left, font, ink);
+        canvas.DrawText(clonePreparation?.Tool == EditorTool.Blur ? "Preparing blur sample · Esc to cancel" : "Preparing clone sample · Esc to cancel", 22, 33, SKTextAlign.Left, font, ink);
     }
 }

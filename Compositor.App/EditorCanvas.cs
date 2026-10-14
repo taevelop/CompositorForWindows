@@ -8,7 +8,7 @@ using SkiaSharp.Views.WPF;
 
 namespace Compositor.App;
 
-public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection, Crop, Eyedropper, Gradient, Shape, MagicWand, CloneStamp, SpotHealing }
+public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection, Crop, Eyedropper, Gradient, Shape, MagicWand, CloneStamp, SpotHealing, Blur }
 public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
@@ -251,9 +251,9 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             Session.Begin(); MovePointer(point); return;
         }
         if (Session.ActiveLayer is not { } layer || Tool == EditorTool.Hand) return;
-        if (Tool is EditorTool.Brush or EditorTool.Eraser or EditorTool.CloneStamp or EditorTool.SpotHealing)
+        if (Tool is EditorTool.Brush or EditorTool.Eraser or EditorTool.CloneStamp or EditorTool.SpotHealing or EditorTool.Blur)
         {
-            if (Tool is EditorTool.CloneStamp or EditorTool.SpotHealing && Session.EditMask) throw new InvalidOperationException("This tool edits image pixels. Select the image thumbnail first.");
+            if (Tool is EditorTool.CloneStamp or EditorTool.SpotHealing or EditorTool.Blur && Session.EditMask) throw new InvalidOperationException("This tool edits image pixels. Select the image thumbnail first.");
             if (layer.IsAdjustment && !Session.EditMask) throw new InvalidOperationException("Adjustment layers have no image pixels. Select Edit mask to paint coverage.");
             if (layer.IsGroup) throw new InvalidOperationException("Select an image layer inside the group before painting.");
             if (!LayerHierarchy.Entries(Session.Document).First(e => e.Layer.Id == layer.Id).Visible) throw new InvalidOperationException("Show the layer and its parent groups before painting.");
@@ -261,11 +261,12 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         multipleMove = Tool == EditorTool.Move && Session.SelectedLayerIds.Count > 1 ? new GroupTransform(Session.Document, Session.SelectedLayerIds) : null;
         originalLayer = layer; anchor = point;
         groupMoveDocument = layer.IsGroup ? Session.Document : null;
-        if (Tool is EditorTool.Brush or EditorTool.Eraser or EditorTool.CloneStamp or EditorTool.SpotHealing)
+        if (Tool is EditorTool.Brush or EditorTool.Eraser or EditorTool.CloneStamp or EditorTool.SpotHealing or EditorTool.Blur)
         {
             var settings = ReadBrush() with { Erase = Tool == EditorTool.Eraser };
-            var selection = Tool is not (EditorTool.CloneStamp or EditorTool.SpotHealing) && Session.Document.Selection is { } selected ? SelectionCoverage.Create(selected, Session.Document.Width, Session.Document.Height) : null;
+            var selection = Tool is not (EditorTool.CloneStamp or EditorTool.SpotHealing or EditorTool.Blur) && Session.Document.Selection is { } selected ? SelectionCoverage.Create(selected, Session.Document.Width, Session.Document.Height) : null;
             if (Tool == EditorTool.SpotHealing) BeginHealing(layer, settings);
+            else if (Tool == EditorTool.Blur) { BeginClonePreparation(layer, settings, new(), new(), point);return; }
             else if (Tool == EditorTool.CloneStamp)
             {
                 var clone = ReadClone();

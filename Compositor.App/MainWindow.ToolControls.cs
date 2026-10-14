@@ -60,8 +60,8 @@ public partial class MainWindow
     {
         if (BrushOptions is null) return;
         bool transforming = Canvas?.IsTransforming == true;
-        bool painting = ToolPicker.SelectedIndex is 1 or 2 or 13 or 14;
-        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", 6 => "Lasso", 7 => "Polygon", 8 => "Crop", 9 => "Eyedropper", 10 => "Gradient", 11 => "Shape", 12 => "Magic Wand", 13 => "Clone Stamp", 14 => "Spot Healing", _ => "Brush" };
+        bool painting = ToolPicker.SelectedIndex is 1 or 2 or 13 or 14 or 15;
+        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", 6 => "Lasso", 7 => "Polygon", 8 => "Crop", 9 => "Eyedropper", 10 => "Gradient", 11 => "Shape", 12 => "Magic Wand", 13 => "Clone Stamp", 14 => "Spot Healing", 15 => "Blur", _ => "Brush" };
         if (transforming) ToolTitle.Text = "Transform";
         ColorButton.IsEnabled = ToolbarColorButton.IsEnabled = BackgroundColorButton.IsEnabled = !session.EditMask||ToolPicker.SelectedIndex==11;
         RefreshPaletteSwatches();

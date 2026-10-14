@@ -18,3 +18,13 @@ BlurStroke는고정sample/offset0의CloneStroke를사용해확장격자·selecti
 - 실제WPF/저장왕복·screen/export·큰brush/자연이미지/alpha경계품질·배포갱신. 기존Windows최대sweptcoverage와Macsoftstamp누적차이도품질범위에유지한다.
 
 이번단계는코어연산이며실행패키지와UI는이전단계를유지한다. 실제Mac왕복/별도PC검증은사용자지시로보류다.
+
+## 이미지 도구 UI·비동기 연결
+
+Blur(R) 아이콘을rail16번째에추가하고Size/Hardness/Opacity공유slider를표시한다. 색/Clone/Healing옵션은숨긴다. 원본Smear(R)의Blur모드를연결한단계이며Smudge/Liquify와마스크Blur는별도후속이다. 16개tool이기본높이에들어가도록item높이30/세로margin1로조정하고작은창의실제scroll은유지한다.
+
+ClonePreparation을tool소유자가있는frozen-sample준비로확장해Blur가항상worker에서sample을만든다. pointer점은UI에서큐로모으고worker가적용한뒤동일session/document/transaction generation/tool/image target일때만preview/install/commit한다. mouseup전설치면이후live입력을이어가고mouseup후면단일Undo로commit한다. Esc/tool/tab/Dispose는취소한다. captureoverride도시작때고정한다. sourcecrosshair/Alt-source는Clone에만적용된다.
+
+공통명령대기에CloneCompletion을포함해Blur/Clone준비중저장/내보내기가준비결과를기다린다. busy Esc도공유준비를취소한다. 실제WPF Blur검사통과:queued입력/단일UndoRedo/프로젝트왕복/PNG-composite일치,지연capture중Esc·명령대기/UI잠금과복원,lateworker가새transaction을닫지않음. 기존Clone단독회귀와16tool startup scrollbar숨김/compactscroll/복원·title/canvas고정검사도통과했다. Release0경고/오류,제품코어변경없음·695코어검증유지.
+
+마스크Blur·대형실측/중간Gaussian취소·실제MacCoreImage동등성/원본softstamp농도·물리입력/새패키지배포는잔여다. 이번BlurUI는개발Release빌드에만반영됐으며기존publish-healing-cancellable패키지에는없다.

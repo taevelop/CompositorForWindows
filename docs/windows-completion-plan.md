@@ -363,3 +363,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Healing first-display/paint/input분리계측:최신배포4K/800px첫표시126ms·입력단일최대24ms·paint최대11ms·Dispatcher51ms·끝549ms. 이전537msgap재현되지않았으나측정조건변경이며제품최적화/원인해결로주장하지않는다. publish-healing-cancellable에최신native취소/도구막대포함갱신·portable45초gate1회통과(동일개발PC)/692코어검증유지. 첫표시/입력계산/표시·GC와다음원본도구·텍스트/PSD/RAW/품질·배포잔여,70/30관리추정재산정전유지.
 
 - Blur 원본BlurTool/BrushStroke source-over·stroke당고정raw문서sample·sigma크기규칙대조. BlurBrush/BlurStroke 이미지코어연결·Clone확장/선택/metadata/Undo공유. 코어695·tile경계/독립opacity수식/다음stroke재샘플/원본/transparent확장·linkedmask검사통과. 도구UI/마스크Blur/대형async/저장WPF·CoreImage샘플링/성능·배포후속. 전체70/30관리추정재산정전유지,상세blur-brush.md.
+
+- Blur(R) rail/공유sliders·고정sample async준비·queued입력·tool/session/doc/gen보호·Esc·단일Undo·공통명령준비대기연결. 실제Blur/Clone/16tool scrollbar·고정layout WPF회귀통과·695코어검증유지. 마스크Blur/Smudge/Liquify·대형성능/원본soft농도/배포후속. 전체70/30관리추정은최근작업가중치재산정전유지하며MVP구현100/검증96+보류4와별도다.

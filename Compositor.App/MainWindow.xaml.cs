@@ -298,7 +298,7 @@ public partial class MainWindow : Window
     private void ActualPixels(object? sender, RoutedEventArgs e) { Canvas.ActualPixels(); Refresh(); }
     private async void WindowKeyDown(object sender, KeyEventArgs e)
     {
-        if (busy){if(e.Key==Key.Escape&&(Canvas.IsShapePreparing||Canvas.IsHealingPreparing)){Canvas.CancelInteraction();e.Handled=true;}else if(e.Key==Key.Escape&&(fillCancellation is not null||subjectCancellation is not null)){CancelFill(null,e);e.Handled=true;}return;}
+        if (busy){if(e.Key==Key.Escape&&(Canvas.IsShapePreparing||Canvas.IsHealingPreparing||Canvas.IsClonePreparing)){Canvas.CancelInteraction();e.Handled=true;}else if(e.Key==Key.Escape&&(fillCancellation is not null||subjectCancellation is not null)){CancelFill(null,e);e.Handled=true;}return;}
         if (Canvas.IsTransforming && e.Key == Key.Escape) { CancelTransform(null, e); e.Handled = true; return; }
         if (Canvas.Tool == EditorTool.Crop && e.Key == Key.Escape) { CancelCrop(null, e); e.Handled = true; return; }
         if (e.Key == Key.Escape && Canvas.HasInteraction) { Canvas.CancelInteraction(); e.Handled = true; return; }
@@ -361,7 +361,7 @@ public partial class MainWindow : Window
                 case Key.C: ToolPicker.SelectedIndex = 8; break;
                 case Key.I: ToolPicker.SelectedIndex = 9; break;
                 case Key.G: ToolPicker.SelectedIndex = 10; break;
-                case Key.W: ToolPicker.SelectedIndex = 12; break; case Key.S: ToolPicker.SelectedIndex = 13; break; case Key.J: ToolPicker.SelectedIndex = 14; break;
+                case Key.W: ToolPicker.SelectedIndex = 12; break; case Key.S: ToolPicker.SelectedIndex = 13; break; case Key.J: ToolPicker.SelectedIndex = 14; break; case Key.R: ToolPicker.SelectedIndex = 15; break;
                 case Key.U: if(shift&&ToolPicker.SelectedIndex==11)CycleShapeKind();else ToolPicker.SelectedIndex=11;break;
                 case Key.Tab when ToolPicker.SelectedIndex==11: CycleShapeKind();break;
                 case Key.X when Keyboard.Modifiers==ModifierKeys.None: SwapPalette(null,e);break;
