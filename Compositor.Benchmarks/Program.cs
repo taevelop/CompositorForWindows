@@ -5,6 +5,7 @@ using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 
+if(args.Length>0&&args[0]=="--background-scale"){BackgroundScaleBenchmark.Run(args[1],args[2],args.Length>3?int.Parse(args[3]):4000);return;}
 if(args.Length>0&&args[0]=="--subject-cancel")
 {
     using var predictor=new U2NetPredictor(args[1]);var source=ShapeRaster.Create(new(ShapeKind.Ellipse,.8,.2,.1),320,320);var before=source.ToRgba();using var cancellation=new CancellationTokenSource();
@@ -147,6 +148,7 @@ File.WriteAllText(output, JsonSerializer.Serialize(new { timeUtc = DateTimeOffse
     architecture = RuntimeInformation.ProcessArchitecture.ToString(), processors = Environment.ProcessorCount,
     description = "Release CPU model plus offscreen Skia 1000x1000 render; 4000x4000 document, 800px soft brush, 120 updates/pass. Not WPF presentation or input-to-photon latency.", runs }, new JsonSerializerOptions { WriteIndented = true }));
 Console.WriteLine(File.ReadAllText(output));
+
 
 
 
