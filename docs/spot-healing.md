@@ -68,3 +68,11 @@ Healing의 상대 frame 원점이 256px 타일에 정렬되면 BrushStroke.Refra
 코어 680개 통과: solid tile을64px로crop해 남긴 비영 padding,48point의256px경계 확장, feather 선택과 새 셀, 왼쪽 비정렬 fallback, 전체 재생 대비 coverage/wash/최종 CreateTexture 픽셀 일치, 이전 preview스냅샷 불변. 기존 Clone·mask·rotationFlip검사 포함. Release0경고/오류, 단독 실제 Healing WPF의3모드/취소/late worker/대기저장/왕복/경계확장검사 통과. fullWPF간헐 실패의 해결 증거로 사용하지 않는다.
 
 동일4K canvas/64px source/40px tip/48point/seed123 측정: 이전 input257.0ms/최대13.0ms/완료40.4ms/누적할당755.5MiB, 최종 input88.7ms/최대15.3ms/완료38.8ms/할당170.1MiB. 누적할당 약77.5% 감소. 이전 측정의 해시용 작은RGBA 할당 약0.1MiB는 포함됐으며 최종 측정은 해시 계산 전 할당값을 고정한다. 결과 SHA256은 둘 다 A9D244361781046B83740DF2B1060D8D5ED4AA42445DA014885BE2A6DBA66991. 각 단일 core 실행이며 최대 입력 지연 개선은 입증하지 못했다. dense800px/UI응답/native취소/자연품질/비정렬 확장 비용은 계속 잔여다.
+
+## 실제 WPF 대형 브러시 측정
+
+`Compositor.Windows.exe --healing-benchmark report 4000`은 dense4K 원본의 검은 결함을800px/48point로 보정한다. 입력 사이 Background Dispatcher를 진행시켜 실제 rendering을 포함한다. 단일Undo/원본Undo복원/결함 개선을 검사하고10ms Input timer 간격과 단일입력 시간을 기록한다. 취소 probe는 실제 SpotHealing.Compute delegate 진입 신호를 받은 뒤Esc를 보내 원본 즉시복원/transaction종료/Undo없음/늦은결과폐기를 검사한다. 신호는native호출전이며 실제native내부취소를 입증하지 않는다.
+
+개발 실행: 입력+render1078ms/단일입력최대30.6ms/끝worker541ms/Dispatcher최대165ms/EscUI복원2.99ms/worker정리3.29ms. self-contained 배포 실행:1086ms/27.1ms/564ms/156ms/2.94ms/3.39ms. 누적할당651MiB·peak809MiB는검증용fullRGBA2벌/취소probe를포함하므로이전corestroke할당과직접비교하지않는다. 각1회이며물리입력/일반자연품질/Mac동등성 검증이아니다. rendering포함UIgap과native중간취소는개선대상으로남긴다.
+
+최신실행패키지는 `artifacts/publish-healing-ui/Compositor.Windows.exe`다. 기존 실행패키지폴더는유지한다. 빌드0경고/오류, portable45초gate1회통과:공백경로copy/제한PATH·무효sharedruntime경로/패키지내CLR·Skia·C모듈관측 및전체WPF회귀. 같은개발PC이며별도cleanWindows실기를대체하지않고일반30초gate안정화증거로사용하지않는다. 제품연산변경없음,이전680코어검증유지.
