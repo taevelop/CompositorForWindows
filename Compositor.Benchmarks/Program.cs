@@ -5,6 +5,9 @@ using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 
+if(args.Length>0&&args[0]=="--healing"){HealingBenchmark.Run(args[1],args.Length>2?int.Parse(args[2]):48,args.Length>3?int.Parse(args[3]):40,args.Length>4&&args[4]=="expand");return;}
+if(args.Length>0&&args[0]=="--healing-natural"){HealingBenchmark.Natural(args[1],args[2],args.Length>4?int.Parse(args[3]):null,args.Length>4?int.Parse(args[4]):null);return;}
+
 if(args.Length>0&&args[0]=="--clone-capture-cancel")
 {
     int side=args.Length>2?int.Parse(args[2]):4000;var document=Document.Create(side,side);

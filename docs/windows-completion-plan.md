@@ -351,3 +351,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - SpotHealing pendingSave/공통명령완료대기·동일session/doc확인·busy Esc취소/UI복원. WPF파일쓰기전대기→완료결과저장/실제재열기/PNG픽셀일치·Esc취소시파일없음검사통과. fixture별도tab격리·최신빌드0경고오류. 경계확장/복합/대형품질·실기/배포후속, 전체70/30관리추정유지.
 
 - HealingStroke 원본/coverage/wash공유확장격자·raster/mask배치·끝kernel/선택/crop·예산연결. 코어677/rotationFlip+feather전픽셀참조·linked독립mask/선택무변경/Undo검사통과. 실제J16→17px/WPF끝worker·mask·Undo·UI저장통과. 연속frame재생/대형품질·native취소·실기/배포후속, 전체관리70/30유지.
+
+- Healing4K dense40/800px48입력core측정 및natural한사진3위치/radius3 defect·outside불변/3모드확대검토CLI. dense800입력526ms/끝543ms, 작은source확장40px입력239ms이나managed755MiB할당잔여. 자연CA/Proximity결함감소·detail복원불완전/Texturegrain자국, 일반품질통과아님. WPF/대형/취소·할당·배포/실기후속, 제품경로변경없음·전체70/30관리추정유지.

@@ -52,3 +52,11 @@ HealingStroke가시작document/source/settings/mode/seed를고정하고coverage�
 코어677개통과: source16→17/new alpha·linked/independent mask·원본/UndoRedo·selection제외/no-op·취소, rotation37/FlipXY/feather1의rawhealed+최종selection참조와전pixel1LSB이내합성검사. 실제J WPF에서도16→17px draft/complete mask·Undo/Redo·UI저장canvas출력일치검사통과. 최신Release0경고오류·기존3모드/Esc/lateworker/pendingSave/재열기PNG회귀통과. 입력중selectioncoverage를중복생성하지않게정리했다.
 
 현재frame변경은points재생이므로긴확장stroke/큰tip의preview비용이남는다. nativekernel 중간취소는없다. dense/대형ROI·자연texture/색공간/softcoverage원본동등성·budget극한·실기·배포갱신 및fullWPF간헐항목은후속이며전체Healing품질완료로판정하지않는다.
+
+## 코어 성능·자연 사진 품질 probe
+
+--healing report [count=48] [diameter=40] [expand] 측정CLI와 --healing-natural source report [cx cy]를추가했다. source는기존공개rembg 예제사진 artifacts/subject-plants.jpg(987×1481)이다. natural probe는radius3 black defect를주입하고원본groundtruth의29pixel RGB오차/결함밖모든채널불변/손상source스냅샷불변을검사한다. 원본·손상·3모드의32px patch를4배확대한comparison PNG도시각검토했다.
+
+4Kdense/48입력: 40px input35.6ms/최대2.13ms/complete83.7ms/managed131.6MiB/peak322MiB; 800px input526ms/최대19.8ms/complete543ms/managed400.7MiB/peak439MiB. 작은64px source를계속확장한40px48입력은239ms/최대10.4ms/complete37.9ms이지만managed755MiB/peak64MiB로누적할당이높다. managed는source준비제외,peak는준비포함이고각1회core이다. WPFframe/취소응답을입증하지않는다. expand는성능probe이며투명영역보정의자연품질을대체하지않는다.
+
+고정seed123 자연probe RMSE(원본0–255 RGB 대비): 평탄부 손상174.8→ContentAware/Proximity1.10, CreateTexture43.2; wood76.2→17.6/17.6/27.5; leaf154.4→16.0/22.6/47.8. 순서는ContentAware/Proximity/CreateTexture이며원본미손상pixels는세모드모두같다. 확대검토에서ContentAware/Proximity는결함을줄였으나원래결/잎디테일복원은불완전, CreateTexture는grain자국이눈에띈다. 한사진세위치/작은합성결함이며일반품질·실제Mac동등성통과가아니다. 다중사진/큰선택/에지/전처리·대형UI/취소/할당최적화·배포검증은잔여다. 이번변경은benchmark만이며제품연산은그대로다.
