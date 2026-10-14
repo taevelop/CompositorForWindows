@@ -361,3 +361,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Healing Windowsnative5단계row/linear poll중간취소·재귀/최상위버퍼해제·private부분output폐기·기존export유지/새export추가. 코어692·3모드token/no-token/legacy픽셀동일·각nativephase실제취소·부분쓰기재시도·기준SHA동일·실제WPF회귀통과. macOS원본불변/native취소적응본으로파일해시동일주장갱신. 이번4KUIgap537ms/끝626ms로성능원인분리잔여, 실제native취소시간/배포갱신후속. 전체70/30관리추정재산정전유지.
 
 - Healing first-display/paint/input분리계측:최신배포4K/800px첫표시126ms·입력단일최대24ms·paint최대11ms·Dispatcher51ms·끝549ms. 이전537msgap재현되지않았으나측정조건변경이며제품최적화/원인해결로주장하지않는다. publish-healing-cancellable에최신native취소/도구막대포함갱신·portable45초gate1회통과(동일개발PC)/692코어검증유지. 첫표시/입력계산/표시·GC와다음원본도구·텍스트/PSD/RAW/품질·배포잔여,70/30관리추정재산정전유지.
+
+- Blur 원본BlurTool/BrushStroke source-over·stroke당고정raw문서sample·sigma크기규칙대조. BlurBrush/BlurStroke 이미지코어연결·Clone확장/선택/metadata/Undo공유. 코어695·tile경계/독립opacity수식/다음stroke재샘플/원본/transparent확장·linkedmask검사통과. 도구UI/마스크Blur/대형async/저장WPF·CoreImage샘플링/성능·배포후속. 전체70/30관리추정재산정전유지,상세blur-brush.md.
