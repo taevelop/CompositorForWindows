@@ -29,3 +29,7 @@ Release 경고/오류 0, 코어 628개 및 전체 WPF 회귀 통과.
 MatteRefinement 연결: Basic은 기존 마스크 참조를 반환한다. Advanced Refine 0–40/Contrast 0–100/Shift Edge -10–10 및 기본 12/25/0을 원본에 맞췄다. Skia Gray8 가이드/마스크 변환, guided epsilon 1e-4, 미리보기 최대 1400px 정제 후 원본 크기 확대, 전체 적용은 축소 없이 처리한다. Shift Edge는 abs(edge)/2 blur와 음수 .75/양수 .25 임계값·.001 폭을, Contrast는 slope=1/max(.02,1-strength*.98)를 사용한다. 불투명 회색/타일 padding을 보존한다. grayscale 색공간 및 cubic 확대는 Apple DeviceGray/high interpolation과 실제 비교가 아직 없다. 상수 대비 참조/Basic 공유·원본 불변·범위/취소와 Shift 방향 검사를 추가했다. 자연 이미지 품질·피크 메모리·UI 및 추론 캐시 연결은 후속이다.
 
 Release 경고/오류 0, 코어 631개 및 전체 WPF 회귀 통과. 사용자 배경 제거 패널 자체는 아직 미연결이다.
+
+Basic UI 및 캐시 1차 연결: Filter → Remove Background는 검증된 소형/정규 ONNX 파일 선택 후 실행한다. 모델 자동 설치/배포는 아직 없다. BackgroundRemovalJob는 원본 문서/레이어에 고정된 단일 추론 마스크를 직렬 worker에서 캐시한다. 표시 전용 비교 및 전체 적용에서 같은 원본 마스크를 사용하며 이미지 픽셀을 보존한다. 실제 WPF 회귀는 주입한 고정 회색 마스크로 추론 횟수 1·원본 픽셀 보존·비교·Undo/Redo·저장 출력 왕복·닫기 취소를 검사한다. 이 검사는 실제 ONNX 이미지 품질 검증이 아니다. Advanced 연산은 Job API로 준비됐지만 사용자 설정 UI는 아직 연결하지 않았다. 모델 자동 설치·패널 시각/실제 ONNX UI/늦은 세대/메모리 및 Advanced UI는 후속이다.
+
+최종 Release 경고/오류 0, 코어 631개 및 확장 WPF 회귀 통과.

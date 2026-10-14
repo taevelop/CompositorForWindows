@@ -6,7 +6,7 @@ using Compositor.Core;
 using Compositor.Imaging;
 namespace Compositor.App;
 
-public enum PixelFilterKind {GaussianBlur,MotionBlur,AddNoise,LensCorrection,ContentAwareFill}
+public enum PixelFilterKind {GaussianBlur,MotionBlur,AddNoise,LensCorrection,ContentAwareFill,RemoveBackground}
 public sealed class PixelFilterWindow:Window
 {
     private readonly EditorSession session;
@@ -14,6 +14,8 @@ public sealed class PixelFilterWindow:Window
     private readonly Guid layerId;
     private readonly Action<Document?> display;
     private readonly PixelFilterKind kind;
+    private readonly BackgroundRemovalJob? backgroundJob;
+    private bool background=>kind==PixelFilterKind.RemoveBackground;
     private bool fill=>kind==PixelFilterKind.ContentAwareFill;
     private bool motion=>kind==PixelFilterKind.MotionBlur;
     private bool lens=>kind==PixelFilterKind.LensCorrection;
@@ -36,7 +38,7 @@ public sealed class PixelFilterWindow:Window
     internal readonly CheckBox Monochromatic=new(){Content="Monochromatic",Margin=new(0,4,0,6)};
     internal uint NoiseSeed {get;}=(uint)Random.Shared.NextInt64(1L<<32);
     internal Task Pending {get;private set;}=Task.CompletedTask;
-    public PixelFilterWindow(EditorSession session,Action<Document?> display,PixelFilterKind kind=PixelFilterKind.GaussianBlur)
+    public PixelFilterWindow(EditorSession session,Action<Document?> display,PixelFilterKind kind=PixelFilterKind.GaussianBlur,Func<Raster,CancellationToken,LayerMask>? predict=null)
     {
         if(!Enum.IsDefined(kind))throw new ArgumentOutOfRangeException(nameof(kind));
         if(session.InTransaction)throw new InvalidOperationException("Finish the active edit first.");
@@ -44,17 +46,18 @@ public sealed class PixelFilterWindow:Window
             throw new InvalidOperationException("Select image pixels, not a group, adjustment or mask.");
         if(!LayerHierarchy.Entries(session.Document).First(e=>e.Layer.Id==layer.Id).Visible)throw new InvalidOperationException("Show the image and its parents first.");
         if(kind==PixelFilterKind.ContentAwareFill&&session.Document.Selection is not {IsEmpty:false})throw new InvalidOperationException("Select an area to fill first.");
-        this.session=session;this.display=display;this.kind=kind;original=session.Document;layerId=layer.Id;
+        if(kind==PixelFilterKind.RemoveBackground&&predict is null)throw new ArgumentException("Background predictor is required.");
+        this.session=session;this.display=display;this.kind=kind;original=session.Document;layerId=layer.Id;if(background)backgroundJob=new(original,layerId,predict!);
         if(motion){Radius.Minimum=1;Radius.Maximum=2000;Radius.Value=10;Radius.SmallChange=1;Radius.LargeChange=50;RadiusValue.Text="10";}
         if(noise){Radius.Maximum=400;Radius.Value=10;RadiusValue.Text="10";}
         if(lens){Radius.Minimum=-100;Radius.Maximum=100;Radius.Value=0;RadiusValue.Text="0";}
-        Title=fill?"Content-Aware Fill":lens?"Lens Correction":noise?"Add Noise":motion?"Motion Blur":"Gaussian Blur";Width=430;SizeToContent=SizeToContent.Height;ResizeMode=ResizeMode.NoResize;
+        Title=background?"Remove Background":fill?"Content-Aware Fill":lens?"Lens Correction":noise?"Add Noise":motion?"Motion Blur":"Gaussian Blur";Width=430;SizeToContent=SizeToContent.Height;ResizeMode=ResizeMode.NoResize;
         Style=(Style)Application.Current.FindResource(typeof(Window));ShowInTaskbar=false;WindowStartupLocation=WindowStartupLocation.CenterOwner;
         var body=new StackPanel{Margin=new(22)};Content=body;
         body.Children.Add(new TextBlock{Text=Title,FontSize=20,FontWeight=FontWeights.SemiBold});
-        body.Children.Add(new TextBlock{Text=fill?"Rebuild the selected area using surrounding opaque image pixels.":lens?"Remove distortion · positive: barrel, negative: pincushion":noise?"Amount (%) · changes image colors while preserving alpha":motion?"Distance in layer pixels · positive angles point up-right":"Radius in layer pixels · edges spread into transparency",TextWrapping=TextWrapping.Wrap,Foreground=(Brush)FindResource("MutedInk"),Margin=new(0,8,0,18)});
+        body.Children.Add(new TextBlock{Text=background?"Hide the background with a layer mask. Original image pixels are preserved.":fill?"Rebuild the selected area using surrounding opaque image pixels.":lens?"Remove distortion · positive: barrel, negative: pincushion":noise?"Amount (%) · changes image colors while preserving alpha":motion?"Distance in layer pixels · positive angles point up-right":"Radius in layer pixels · edges spread into transparency",TextWrapping=TextWrapping.Wrap,Foreground=(Brush)FindResource("MutedInk"),Margin=new(0,8,0,18)});
         var row=new DockPanel();body.Children.Add(row);DockPanel.SetDock(RadiusValue,Dock.Right);row.Children.Add(RadiusValue);row.Children.Add(new TextBlock{Text=lens?"Remove distortion":noise?"Amount (%)":motion?"Distance":"Radius",VerticalAlignment=VerticalAlignment.Center});
-        Radius.Style=(Style)FindResource("EditorSlider");body.Children.Add(Radius);if(fill){row.Visibility=Radius.Visibility=reset.Visibility=Visibility.Collapsed;}
+        Radius.Style=(Style)FindResource("EditorSlider");body.Children.Add(Radius);if(fill||background){row.Visibility=Radius.Visibility=reset.Visibility=Visibility.Collapsed;}
         if(motion)
         {
             var angleRow=new DockPanel{Margin=new(0,14,0,0)};body.Children.Add(angleRow);DockPanel.SetDock(AngleValue,Dock.Right);angleRow.Children.Add(AngleValue);angleRow.Children.Add(new TextBlock{Text="Angle (degrees)",VerticalAlignment=VerticalAlignment.Center});
@@ -97,7 +100,7 @@ public sealed class PixelFilterWindow:Window
     {
         if(committing)return;
         cancellation?.Cancel();var owner=new CancellationTokenSource();cancellation=owner;
-        var settings=ReadSettings();if(!noise&&!lens&&!fill)margin=Math.Max(margin,settings.Margin);int padding=margin;var noiseSettings=ReadNoise();
+        var settings=ReadSettings();if(!noise&&!lens&&!fill&&!background)margin=Math.Max(margin,settings.Margin);int padding=margin;var noiseSettings=ReadNoise();
         ApplyButton.IsEnabled=false;Feedback.Text="Calculating filter…";Pending=Calculate(owner,settings,noiseSettings,padding,Radius.Value);
     }
     private BlurSettings ReadSettings()=>new(motion?BlurKind.Motion:BlurKind.Gaussian,Radius.Value,Angle.Value);
@@ -108,7 +111,7 @@ public sealed class PixelFilterWindow:Window
         try
         {
             await Task.Delay(40,token);
-            var result=await Task.Run(async()=>{await gate.WaitAsync(token);try{return fill?ContentAwareFill.Apply(original,layerId,token):lens?LensCorrection.Preview(original,layerId,distortion,token):noise?AddNoise.Apply(original,layerId,noiseSettings,token):SpatialBlur.Preview(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
+            var result=await Task.Run(async()=>{await gate.WaitAsync(token);try{return background?backgroundJob!.Prepare(new(),true,token):fill?ContentAwareFill.Apply(original,layerId,token):lens?LensCorrection.Preview(original,layerId,distortion,token):noise?AddNoise.Apply(original,layerId,noiseSettings,token):SpatialBlur.Preview(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
             if(closed||token.IsCancellationRequested||!ReferenceEquals(cancellation,owner)||!Owns)return;
             prepared=result;ShowPreview();ApplyButton.IsEnabled=true;Feedback.Text="Ready · one Undo when applied";
         }
@@ -127,7 +130,7 @@ public sealed class PixelFilterWindow:Window
         var settings=ReadSettings();double distortion=Radius.Value;int padding=margin;Feedback.Text="Applying full-size filter…";
         try
         {
-            var result=noise||fill?prepared:await Task.Run(async()=>{await gate.WaitAsync(token);try{return lens?LensCorrection.Apply(original,layerId,distortion,token):SpatialBlur.Apply(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
+            var result=noise||fill?prepared:await Task.Run(async()=>{await gate.WaitAsync(token);try{return background?backgroundJob!.Prepare(new(),false,token):lens?LensCorrection.Apply(original,layerId,distortion,token):SpatialBlur.Apply(original,layerId,settings,padding,token);}finally{gate.Release();}},token);
             if(!closed&&!token.IsCancellationRequested&&Owns){session.Preview(result);session.Commit();finished=true;Close();}
         }
         catch(OperationCanceledException) when(token.IsCancellationRequested){}
@@ -139,6 +142,7 @@ public sealed class PixelFilterWindow:Window
         }
     }
 }
+
 
 
 

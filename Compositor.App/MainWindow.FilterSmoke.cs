@@ -103,7 +103,17 @@ public partial class MainWindow
             projectPath=Path.Combine(root,"ContentFill.comp");Check(await Save(false)&&await ReopenSavedProject(projectPath)&&fillOutput.SequenceEqual(CompositePixels(session.Document)),"Fill save/reopen changed pixels.");
             session.Load(fillDoc);dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.ContentAwareFill){Owner=this};dialog.Show();var fillPending=dialog.Pending;dialog.Close();dialog=null;await fillPending;
             Check(ReferenceEquals(session.Document,fillDoc)&&!session.InTransaction&&ReferenceEquals(Canvas.DisplayDocument,fillDoc),"Fill cancellation retained result.");
-            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo","Motion distance/angle preview","Motion Apply/Undo/Redo/save","Motion close cancellation","Noise settings and stable seed","Noise full-resolution Apply/Undo/Redo/save","Noise comparison/cancel","Lens settings/comparison/Apply/Undo/Redo/save/cancel","Lens bounded preview and full-resolution Apply","Content fill menu/preview/comparison/Undo/Redo/save/cancel"},note="Hidden WPF; original Mac pixel comparison deferred."}));
+            session.Load(document);int inferenceCount=0;
+            LayerMask PredictBackground(Raster source,CancellationToken token){token.ThrowIfCancellationRequested();inferenceCount++;return LayerMask.Solid(source.Width,source.Height,128);}
+            dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.RemoveBackground,PredictBackground){Owner=this};dialog.Show();await dialog.Pending;
+            Check(dialog.ApplyButton.IsEnabled&&ReferenceEquals(session.Document,document)&&inferenceCount==1,"Background inference preview failed or mutated source.");
+            dialog.PreviewEnabled.IsChecked=false;Check(ReferenceEquals(Canvas.DisplayDocument,document),"Background comparison failed.");dialog.PreviewEnabled.IsChecked=true;
+            await dialog.ApplyEditAsync();dialog=null;Check(session.UndoCount==1&&inferenceCount==1&&ReferenceEquals(session.ActiveLayer!.Pixels,layer.Pixels),"Background Apply repeated inference or changed image pixels.");
+            var backgroundOutput=CompositePixels(session.Document);Undo(this,new());Check(ReferenceEquals(session.Document,document),"Background Undo failed.");Redo(this,new());
+            projectPath=Path.Combine(root,"Background.comp");Check(await Save(false)&&await ReopenSavedProject(projectPath)&&backgroundOutput.SequenceEqual(CompositePixels(session.Document)),"Background save/reopen changed mask output.");
+            session.Load(document);dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.RemoveBackground,PredictBackground){Owner=this};dialog.Show();var backgroundCancel=dialog.Pending;dialog.Close();dialog=null;await backgroundCancel;
+            Check(ReferenceEquals(session.Document,document)&&!session.InTransaction&&ReferenceEquals(Canvas.DisplayDocument,document),"Background close retained preview.");
+            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo","Motion distance/angle preview","Motion Apply/Undo/Redo/save","Motion close cancellation","Noise settings and stable seed","Noise full-resolution Apply/Undo/Redo/save","Noise comparison/cancel","Lens settings/comparison/Apply/Undo/Redo/save/cancel","Lens bounded preview and full-resolution Apply","Content fill menu/preview/comparison/Undo/Redo/save/cancel","Background cached inference/basic preview/Undo/save/cancel (injected matte)"},note="Hidden WPF; original Mac pixel comparison deferred."}));
         }
         finally
         {
@@ -113,6 +123,7 @@ public partial class MainWindow
         }
     }
 }
+
 
 
 

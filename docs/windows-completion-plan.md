@@ -262,3 +262,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - 배경 제거 Advanced guided filter 산술 기반: 원본 epsilon/경계 평균·guide covariance 유지, 독립 평균·상수/경계·취소 검사. 코어 628개 및 WPF 회귀 통과. gray 변환·실제 마스크/contrast/shift/UI 및 대형 메모리는 잔여, 전체 관리 추정 70/30 유지.
 
 - 배경 제거 MatteRefinement Raster 연결: Gray8 guide·1400px 표시 정제/전체 적용·Contrast·Shift Edge 원본 범위/공식. 코어 631개 및 WPF 회귀 통과. 실제 품질/색공간/메모리 및 UI·배포는 잔여, 전체 관리 추정 70/30 유지.
+
+- 배경 제거 Basic 메뉴/모델 파일 선택·원본 고정 추론 캐시·표시 비교/전체 적용 연결. 주입 마스크 WPF 캐시 1회·픽셀 보존·Undo/저장/취소 및 코어 631개 통과. Advanced UI·실제 모델 UI/자동 설치·시각/품질/메모리는 잔여, 전체 관리 추정 70/30 유지.
