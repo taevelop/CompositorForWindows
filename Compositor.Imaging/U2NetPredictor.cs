@@ -17,7 +17,7 @@ public sealed class U2NetPredictor : IDisposable
         if (file.Length > 192 * 1024 * 1024) throw new InvalidDataException("Unexpected U2Net model size.");
         var model = File.ReadAllBytes(modelPath);
         string hash=Convert.ToHexString(SHA256.HashData(model));
-        if (hash!=ModelSha256&&hash!="8D10D2F3BB75AE3B6D527C77944FC5E7DCD94B29809D47A739A7A728A912B491")
+        if (!BackgroundModelStore.KnownHash(hash))
             throw new InvalidDataException("The U2Net model checksum does not match the verified release.");
         // Load the bytes that were verified, avoiding a file replacement between hash and load.
         session = new InferenceSession(model);

@@ -55,3 +55,8 @@ Release 경고/오류 0, 코어 634개 및 일반 WPF 회귀 통과.
 
 중복 RGBA 배열 제거: RasterBuffer.CopyTo는 기존 packed 비트맵 span을 초기화하고 불변 타일을 직접 복사한다. 부분 타일과 누락 타일·투명 영역·토큰 취소를 검사하며 U2Net 입력 및 MatteRefinement Gray8 입력에서 ToRgba 중간 byte[]를 제거했다. 코어 635개 및 전체 WPF 회귀, Release 경고/오류 0.
 동일 분리 프로세스 1회 재측정: 4K 누적 managed1278.5MiB/피크1023.3MiB/최종1254ms(이전1583.7/1082.6/1149); 100MP 누적7618.0MiB/피크5965.6MiB/최종6701ms(이전9525.3/6228.2/7184). 추론1회·원본참조/마스크크기·문서 검사 통과. 큰 누적 할당을 제거했지만 피크는 여전히 약5.83GiB이며 광범위 안정성이나 속도 개선 완료로 처리하지 않는다. gray/float/최종 RGBA·마스크 복제는 여전히 남는다. 모델 설치·배포·품질 및 Mac/별도 PC 보류 유지.
+
+모델 로컬 설치: BackgroundModelStore는 선택한 파일을 private 임시 파일로 스트리밍·192MiB 상한·SHA256 알려진 두 모델 검증·Flush 후 background.onnx로 원자 이동한다. 실패/취소는 기존 모델을 보존하고 임시 파일을 제거한다. 일회 setup은 LocalApplicationData/CompositorForWindows/Models에 설치하고 다음 실행은 설치 파일을 재사용한다. Change background model 메뉴로 교체/복구하며 설치 작업은 worker에서 수행한다. 파일 선택 UI 직접 조작/자동 다운로드는 아직 검증/구현하지 않았다. 모델 변경 전에 활성 Transform 확정 정책을 유지한다.
+검증: 잘못된 모델/사전 취소 시 이전 파일·임시 파일 정리 검사, 실제 u2netp를 artifacts/installed-model-check에 설치해 합성 입력 추론 약200ms/320px/0–255 성공. 패키지에 가중치를 포함하거나 재배포한 것은 아니다. U²-Net 저장소 Apache-2.0(https://raw.githubusercontent.com/xuebinqin/U-2-Net/master/LICENSE) 및 rembg 릴리스 출처는 유지하며 자동 설치/배포에는 출처/공지·검증 파일을 연결해야 한다. 모델 품질/대형 메모리 및 Mac/별도 PC 보류 유지.
+
+최종 Release 경고/오류 0, 코어 636개 및 전체 WPF 회귀 통과.
