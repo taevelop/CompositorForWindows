@@ -118,7 +118,17 @@ public partial class MainWindow
             projectPath=Path.Combine(root,"Background.comp");Check(await Save(false)&&await ReopenSavedProject(projectPath)&&backgroundOutput.SequenceEqual(CompositePixels(session.Document)),"Background save/reopen changed mask output.");
             session.Load(document);dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.RemoveBackground,PredictBackground){Owner=this};dialog.Show();var backgroundCancel=dialog.Pending;dialog.Close();dialog=null;await backgroundCancel;
             Check(ReferenceEquals(session.Document,document)&&!session.InTransaction&&ReferenceEquals(Canvas.DisplayDocument,document),"Background close retained preview.");
-            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo","Motion distance/angle preview","Motion Apply/Undo/Redo/save","Motion close cancellation","Noise settings and stable seed","Noise full-resolution Apply/Undo/Redo/save","Noise comparison/cancel","Lens settings/comparison/Apply/Undo/Redo/save/cancel","Lens bounded preview and full-resolution Apply","Content fill menu/preview/comparison/Undo/Redo/save/cancel","Background cached inference/basic preview/Undo/save/cancel (injected matte)"},note="Hidden WPF; original Mac pixel comparison deferred."}));
+            var inferenceEntered=new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            LayerMask BlockingPredict(Raster pixels,CancellationToken token){inferenceEntered.TrySetResult();token.WaitHandle.WaitOne();token.ThrowIfCancellationRequested();return LayerMask.Solid(pixels.Width,pixels.Height);}
+            session.Load(document);dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.RemoveBackground,BlockingPredict){Owner=this};dialog.Show();
+            await inferenceEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));var runningBackground=dialog.Pending;dialog.Close();dialog=null;await runningBackground;
+            Check(ReferenceEquals(session.Document,document)&&!session.InTransaction&&!session.CanUndo&&ReferenceEquals(Canvas.DisplayDocument,document),"Closing during running inference published a result.");
+            using var releaseInference=new ManualResetEventSlim();var staleEntered=new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            LayerMask StalePredict(Raster pixels,CancellationToken token){staleEntered.TrySetResult();if(!releaseInference.Wait(TimeSpan.FromSeconds(5)))throw new TimeoutException("Stale inference was not released.");return LayerMask.Solid(pixels.Width,pixels.Height,64);}
+            dialog=new(session,Canvas.ShowFilterPreview,PixelFilterKind.RemoveBackground,StalePredict){Owner=this};dialog.Show();await staleEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var staleBackground=dialog.Pending;session.Load(document);session.Begin();releaseInference.Set();await staleBackground;dialog.Close();dialog=null;
+            Check(session.InTransaction&&ReferenceEquals(session.Document,document)&&ReferenceEquals(Canvas.DisplayDocument,document),"Stale inference overwrote or cancelled a newer edit.");session.Cancel();
+            File.WriteAllText(reportPath,JsonSerializer.Serialize(new{checks=new[]{"slider/latest preview","comparison checkbox","single Apply/Undo/Redo","pixel/mask save roundtrip","close cancellation","new transaction stale result protection","2048px display-only preview","full-resolution Apply and Undo","Motion distance/angle preview","Motion Apply/Undo/Redo/save","Motion close cancellation","Noise settings and stable seed","Noise full-resolution Apply/Undo/Redo/save","Noise comparison/cancel","Lens settings/comparison/Apply/Undo/Redo/save/cancel","Lens bounded preview and full-resolution Apply","Content fill menu/preview/comparison/Undo/Redo/save/cancel","Background cached inference/basic preview/Undo/save/cancel (injected matte)","running inference close cancellation","stale inference newer transaction protection"},note="Hidden WPF; original Mac pixel comparison deferred."}));
         }
         finally
         {
@@ -128,6 +138,7 @@ public partial class MainWindow
         }
     }
 }
+
 
 
 

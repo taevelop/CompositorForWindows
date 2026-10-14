@@ -47,3 +47,6 @@ Advanced UI 연결: Advanced edge refinement 체크, Refine 0–40/Contrast 0–
 동일 987×1481 u2netp WPF 검사 1회: 전체 1928ms, 누적 managed 376.8MiB, 작업 후 WS 335.8MiB. 앞선 구간별 신규 배열 1709ms/773.7MiB/415.8MiB 대비 누적 할당 감소를 관측했다. 시간은 증가했고 반복/피크 측정이 아니므로 성능 전체 개선·100MP 안전성을 확정하지 않는다. 전체 mask/guide/output/gray/RGBA 버퍼와 대형 취소·설치/배포·품질은 잔여다.
 
 Release 경고/오류 0, 코어 634개 및 일반 WPF 회귀 통과.
+
+실행 중 취소/세대 보호: WPF injected predictor를 진입 신호까지 실행한 후 창을 닫고 worker가 토큰을 관측하도록 검사했다. 원본 문서/Undo/표시 복원 확인. 취소를 무시하고 기다리는 predictor는 문서 Load/새 Begin 뒤 해제하여 늦은 결과가 새 트랜잭션을 덮거나 취소하지 않음을 확인했다. 기존 사전 취소 검사와 구분한다. ONNX Run에서 취소 토큰 요청으로 발생한 OnnxRuntimeException은 OperationCanceledException으로 변환한다.
+--subject-cancel 실제 정규 모델 검사: 세션 생성 후 320px 타원 Predict에 50ms 후 취소 요청, 약 60.1ms에 OperationCanceledException 관측·원본 바이트 보존. 준비/ORT/후처리 중 정확한 취소 단계와 모든 대형 작업 지연은 아직 미검증이다. Release 경고/오류 0, 코어 634개 및 확장 WPF 회귀 통과. 대형 피크/모델 설치·배포·피사체 품질 및 Mac/별도 PC 보류는 유지한다.

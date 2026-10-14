@@ -47,7 +47,7 @@ public sealed class U2NetPredictor : IDisposable
         cancellation.ThrowIfCancellationRequested();
         using var options=new RunOptions();
         using var registration=cancellation.Register(()=>options.Terminate=true);
-        using var outputs=session.Run(new[]{NamedOnnxValue.CreateFromTensor(session.InputMetadata.Keys.First(),input)},session.OutputMetadata.Keys.Take(1).ToArray(),options);
+        using var outputs=RunCancellable(input,options,cancellation);
         cancellation.ThrowIfCancellationRequested();
         var prediction=outputs.First().AsTensor<float>().ToArray();
         if(prediction.Length!=320*320||prediction.Any(v=>!float.IsFinite(v)))throw new InvalidDataException("Invalid U2Net matte output.");
@@ -67,5 +67,10 @@ public sealed class U2NetPredictor : IDisposable
         cancellation.ThrowIfCancellationRequested();return new(new Raster(source.Width,source.Height,tiles.ToImmutable()));
     }
     public void Dispose()=>session.Dispose();
+    private IDisposableReadOnlyCollection<DisposableNamedOnnxValue> RunCancellable(DenseTensor<float> input,RunOptions options,CancellationToken cancellation)
+    {
+        try{return session.Run(new[]{NamedOnnxValue.CreateFromTensor(session.InputMetadata.Keys.First(),input)},session.OutputMetadata.Keys.Take(1).ToArray(),options);}
+        catch(OnnxRuntimeException) when(cancellation.IsCancellationRequested){throw new OperationCanceledException(cancellation);}
+    }
 }
 

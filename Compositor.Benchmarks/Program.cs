@@ -5,6 +5,18 @@ using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 
+if(args.Length>0&&args[0]=="--subject-cancel")
+{
+    using var predictor=new U2NetPredictor(args[1]);var source=ShapeRaster.Create(new(ShapeKind.Ellipse,.8,.2,.1),320,320);var before=source.ToRgba();using var cancellation=new CancellationTokenSource();
+    var timer=Stopwatch.StartNew();cancellation.CancelAfter(50);
+    try{predictor.Predict(source,cancellation.Token);throw new InvalidOperationException("Prediction completed before cancellation was observed.");}
+    catch(OperationCanceledException) when(cancellation.IsCancellationRequested)
+    {
+        if(!source.ToRgba().SequenceEqual(before))throw new InvalidOperationException("Cancelled prediction changed source pixels.");
+        File.WriteAllText(args[2],JsonSerializer.Serialize(new{requestedAfterMs=50,elapsedMs=timer.Elapsed.TotalMilliseconds,exception="OperationCanceledException",note="Actual model Predict cancellation after session construction; cancellation may land in preparation, native execution or postprocessing."}));
+    }
+    return;
+}
 if (args.Length > 0 && args[0] == "--subject-probe")
 {
     using var predictor = new U2NetPredictor(args[1]);
@@ -135,6 +147,7 @@ File.WriteAllText(output, JsonSerializer.Serialize(new { timeUtc = DateTimeOffse
     architecture = RuntimeInformation.ProcessArchitecture.ToString(), processors = Environment.ProcessorCount,
     description = "Release CPU model plus offscreen Skia 1000x1000 render; 4000x4000 document, 800px soft brush, 120 updates/pass. Not WPF presentation or input-to-photon latency.", runs }, new JsonSerializerOptions { WriteIndented = true }));
 Console.WriteLine(File.ReadAllText(output));
+
 
 
 
