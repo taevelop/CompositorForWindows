@@ -16,6 +16,7 @@ public sealed class WarpRasterStroke
     private bool faulted;
     internal bool IsFaulted => faulted;
     private readonly List<PointD> points = [];
+    private readonly HashSet<TileKey> dirty = [];
     public IReadOnlyList<PointD> Points => points.AsReadOnly();
     public Raster Pixels { get; private set; }
 
@@ -54,9 +55,24 @@ public sealed class WarpRasterStroke
                 if (mode == SmearMode.Smudge) Smudge(next, cancellation);else Push(previous, next, cancellation);
                 points.Add(next);previous = next;
             }
-            var snapshot = Raster.FromRgba(width, height, pixels, cancellation);last = point;Pixels = snapshot;
+            Publish(cancellation);last = point;
         }
         catch { faulted = true;throw; }
+    }
+    private void Publish(CancellationToken cancellation)
+    {
+        var tiles = Pixels.Tiles.ToBuilder();bool changed = false;
+        foreach (var key in dirty)
+        {
+            cancellation.ThrowIfCancellationRequested();int left = key.X * 256, top = key.Y * 256;
+            int w = Math.Min(256, width - left), h = Math.Min(256, height - top);
+            Pixels.Tiles.TryGetValue(key, out var before);var bytes = before is null ? new byte[PixelTile.ByteCount] : before.Bytes.ToArray();
+            for (int y = 0; y < h; y++) pixels.AsSpan(((top + y) * width + left) * 4, w * 4).CopyTo(bytes.AsSpan(y * PixelTile.Stride));
+            if (before is not null && before.Bytes.SequenceEqual(bytes)) continue;
+            bool empty = bytes.AsSpan().IndexOfAnyExcept((byte)0) < 0;if (before is null && empty) continue;
+            changed = true;if (empty) tiles.Remove(key);else tiles[key] = new(bytes);
+        }
+        cancellation.ThrowIfCancellationRequested();if (changed) Pixels = new(width, height, tiles.ToImmutable());dirty.Clear();
     }
     private void PickUp(PointD center, CancellationToken cancellation)
     {
@@ -82,8 +98,10 @@ public sealed class WarpRasterStroke
             {
                 int x = cx + dx;if (x < 0 || x >= width) continue;float w = Weight(MathF.Sqrt(dx * dx + dy * dy) * invR);if (w <= 0) continue;
                 int p = (y * width + x) * 4, c = ((dy + radius) * side + dx + radius) * 4;
+                bool changed = false;
                 for (int k = 0; k < 4; k++)
-                { float under = pixels[p + k], painted = under + (carried[c + k] - under) * w;pixels[p + k] = Channel(painted);carried[c + k] = painted + (carried[c + k] - painted) * keep; }
+                { float under = pixels[p + k], painted = under + (carried[c + k] - under) * w;byte value = Channel(painted);changed |= pixels[p + k] != value;pixels[p + k] = value;carried[c + k] = painted + (carried[c + k] - painted) * keep; }
+                if (changed) dirty.Add(new(x / 256, y / 256));
             }
         }
     }
@@ -106,8 +124,10 @@ public sealed class WarpRasterStroke
                 float sx = Math.Clamp(x - x0 - mx * w, 0, cw - 1), sy = Math.Clamp(y - y0 - my * w, 0, ch - 1);
                 int ix = Math.Min(cw - 2, (int)sx), iy = Math.Min(ch - 2, (int)sy);if (ix < 0 || iy < 0) continue;
                 float fx = sx - ix, fy = sy - iy;int p = (y * width + x) * 4, s00 = (iy * cw + ix) * 4;
+                bool changed = false;
                 for (int k = 0; k < 4; k++)
-                { float top = scratch[s00 + k] + (scratch[s00 + 4 + k] - scratch[s00 + k]) * fx, bottom = scratch[s00 + cw * 4 + k] + (scratch[s00 + cw * 4 + 4 + k] - scratch[s00 + cw * 4 + k]) * fx;pixels[p + k] = Channel(top + (bottom - top) * fy); }
+                { float top = scratch[s00 + k] + (scratch[s00 + 4 + k] - scratch[s00 + k]) * fx, bottom = scratch[s00 + cw * 4 + k] + (scratch[s00 + cw * 4 + 4 + k] - scratch[s00 + cw * 4 + k]) * fx;byte value = Channel(top + (bottom - top) * fy);changed |= pixels[p + k] != value;pixels[p + k] = value; }
+                if (changed) dirty.Add(new(x / 256, y / 256));
             }
         }
     }

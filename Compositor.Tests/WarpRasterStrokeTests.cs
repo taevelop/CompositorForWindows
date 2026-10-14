@@ -25,6 +25,7 @@ public class WarpRasterStrokeTests
         stroke.Append(new(255, 8));Assert.Same(source, stroke.Pixels);stroke.Append(new(256, 8));
         int center = (8 * 513 + 256) * 4;var actual = stroke.Pixels.ToRgba();Assert.Equal((byte)110, actual[center]);Assert.Equal((byte)255, actual[center + 3]);
         Assert.Equal(bytes[center + 20], actual[center + 20]);Assert.Equal(bytes, source.ToRgba());
+        Assert.Same(source.Tiles[new(2, 0)], stroke.Pixels.Tiles[new(2, 0)]);
     }
     [Theory]
     [InlineData(SmearMode.Smudge)]

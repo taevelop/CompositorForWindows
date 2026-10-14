@@ -377,3 +377,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Smear(R) Liquify/Blur/Smudge selector·Strength슬라이더·초기Liquify/탭상태·async초기화/queued입력/최종반영·display-only preview·owner/session/doc/gen/모드보호·입력중명령대기/Esc 연결. 실제warp WPF 두모드/UndoRedo·프로젝트/PNG·preview불변·탭·busy취소·새gen보호와Blur/16tool 회귀통과·시각확인. 709코어검증유지. 대형·복합품질/원본sampling·실제UI pendingSave/모드cycling·배포후속,전체70/30관리추정재산정전유지.
 
 - Warp actual Save중입력큐마무리/준비대기·파일쓰기전잠금·단일Undo saved결과·UI재열기픽셀동일, busyEsc원본/UI복원·프로젝트없음·late/newgen검사통과. publish-smear-ui에세모드패키지갱신. 제품연산변경없음·709코어검증유지. 복합/대형·자연품질/원본농도·mode cycling/나머지Type·Zoom·text·PSD·RAW·배포범위잔여,전체70/30관리추정재산정전유지.
+
+- Warp rotation37/FlipXY·복합feather2·linked/독립mask 전픽셀합성회귀·코어713통과. 4K/40px/12입력probe 추가 및Append전체Raster변환→수정tile snapshot공유:두모드최종SHA동일,할당1.6GiB→207~221MiB/입력310~342→10~13ms. 합성core단일측정이며WPF/800px/100MP/자연품질완료아님. 초기capture/큰brush·preview/연속·배포후속,전체70/30관리추정재산정전유지.

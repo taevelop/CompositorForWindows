@@ -5,6 +5,8 @@ using Compositor.Core;
 using Compositor.Imaging;
 using SkiaSharp;
 
+if(args.Length>0&&args[0]=="--warp"){WarpBenchmark.Run(args[1],args.Length>2?Enum.Parse<SmearMode>(args[2],true):SmearMode.Smudge,args.Length>3?int.Parse(args[3]):4000,args.Length>4?int.Parse(args[4]):12,args.Length>5?int.Parse(args[5]):40);return;}
+
 if(args.Length>0&&args[0]=="--healing"){HealingBenchmark.Run(args[1],args.Length>2?int.Parse(args[2]):48,args.Length>3?int.Parse(args[3]):40,args.Length>4&&args[4]=="expand");return;}
 if(args.Length>0&&args[0]=="--healing-natural"){HealingBenchmark.Natural(args[1],args[2],args.Length>4?int.Parse(args[3]):null,args.Length>4?int.Parse(args[4]):null);return;}
 

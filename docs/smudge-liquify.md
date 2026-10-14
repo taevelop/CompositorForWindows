@@ -55,3 +55,24 @@ Esc·mode/tool/tab/session/Dispose 변경은 owner token과 transaction을 취�
 개발Release actual Save/reopen/Esc 회귀 통과·빌드0경고/오류. 제품연산변경없음·709코어검증유지. 세모드의 새 패키지는 `artifacts/publish-smear-ui/Compositor.Windows.exe`이며 기존패키지는유지한다. 배포본 결과는아래에기록한다. 복합변형/feather·자연품질·대형/연속입력/원본농도·모드cycling은계속잔여다. 실제Mac왕복/별도PC실기를대체하지않는다.
 
 이패키지의actualwarp WPF Save/reopen/Esc회귀와portable45초gate1회가통과했다. 공백경로copy/제한PATH/패키지내CLR·Skia·C모듈로드관측·전체WPF회귀는같은개발PC의결과다. 일반30초gate의간헐안정화와별도cleanPC실기검증으로확대해해석하지않는다.
+
+## 복합 선택과 수정 타일 스냅샷
+
+코어713개 통과: 두 모드×linked/독립mask에서 rotation37/FlipXY·사각 선택에서 ellipse 빼기·feather2 최종 clipping을 전체 pixel 독립 blend 기준과1LSB이내 비교했다. 원본/Effects/opacity·rotation/flip·mask placement/pixel 공유를 유지한다. 비선택 warp 결과를 동일 source grid로 맞춰 최종 선택 합성을 비교한 내부 기준이며 실제 Mac 전체 연산 결과와의 비교는 아니다.
+
+`--warp report [Smudge|Liquify] [side=4000] [count=12] [diameter=40]` 코어 측정을 추가했다. 합성 red/green 분할 premul alpha128 이미지에서 초기 raw 캡처/작업 준비, 입력, 끝 layer 반영, 최대 입력시간, managed allocation/peak, 원본불변 및 결과SHA를 기록한다. setup은할당에서제외하고peak에는포함한다. hash용추가RGBA와검증은시간/할당·peak확정뒤실행한다.
+
+매 Append의 전체Raster.FromRgba를 수정 타일 게시로 대체했다. Smudge/Liquify의RGBA 연산 중 실제 byte 변경 타일만 추적하고, Append 성공 때 그 타일의 논리 rows를 immutable buffer로 옮긴다. 변경 없는 타일/이전 Raster 스냅샷은 공유한다. 취소·실패는 private 작업을 폐기하며 이전 게시 결과는 유지한다. float 운반색, scratch 및 dab 연산은 그대로다.
+
+| 4K/40px/12입력, 각1회 | Smudge 이전→현재 | Liquify 이전→현재 |
+|---|---:|---:|
+| 입력 합계 | 342.4→10.2ms | 310.0→12.6ms |
+| 단일 입력 최대 | 46.4→5.13ms | 36.4→5.92ms |
+| 준비 | 195.3→205.8ms | 192.2→186.2ms |
+| 끝 반영 | 67.6→68.2ms | 134.2→129.9ms |
+| managed 누적 할당 | 1608.6→206.8MiB | 1622.8→221.4MiB |
+| process peak | 1365.5→443.5MiB | 1380.8→444.8MiB |
+
+최종SHA는각모드전후동일: Smudge169C2A1A3A445E7BE46A4D808A6850EAD764485A6BD578AED8D36D627C03798C, Liquify6EEFABAC4188A2A1AA735817C8C31ABD902F5C5EC2030BBB72A52BF7663CEBFC. core713검사에변하지않은edge tile 공유도포함한다. 이표는단일합성core이며WPF응답/물리입력/800px·100MP·자연품질완료가아니다. 초기fullcanvas캡처와큰brush/장시간·preview rendering은후속이다. publish-smear-ui는이전b8fe821단계이며이번최적화의배포갱신은후속이다.
+
+최적화 후 Release0경고/오류·실제warp WPF 미리보기/UndoRedo/실제Save대기·재열기/PNG/탭/Esc/새generation 회귀도통과했다. 성능 표는여전히코어측정이며이기능회귀를UI응답시간측정으로대체하지않는다.

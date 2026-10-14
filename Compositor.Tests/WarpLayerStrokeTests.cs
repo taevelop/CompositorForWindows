@@ -5,6 +5,43 @@ using Xunit;
 namespace Compositor.Tests;
 public class WarpLayerStrokeTests
 {
+    [Theory]
+    [InlineData(SmearMode.Smudge, true)]
+    [InlineData(SmearMode.Smudge, false)]
+    [InlineData(SmearMode.Liquify, true)]
+    [InlineData(SmearMode.Liquify, false)]
+    public void RotatedFlippedWarpClipsCompositeFeatherOnceAndPreservesMasks(SmearMode mode, bool linked)
+    {
+        var doc = Document.Create(128, 128);var bytes = new byte[32 * 32 * 4];
+        for (int y = 0; y < 32; y++) for (int x = 0; x < 32; x++)
+        { int p = (y * 32 + x) * 4;bytes[p + (x < 16 ? 0 : 2)] = 100;bytes[p + 3] = 128; }
+        var transform = new LayerTransform(40, 40, 32, 32, 37, true, true);
+        var mask = LayerMask.Solid(32, 32, 180) with { Linked = linked, Placement = linked ? null : new LayerTransform(30, 50, 32, 32, 23, true, false) };
+        var layer = doc.Layers[0] with { Pixels = Raster.FromRgba(32, 32, bytes), Transform = transform, Mask = mask, Opacity = .6, Effects = new(ColorOverlay: new(.1, .2, .3, .4)) };doc = doc.Replace(layer);
+        var a = transform.ToDocument(new(14.5, 15.5), 32, 32);var b = transform.ToDocument(new(18.5, 15.5), 32, 32);var settings = new BrushSettings(4, .7, .6, 0, 0, 0);
+        var whole = new WarpLayerStroke(doc, layer.Id, settings, mode);whole.Append(a);whole.Append(b);var full = whole.Complete().Layers[0];
+        var box = SelectionGeometry.Box(b.X - 5, b.Y - 5, 10, 10, false, true);
+        var cut = SelectionGeometry.Box(b.X + 1, b.Y - 1, 2, 2, true, true);
+        var combined = SelectionGeometry.Combine(box, cut, SelectionMode.Subtract, 128, 128) ?? throw new InvalidOperationException("Composite fixture is empty.");
+        var geometry = combined with { Feather = 2 };
+        var selected = doc with { Selection = geometry };var stroke = new WarpLayerStroke(selected, layer.Id, settings, mode);stroke.Append(a);stroke.Append(b);var result = stroke.Complete().Layers[0];
+        var corner = result.Transform.ToDocument(new(0, 0), result.Pixels.Width, result.Pixels.Height);
+        var initialOrigin = transform.ToPixels(corner, 32, 32);var fullOrigin = full.Transform.ToPixels(corner, full.Pixels.Width, full.Pixels.Height);
+        var before = RasterReframe.Apply(layer.Pixels, new((int)Math.Round(initialOrigin.X), (int)Math.Round(initialOrigin.Y), result.Pixels.Width, result.Pixels.Height)).ToRgba();
+        var raw = RasterReframe.Apply(full.Pixels, new((int)Math.Round(fullOrigin.X), (int)Math.Round(fullOrigin.Y), result.Pixels.Width, result.Pixels.Height)).ToRgba();var actual = result.Pixels.ToRgba();
+        var coverage = SelectionCoverage.Create(geometry, 128, 128);int changed = 0;
+        for (int y = 0; y < result.Pixels.Height; y++) for (int x = 0; x < result.Pixels.Width; x++)
+        {
+            var world = result.Transform.ToDocument(new(x + .5, y + .5), result.Pixels.Width, result.Pixels.Height);double weight = coverage.Sample(world);int p = (y * result.Pixels.Width + x) * 4;
+            for (int c = 0; c < 4; c++)
+            { int expected = (int)Math.Round(before[p + c] * (1 - weight) + raw[p + c] * weight, MidpointRounding.AwayFromZero);Assert.InRange(Math.Abs(actual[p + c] - expected), 0, 1);if (actual[p + c] != before[p + c]) changed++; }
+        }
+        Assert.True(changed > 0);Assert.Equal(bytes, layer.Pixels.ToRgba());Assert.Same(layer.Effects, result.Effects);Assert.Equal(layer.Opacity, result.Opacity);
+        Assert.Equal(37, result.Transform.Rotation);Assert.True(result.Transform.FlipX && result.Transform.FlipY);Assert.Equal(mask.Linked, result.Mask!.Linked);
+        if (!linked) { Assert.Same(mask.Pixels, result.Mask.Pixels);Assert.Equal(mask.Placement, result.Mask.Placement); }
+        else Assert.Equal(result.Pixels.Width, result.Mask.Pixels.Width);
+    }
+
     [Fact]
     public void ReplacementCopiesAlphaAndCanClearWhereOrdinaryCloneKeepsSource()
     {
