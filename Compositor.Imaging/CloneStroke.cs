@@ -10,6 +10,7 @@ public sealed class CloneStroke
     private readonly BrushSettings settings;
     private readonly Raster sample;
     private readonly PointD offset;
+    private readonly bool replaceSample;
     private readonly SelectionCoverage? selection;
     private readonly List<PointD> points = [];
     private RasterFrame frame;
@@ -18,16 +19,16 @@ public sealed class CloneStroke
     private bool completed;
     public Document Document { get; private set; }
 
-    public CloneStroke(Document document, Guid layerId, BrushSettings settings, Raster sample, PointD offset)
+    public CloneStroke(Document document, Guid layerId, BrushSettings settings, Raster sample, PointD offset, bool replaceSample = false)
     {
         document.Validate(); original = Document = document; source = document.Layers.First(l => l.Id == layerId);
-        this.settings = settings; this.sample = sample; this.offset = offset;
+        this.settings = settings; this.sample = sample; this.offset = offset;this.replaceSample = replaceSample;
         selection = document.Selection is { } selected ? SelectionCoverage.Create(selected, document.Width, document.Height) : null;
         frame = new(0, 0, source.Pixels.Width, source.Pixels.Height); expanded = source;
         stroke = MakeStroke(source);
     }
 
-    private BrushStroke MakeStroke(Layer layer) => new(layer, settings, original.Width, original.Height, selection, sample, offset);
+    private BrushStroke MakeStroke(Layer layer) => new(layer, settings, original.Width, original.Height, selection, sample, offset, replaceSample);
 
     public void Append(PointD point)
     {

@@ -62,6 +62,7 @@ public sealed class BrushStroke
     private readonly double[] mapping;
     private readonly Raster? cloneSample;
     private readonly PointD cloneOffset;
+    private readonly bool replaceClone;
     private PointD? previous;
     public Raster Pixels { get; private set; }
     internal BrushStroke ReframeAligned(Layer grown, RasterFrame relative)
@@ -69,7 +70,7 @@ public sealed class BrushStroke
         if (relative.Left % 256 != 0 || relative.Top % 256 != 0 || relative.Left > 0 || relative.Top > 0 ||
             relative.Left + relative.Width < Pixels.Width || relative.Top + relative.Height < Pixels.Height)
             throw new ArgumentException("Brush work transfer requires tile-aligned expansion.");
-        var next = new BrushStroke(grown, settings, canvasWidth, canvasHeight, selection, cloneSample, cloneOffset)
+        var next = new BrushStroke(grown, settings, canvasWidth, canvasHeight, selection, cloneSample, cloneOffset, replaceClone)
         { Pixels = ReferenceEquals(Pixels, layer.Pixels) ? grown.Pixels : RasterReframe.Apply(Pixels, relative), previous = previous };
         foreach (var (key, tile) in work)
         {
@@ -93,9 +94,9 @@ public sealed class BrushStroke
         }
         return next;
     }
-    public BrushStroke(Layer layer, BrushSettings settings, int canvasWidth, int canvasHeight, SelectionCoverage? selection = null, Raster? cloneSample = null, PointD cloneOffset = default)
+    public BrushStroke(Layer layer, BrushSettings settings, int canvasWidth, int canvasHeight, SelectionCoverage? selection = null, Raster? cloneSample = null, PointD cloneOffset = default, bool replaceClone = false)
     {
-        if (!double.IsFinite(settings.Diameter) || settings.Diameter is < 1 or > 2000 ||
+        if (!double.IsFinite(settings.Diameter) || settings.Diameter < 1 || settings.Diameter > (replaceClone ? 2004 : 2000) ||
             !double.IsFinite(settings.Hardness) || settings.Hardness is < 0 or > 1 ||
             !double.IsFinite(settings.Opacity) || settings.Opacity is < 0 or > 1)
             throw new ArgumentOutOfRangeException(nameof(settings));
@@ -103,7 +104,8 @@ public sealed class BrushStroke
         if (layer.IsGroup) throw new InvalidOperationException("Groups cannot be painted directly.");
         if (cloneSample is not null && (settings.Erase || cloneSample.Width != canvasWidth || cloneSample.Height != canvasHeight ||
             !double.IsFinite(cloneOffset.X) || !double.IsFinite(cloneOffset.Y))) throw new ArgumentException("Invalid clone sample or offset.");
-        this.cloneSample = cloneSample; this.cloneOffset = cloneOffset;
+        if (replaceClone && cloneSample is null) throw new ArgumentException("Replacement requires a sample.");
+        this.cloneSample = cloneSample; this.cloneOffset = cloneOffset;this.replaceClone = replaceClone;
         this.selection = selection;
         this.layer = layer; this.settings = settings; this.canvasWidth = canvasWidth; this.canvasHeight = canvasHeight;
         Pixels = layer.Pixels;
@@ -168,7 +170,7 @@ public sealed class BrushStroke
                     double localX = tx * 256 + x + .5, localY = ty * 256 + y + .5;
                     var mapped = new PointD(mapping[0] * localX + mapping[2] * localY + mapping[4], mapping[1] * localX + mapping[3] * localY + mapping[5]);
                     var sampled = CloneStamp.Sample(cloneSample, new(mapped.X + cloneOffset.X, mapped.Y + cloneOffset.Y));
-                    double inverse = 1 - sampled.Alpha * amount / 255;
+                    double inverse = replaceClone ? 1 - amount : 1 - sampled.Alpha * amount / 255;
                     for (int c = 0; c < 4; c++)
                     {
                         double channel = c switch { 0 => sampled.Red, 1 => sampled.Green, 2 => sampled.Blue, _ => sampled.Alpha };

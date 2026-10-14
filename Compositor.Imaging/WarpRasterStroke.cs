@@ -14,6 +14,7 @@ public sealed class WarpRasterStroke
     private float[] carried = [], scratch = [];
     private PointD? last;
     private bool faulted;
+    internal bool IsFaulted => faulted;
     private readonly List<PointD> points = [];
     public IReadOnlyList<PointD> Points => points.AsReadOnly();
     public Raster Pixels { get; private set; }

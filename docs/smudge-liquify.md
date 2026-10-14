@@ -21,3 +21,15 @@ dab 중심 목록을 유지하고 Append가 성공하면 immutable Raster 스냅
 - 실제 WPF·프로젝트/출력 검증, 자연 이미지·회전/flip·대형/연속 입력 성능 및 배포 갱신.
 
 현재 Append마다 문서 전체 스냅샷을 변환하므로 대형 문서 비용은 아직 높을 수 있다. 대형/장시간 성능을 측정하기 전 완료로 표시하지 않는다. 이번 단계는 연산 기반이며 현재 배포본의 Blur UI에는 Smudge/Liquify 모드가 없다. 실제 Mac 왕복과 별도 PC 실기는 사용자 지시로 보류다.
+
+## 레이어 최종 반영
+
+`WarpLayerStroke`가 시작 문서/레이어/설정을 고정하고 raw active layer를 문서 좌표로 캡처한다. Append는 warp 작업 사본만 변경하며, Complete는 diameter+4·hardness1·opacity1 tip으로 dab 경로를 재생해 레이어 픽셀에 반영한다. CloneStroke의 확장/선택/metadata/mask placement/crop·100MP/Undo 예산을 공유한다. 실패한 warp는 Complete도 거부하며, 성공 결과는 재호출해도 같은 참조다. 마스크/그룹/조정 이미지는 이 경로의 대상이 아니다.
+
+공유 BrushStroke/CloneStroke에 선택적 sample 교체 모드를 추가했다. 기본 Clone/Blur source-over는 그대로다. 교체는 original*(1-amount)+sample*amount를 모든 RGBA에 적용하므로 sample alpha가 낮으면 alpha도 낮추고 투명 sample은 지울 수 있다. 정렬된 격자 확장의 작업 전달에서도 교체 플래그를 유지한다. 일반 브러시 최대2000px는 유지하며 교체 tip만2004px까지 허용해 입력 최대2000의 원본 diameter+4 범위를 처리한다. 원본 makeRasterEdit의2000px 검사와 finishWarp의+4 조합에서 생길 수 있는 상한 문제를 Windows에서 반복하지 않는다.
+
+코어709개 통과: 독립 교체(100,0,0,128)+(0,20,0,32)×.5=(50,10,0,80), 일반 source-over=(94,10,0,136), 투명 지우기, 확장 후alpha96/red70, feather alpha 수식, 일반/교체 tip 상한. Smudge raw결과 alpha128/red128 반영·원본/metadata·단일UndoRedo·.comp 픽셀 왕복, 선택 제외·클릭 no-op·취소 후 반영 거부. 잘못 계산한 일반 source-over 테스트 alpha144를 독립 수식의136으로 수정했다. 기존Clone/Blur WPF는 별도 회귀한다.
+
+이번에는 최종 반영 코어까지 연결했다. 작업 중 표시/세 모드 selector·탭 상태·비동기 준비/큐·저장대기·실제 warp WPF·회전/복합선택·대형/자연품질·새패키지배포는 계속 잔여다. 현재 publish-blur-ui 패키지에는 warp 모드가 없다.
+
+최신 Release 빌드0경고/오류, 기존Clone 및 이미지·마스크Blur 단독 WPF 회귀가 통과했다. 이 검사는 기존 도구의 보존 증거이며 아직 연결되지 않은 warp UI의 검증이 아니다.
