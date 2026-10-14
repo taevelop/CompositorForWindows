@@ -25,7 +25,7 @@
 
 - 효과/조정: 원본 9종 비파괴 조정과 6종 공간/자동 필터의 기본 편집 경로가 연결됐다. 남음: 기존 패널 슬라이더 일관성, 원본 샘플링/보간 비교, AI 피사체 누락/흐린 경계 품질과 대형 메모리·지연.
 - 선택/변형: 사각/타원/올가미/크롭·선택 픽셀/클립보드·피사체/레이어/마스크 선택load·기본 변형은 연결됐다. Magic Wand 기본 UI도 연결됐다. 남음: Wand 복잡 윤곽/취소 성능, 왜곡·원근/이동 스냅 상세 범위, 외부 클립보드 호환, 큰 선택/윤곽 성능과 물리 입력.
-- 추가 도구: 도형·그라디언트·색상 채우기·스포이트는 연결됐다. 원본 NavigationTool 및 소스에서 확인한 미구현은 Spot Healing, Blur/Smudge/Liquify, Type, Zoom 전용 도구다. Clone Stamp의 기본 UI·worker·확장·이력·저장 경로는 연결됐으며 입력 지연·복합/실기 품질은 남아 있다. 영역 채우기 도구와 기타 확장 범위는 기존 요구를 유지하며 원본과 별도 대조한다.
+- 추가 도구: 도형·그라디언트·색상 채우기·스포이트·Healing·Clone·Smear(Liquify/Blur/Smudge)의 기본 UI·worker·이력·저장 경로가 연결됐다. 남음: 대형/복합·자연품질/원본soft누적 농도·실기, Smear 모드 cycling, Type와 Zoom 전용 도구. 영역 채우기 도구와 기타 확장 범위는 기존 요구를 유지하며 원본과 별도 대조한다.
 - 텍스트: 편집 가능한 텍스트 모델·글꼴·배치·저장·inline 편집 UI 미구현.
 - 작업 공간: 문서 탭·그룹·다중 선택·계층 드래그는 기본 UI가 연결됐다. 남음: 원본 그룹 마스크의 모델·합성·저장·편집, 탭/환경 설정 고급 범위, 드래그 복합 입력/모니터·DPI 실기, 캔버스 Alt-drag 복제 및 추가 썸네일 동작. 마스크 Alt-drag는 연결됐지만 실제 OLE/물리 입력은 미검증이다.
 - PSD: 현재 ImageCodec는 PNG/JPEG만 허용한다. PSD 구조/지원 요소 가져오기와 미지원 안내는 미구현; PSD 저장은 범위 제외.
@@ -375,3 +375,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - WarpLayerStroke 시작raw캡처/끝hard diameter+4 dab경로·RGBA sample교체·Clone확장/selection/mask/crop/예산 연결. 코어709/독립copy·source-over alpha수식/transparent지우기/정렬확장flag/feather·2004최대commit tip·Smudge metadata/Undo/저장·취소 검사 통과. 모드UI/작업중표시/async·warp WPF·대형품질/배포는후속. 전체70/30관리추정재산정전유지.
 
 - Smear(R) Liquify/Blur/Smudge selector·Strength슬라이더·초기Liquify/탭상태·async초기화/queued입력/최종반영·display-only preview·owner/session/doc/gen/모드보호·입력중명령대기/Esc 연결. 실제warp WPF 두모드/UndoRedo·프로젝트/PNG·preview불변·탭·busy취소·새gen보호와Blur/16tool 회귀통과·시각확인. 709코어검증유지. 대형·복합품질/원본sampling·실제UI pendingSave/모드cycling·배포후속,전체70/30관리추정재산정전유지.
+
+- Warp actual Save중입력큐마무리/준비대기·파일쓰기전잠금·단일Undo saved결과·UI재열기픽셀동일, busyEsc원본/UI복원·프로젝트없음·late/newgen검사통과. publish-smear-ui에세모드패키지갱신. 제품연산변경없음·709코어검증유지. 복합/대형·자연품질/원본농도·mode cycling/나머지Type·Zoom·text·PSD·RAW·배포범위잔여,전체70/30관리추정재산정전유지.

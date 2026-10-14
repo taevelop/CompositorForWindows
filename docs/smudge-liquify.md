@@ -45,3 +45,13 @@ Esc·mode/tool/tab/session/Dispose 변경은 owner token과 transaction을 취�
 실제 --warp-smoke 통과: 두 모드의 Session불변 display preview/단일UndoRedo/.comp·PNG-composite 픽셀일치, TabTools 모드복원, 입력 중 명령대기·UI잠금/busyEsc·원본복원/늦은결과폐기, 새generation 보호. 이미지/마스크Blur 회귀와16tool 시작scroll/compactscroll/고정title/canvas도통과했고 도구 화면을 시각확인했다. Release0경고/오류, 제품코어변경없음·709코어검증유지.
 
 아직 대형문서의 초기 캡처·반복전체Raster snapshot/preview tile 변환·메모리/최대지연·physical 입력, 복합선택·회전/flip·mask/effects 미리보기·최종결과 동등성, 실제 UI Save pending 파일쓰기/읽기, 모드 cycling shortcut·자연품질·새실행패키지배포는 후속이다. 현재 publish-blur-ui는 이전Blur단계이며 이번SmearUI는개발Release에만반영된다. 전체 전환 완료나 Mac parity 통과로 표시하지 않는다.
+
+## 실제 저장 대기와 배포
+
+--warp-smoke가 실제 Save(false)를 호출하는 지연 준비 fixture를 추가했다. 마우스 종료 전 Save가 입력 큐를 End하고 준비 완료를 기다린다. 대기 중 Save Task 미완료·busy/Editor 비활성·대상 .comp 디렉터리 없음, release 후 단일Undo·트랜잭션 종료·saved 상태·저장 픽셀 일치를 검증했다. 실제 ReopenSavedProject UI 경로의 픽셀 일치도 확인했다. 재열기 후 새 session/tool 기본값을 다시 fixture 설정으로 지정해 다음 검사와 분리한다.
+
+취소 fixture도 실제 Save를 사용한다. busy Esc 후 원본 참조/트랜잭션 종료/UI 활성 복원과 대상 프로젝트 없음, 늦은 worker 폐기를 확인했다. 새generation 보호 검사도 유지한다. 테스트 파일은 검증한 artifact parent/warp-save-GUID 루트에서만 정리한다.
+
+개발Release actual Save/reopen/Esc 회귀 통과·빌드0경고/오류. 제품연산변경없음·709코어검증유지. 세모드의 새 패키지는 `artifacts/publish-smear-ui/Compositor.Windows.exe`이며 기존패키지는유지한다. 배포본 결과는아래에기록한다. 복합변형/feather·자연품질·대형/연속입력/원본농도·모드cycling은계속잔여다. 실제Mac왕복/별도PC실기를대체하지않는다.
+
+이패키지의actualwarp WPF Save/reopen/Esc회귀와portable45초gate1회가통과했다. 공백경로copy/제한PATH/패키지내CLR·Skia·C모듈로드관측·전체WPF회귀는같은개발PC의결과다. 일반30초gate의간헐안정화와별도cleanPC실기검증으로확대해해석하지않는다.

@@ -34,19 +34,34 @@ public partial class MainWindow
         }
         session.Load(doc);SmearSmudge.IsChecked = true;
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        string root = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(report))!, "warp-save-" + Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);
         Canvas.WarpPrepareOverride = (basis, id, settings, mode, token) => { entered.TrySetResult();release.Task.GetAwaiter().GetResult();return new(basis, id, settings, mode, token); };
         try
         {
             Canvas.BeginPointer(new(31, 32), ModifierKeys.None);Canvas.MovePointer(new(35, 32));await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            var command = ResolveGradientBeforeAction();Check(!command.IsCompleted && busy && !Editor.IsEnabled, "Warp command did not wait.");
+            projectPath = Path.Combine(root, "Saved.comp");var saving = Save(false);
+            Check(!saving.IsCompleted && busy && !Editor.IsEnabled && !Directory.Exists(projectPath), "Warp Save wrote before preparation completed.");
+            release.TrySetResult();Check(await saving && session.UndoCount == 1 && !session.InTransaction && !session.IsModified, "Warp pending Save did not commit and save once.");
+            var saved = session.Document;Check(CompositePixels(saved).SequenceEqual(CompositePixels(ProjectStore.Load(projectPath).Document)), "Pending Save pixels differ.");
+            Check(await ReopenSavedProject(projectPath) && CompositePixels(saved).SequenceEqual(CompositePixels(session.Document)), "Warp UI reopen differs.");
+            session.Load(doc);ToolPicker.SelectedIndex = 15;SmearSmudge.IsChecked = true;BrushSize.Text = "4";BrushHardness.Text = "100";BrushOpacity.Text = "50";Canvas.Fit();
+            entered = new(TaskCreationOptions.RunContinuationsAsynchronously);release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            Canvas.BeginPointer(new(31, 32), ModifierKeys.None);Canvas.MovePointer(new(35, 32));await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            projectPath = Path.Combine(root, "Cancelled.comp");var command = Save(false);Check(!command.IsCompleted && busy && !Editor.IsEnabled, "Warp command did not wait.");
             var escape = new KeyEventArgs(Keyboard.PrimaryDevice, System.Windows.PresentationSource.FromVisual(this), Environment.TickCount, Key.Escape) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
-            WindowKeyDown(this, escape);release.TrySetResult();Check(!await command && !await Canvas.WarpCompletion && ReferenceEquals(session.Document, doc) && !session.InTransaction && !busy && Editor.IsEnabled, "Warp busy Esc failed.");
+            WindowKeyDown(this, escape);release.TrySetResult();Check(!await command && !await Canvas.WarpCompletion && ReferenceEquals(session.Document, doc) && !session.InTransaction && !busy && Editor.IsEnabled && !Directory.Exists(projectPath), "Warp busy Esc failed or saved a draft.");
             entered = new(TaskCreationOptions.RunContinuationsAsynchronously);release = new(TaskCreationOptions.RunContinuationsAsynchronously);
             Canvas.BeginPointer(new(31, 32), ModifierKeys.None);await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));session.Load(doc);session.Begin();long generation = session.TransactionGeneration;release.TrySetResult();
             Check(!await Canvas.WarpCompletion && session.InTransaction && generation == session.TransactionGeneration, "Late warp closed new generation.");session.Cancel();Canvas.CancelInteraction();
         }
-        finally { release.TrySetResult();Canvas.WarpPrepareOverride = null;Canvas.CancelInteraction(); }
-        File.WriteAllText(report, JsonSerializer.Serialize(new { passed = true, checks = new[] { "two modes", "display-only preview", "single Undo/Redo", "project/PNG pixels", "tab mode", "pending command", "busy Esc", "late generation" } }));
+        finally
+        {
+            release.TrySetResult();Canvas.WarpPrepareOverride = null;Canvas.CancelInteraction();
+            string target = Path.GetFullPath(root), parent = Path.GetDirectoryName(Path.GetFullPath(report))!.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            if (!target.StartsWith(parent, StringComparison.OrdinalIgnoreCase) || !Path.GetFileName(target).StartsWith("warp-save-")) throw new IOException("Unsafe warp cleanup.");
+            if (Directory.Exists(target)) Directory.Delete(target, true);
+        }
+        File.WriteAllText(report, JsonSerializer.Serialize(new { passed = true, checks = new[] { "two modes", "display-only preview", "single Undo/Redo", "project/PNG pixels", "tab mode", "actual pending Save waits", "UI reopen pixels", "busy Esc creates no project", "late generation" } }));
         foreach (var tab in workspace.Documents) tab.Session.MarkSaved();Close();
     }
 }
