@@ -26,3 +26,13 @@ SpotHealing.Apply는 premultiplied RGBA Raster와 동일격자의 gray coverage�
 SpotHealing.Compute는image layer만허용하고원본pixels에서커널결과를만든뒤 document selection을layer.Transform좌표로최종blend한다. kernel coverage를selection으로미리축소하지않아원본patch검색/edge tone규칙을유지한다. mask/effects/opacity/blend/transform은with Pixels로보존한다. same-result는원본문서참조를반환하고doc검증·256MiB Undo예산·취소검사후결과를반환한다.
 
 코어673개/전체Release0경고오류통과. 지정pixel선택clip/선택밖no-op·원본pixels/metadata공유·단일UndoRedo/문서참조복원·.comp재열기pixel일치를검사했다. 아직stroke coverage수집/변형복합·raster확장·J UI/wash·끝연산worker/Esc·WPF/출력·대형품질은후속이다. source 및 coverage는현재layer raster격자이며사용자도구완료로판정하지않는다.
+
+## J 도구 UI 1차 연결
+
+EditorTool.SpotHealing index14/J/rail·Content-Aware/Create Texture/Proximity Match radio와Size/Hardness/Opacity slider를연결했다. TabTools에mode를저장한다. image-only/visible/group/adjustment guard를따르고color/mask입력은숨긴다. brush coverage는원본과분리한white/opacity1 raster에모으고현재source에는31gray/45% darkwash를selectionclip과함께preview한다. 원본Document와mode/opacity/seed는stroke시작에고정된다.
+
+mouseup후graycoverage추출/원본기반Compute를serialworker에서실행한다. document/session/transaction세대·tool/image target/layer일치일때만설치하고단일Commit한다. Esc/캡처상실/전환/Dispose는owntransaction을복원하고늦은결과를폐기한다. native 내부중간취소는없고전후/managed단계취소만있다. 진행표시를추가했다.
+
+WPF단독3모드/washdraft·원본에서보정(wash를결과로쓰지않음)·UndoRedo/mask·gesturecancel·Esc/늦은worker·새transaction보호·mode snapshot복원 통과, 화면검토통과. 15도구가기본높이에맞도록rail높이32/margin3,1/padding4로조정했으며도구UI 최초scroll없음/최소크기palette접근/높이복원검사통과. 코어673/Release0경고오류. 전체WPF 첫실행SelectionAutoScrollSmoke의outline size실패, 같은조건재검사는마지막stage27.03초/exit0. 원인미확정품질항목으로유지하고반복안정성완료로표시하지않는다.
+
+현재stroke는layer의기존raster크기내수집이다. 경계밖확장·회전/flip/feather복합·저장/출력전용WPF·pendingSave/탭전환·대형ROI/자연texture/softcoverage원본동등성·실기·배포갱신이후속이다. 사용자도구전체완료로판정하지않는다.

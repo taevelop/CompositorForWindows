@@ -27,7 +27,7 @@ public partial class MainWindow : Window
         defaultPrompts = prompts = EditorPrompts.For(this);
         InitializeComponent();
         InitializeToolControls();
-        Canvas.Session = session; Canvas.ReadBrush = ReadBrush; Canvas.ReadClone = () => new(CloneAligned.IsChecked == true, CloneAllLayers.IsChecked == true);Canvas.ReadGradient=ReadGradient;Canvas.ReadShape=ReadShape;
+        Canvas.Session = session; Canvas.ReadBrush = ReadBrush;Canvas.ReadHealing=()=>HealTexture.IsChecked==true?HealingMode.CreateTexture:HealProximity.IsChecked==true?HealingMode.ProximityMatch:HealingMode.ContentAware; Canvas.ReadClone = () => new(CloneAligned.IsChecked == true, CloneAllLayers.IsChecked == true);Canvas.ReadGradient=ReadGradient;Canvas.ReadShape=ReadShape;
         defaultTabTools=CaptureTabTools() with {CloneSourceState=null};
         AttachTabDrop(NewCanvasDropFrame,null);
         Canvas.ReportError = ShowError;Canvas.WandClick=WandClicked;
@@ -361,7 +361,7 @@ public partial class MainWindow : Window
                 case Key.C: ToolPicker.SelectedIndex = 8; break;
                 case Key.I: ToolPicker.SelectedIndex = 9; break;
                 case Key.G: ToolPicker.SelectedIndex = 10; break;
-                case Key.W: ToolPicker.SelectedIndex = 12; break; case Key.S: ToolPicker.SelectedIndex = 13; break;
+                case Key.W: ToolPicker.SelectedIndex = 12; break; case Key.S: ToolPicker.SelectedIndex = 13; break; case Key.J: ToolPicker.SelectedIndex = 14; break;
                 case Key.U: if(shift&&ToolPicker.SelectedIndex==11)CycleShapeKind();else ToolPicker.SelectedIndex=11;break;
                 case Key.Tab when ToolPicker.SelectedIndex==11: CycleShapeKind();break;
                 case Key.X when Keyboard.Modifiers==ModifierKeys.None: SwapPalette(null,e);break;
@@ -433,6 +433,7 @@ public partial class MainWindow : Window
         await TimedAsync("MaskCopySmoke", () => MaskCopySmoke(Path.ChangeExtension(screenshot,".mask-copy.json")));
         await TimedAsync("WandSmoke", () => WandSmoke(Path.ChangeExtension(screenshot,".wand.json")));
         await TimedAsync("CloneSmoke", () => CloneSmoke());
+        await TimedAsync("HealingSmoke", () => HealingSmoke(Path.ChangeExtension(screenshot,".healing.json")));
         await TimedAsync("GroupSmokeTest", () => GroupSmokeTest(Path.ChangeExtension(screenshot, ".groups.json")));
         await TimedAsync("AdjustmentSmokeTest", () => AdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".adjustments.json")));
         await TimedAsync("ExposureSmokeTest", () => ExposureSmokeTest(Path.ChangeExtension(screenshot, ".exposure.json")));

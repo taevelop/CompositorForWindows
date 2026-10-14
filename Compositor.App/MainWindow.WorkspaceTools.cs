@@ -8,14 +8,15 @@ public partial class MainWindow
 {
     private sealed record TabTools(int Tool,string Size,string Hardness,string Opacity,string Color,string Mask,
         Compositor.Core.SelectionMode Mode,bool Antialiased,bool Center,int CropRatio,bool CropSnap,string Background,bool SampleRing,
-        bool GradientRadial,bool GradientTransparent,bool GradientReverse,double GradientOpacity,ShapeKind ShapeKind,string ShapeRadius,string ShapeWidth){public WandSettings Wand {get;init;}=new(); public CloneSettings CloneOptionsState {get;init;}=new(); public CloneSource? CloneSourceState {get;init;}}
+        bool GradientRadial,bool GradientTransparent,bool GradientReverse,double GradientOpacity,ShapeKind ShapeKind,string ShapeRadius,string ShapeWidth){public HealingMode Healing {get;init;} public WandSettings Wand {get;init;}=new(); public CloneSettings CloneOptionsState {get;init;}=new(); public CloneSource? CloneSourceState {get;init;}}
     private TabTools defaultTabTools=null!;
     private TabTools CaptureTabTools()=>new(ToolPicker.SelectedIndex,BrushSize.Text,BrushHardness.Text,BrushOpacity.Text,
         BrushColor.Text,MaskGray.Text,Canvas.SelectionMode,Canvas.SelectionAntialiased,Canvas.SelectionFromCenter,
         CropRatioPicker.SelectedIndex,Canvas.CropSnapEnabled,backgroundColor,Canvas.ShowSampleRing,
-        GradientRadial.IsChecked==true,GradientTransparent.IsChecked==true,GradientReverse.IsChecked==true,GradientOpacity.Value,ReadShape().Kind,ShapeRadiusValue.Text,ShapeWidthValue.Text){Wand=ReadWandSettings(),CloneOptionsState=Canvas.ReadClone(),CloneSourceState=Canvas.CloneSource.Source is null ? null : Canvas.CloneSource};
+        GradientRadial.IsChecked==true,GradientTransparent.IsChecked==true,GradientReverse.IsChecked==true,GradientOpacity.Value,ReadShape().Kind,ShapeRadiusValue.Text,ShapeWidthValue.Text){Healing=Canvas.ReadHealing(),Wand=ReadWandSettings(),CloneOptionsState=Canvas.ReadClone(),CloneSourceState=Canvas.CloneSource.Source is null ? null : Canvas.CloneSource};
     private void RestoreTabTools(TabTools state)
     {
+        HealContent.IsChecked=state.Healing==HealingMode.ContentAware;HealTexture.IsChecked=state.Healing==HealingMode.CreateTexture;HealProximity.IsChecked=state.Healing==HealingMode.ProximityMatch;
         Canvas.CloneSource=state.CloneSourceState ?? new(); CloneAligned.IsChecked=state.CloneOptionsState.Aligned; CloneAllLayers.IsChecked=state.CloneOptionsState.SampleAllLayers;
         gradientOpacityDigit=null;WandTolerance.Value=state.Wand.Tolerance;WandSamplePoint.IsChecked=state.Wand.SampleRadius==0;WandSample3.IsChecked=state.Wand.SampleRadius==1;WandSample5.IsChecked=state.Wand.SampleRadius==2;WandContiguous.IsChecked=state.Wand.Contiguous;WandAllLayers.IsChecked=state.Wand.SampleAllLayers;
         ShapeRectangle.IsChecked=state.ShapeKind==ShapeKind.Rectangle;ShapeEllipse.IsChecked=state.ShapeKind==ShapeKind.Ellipse;ShapeLine.IsChecked=state.ShapeKind==ShapeKind.Line;

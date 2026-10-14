@@ -60,8 +60,8 @@ public partial class MainWindow
     {
         if (BrushOptions is null) return;
         bool transforming = Canvas?.IsTransforming == true;
-        bool painting = ToolPicker.SelectedIndex is 1 or 2 or 13;
-        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", 6 => "Lasso", 7 => "Polygon", 8 => "Crop", 9 => "Eyedropper", 10 => "Gradient", 11 => "Shape", 12 => "Magic Wand", 13 => "Clone Stamp", _ => "Brush" };
+        bool painting = ToolPicker.SelectedIndex is 1 or 2 or 13 or 14;
+        ToolTitle.Text = ToolPicker.SelectedIndex switch { 0 => "Move", 2 => "Eraser", 3 => "Hand", 4 => "Rectangle", 5 => "Ellipse", 6 => "Lasso", 7 => "Polygon", 8 => "Crop", 9 => "Eyedropper", 10 => "Gradient", 11 => "Shape", 12 => "Magic Wand", 13 => "Clone Stamp", 14 => "Spot Healing", _ => "Brush" };
         if (transforming) ToolTitle.Text = "Transform";
         ColorButton.IsEnabled = ToolbarColorButton.IsEnabled = BackgroundColorButton.IsEnabled = !session.EditMask||ToolPicker.SelectedIndex==11;
         RefreshPaletteSwatches();
@@ -78,6 +78,7 @@ public partial class MainWindow
         var wandMode=Canvas?.SelectionMode??Compositor.Core.SelectionMode.Replace;WandReplace.IsChecked=wandMode==Compositor.Core.SelectionMode.Replace;WandAdd.IsChecked=wandMode==Compositor.Core.SelectionMode.Add;WandSubtract.IsChecked=wandMode==Compositor.Core.SelectionMode.Subtract;
         GradientOptions.Visibility=ToolPicker.SelectedIndex==10?Visibility.Visible:Visibility.Collapsed;
         EyedropperOptions.Visibility=ToolPicker.SelectedIndex==9?Visibility.Visible:Visibility.Collapsed;
+        HealingOptions.Visibility = ToolPicker.SelectedIndex == 14 ? Visibility.Visible : Visibility.Collapsed;
         CloneOptions.Visibility = ToolPicker.SelectedIndex == 13 ? Visibility.Visible : Visibility.Collapsed;
         BrushOptions.Visibility = painting ? Visibility.Visible : Visibility.Collapsed;
         ColorOptions.Visibility = !session.EditMask && ToolPicker.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
