@@ -51,3 +51,11 @@ Clone source crosshair/브러시범위원을 device크기 일정한 black/white 
 --clone-preview report [side] 벤치마크 추가: 합성ellipse·800px tip·세개의인접 sourcecenter, 출력800px/중앙alpha204·원본Raster참조보존을검사한다. 4K 기존경로최초45ms/후속17ms, 재측정47/18/18ms·managed각10.23MiB·프로세스피크276MiB. 100MP는47/19/19ms·각10.33MiB·피크1517MiB. 피크는전체합성source생성과3회실행을포함하며 preview만의메모리로해석하지 않는다.
 
 CanvasRenderer는transform하의 LocalClipBounds에교차하는tile만 TileImage로변환한다. rawpreview가전체sourcebitmap을매hover복사한다는가정은이번소스/측정에서지지되지 않았다. managed직접bilinear실험은4K최초197/후속72·63ms로느려지고피크차이도작아되돌렸다. 최종제품알고리즘은기존경로를유지한다. 코어측정은 WPFframe·100MP복합효과·all-layer·지속hover·stroke시작fullcapture·취소성능을증명하지 않는다. target raster확장과이들항목은계속잔여다.
+
+## 래스터 확장 연결
+
+CloneStroke는stroke시작문서/source/sample/offset을고정하고 문서canvas로clip한swept brush영역을source pixel좌표에매핑해frame을확장한다. RasterReframe으로기존pixel위치·회전/flip·linkedmask흰여백·independentmaskPlacement pin을유지한다. frame변경시기존points를시작pixels에재생하므로opacity/선택이preview에서누적되지 않는다. frame내에서는기존BrushStroke를이어쓴다. preview는항상시작document기반이며transparent/no-op은원본참조를반환한다. 할당전image/mask총예산과결과Undo256MiB를검사한다.
+
+EditorCanvas Clone경로에연결하고cancel/end에서worker상태를해제한다. Core662개통과: 경계성장/기존coverage·white mask·source보존·UndoRedo·독립mask핀·transparent무변경·예산실패·회전+FlipXY16원본픽셀문서위치 검사. 최신WPF단독Clone30초내exit0: 작은layer밖clone/linkedmask/Undo/저장재열기까지통과. 빌드경고/오류0. fullWPF30초timeout및실제Mac/별도PC보류는그대로유지한다.
+
+반복frame변경은point list를재생하므로긴확장stroke성능/할당·최종alpha경계trim·큰sourcecapture/취소worker·all-layer/선택/복합mask추가검증·배포갱신·물리입력은후속이다. 기본확장경로연결로전체도구품질완료를주장하지 않는다.

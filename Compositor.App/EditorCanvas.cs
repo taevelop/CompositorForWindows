@@ -28,6 +28,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     private Point panOrigin;
     private MouseButton? gestureButton;
     private BrushStroke? stroke;
+    private CloneStroke? cloneStroke;
     private SelectionPixelMoveEdit? pixelMove;
     private MaskStroke? maskStroke;
     private Layer? originalLayer;
@@ -214,7 +215,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         bool editing = originalLayer is not null || selectionStart is not null;
         pixelMove?.Dispose(); pixelMove = null;
         selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear(); polygonCursor = null;
-        originalLayer = null; groupMoveDocument = null; multipleMove = null; stroke = null; maskStroke = null; gestureButton = null;
+        originalLayer = null; groupMoveDocument = null; multipleMove = null; cloneStroke = null; stroke = null; maskStroke = null; gestureButton = null;
         if (panStart is not null) { panX = panOrigin.X; panY = panOrigin.Y; panStart = null; }
         if (editing && Session?.InTransaction == true) Session.Cancel();
         if (IsMouseCaptured) ReleaseMouseCapture();
@@ -267,7 +268,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
                 var clone = ReadClone();
                 var offset = CloneSource.OffsetAt(point, clone.Aligned) ?? throw new InvalidOperationException("Alt-click a clone source first.");
                 var sample = CloneStamp.Capture(Session.Document, layer.Id, clone);
-                stroke = new(layer, settings, Session.Document.Width, Session.Document.Height, selection, sample, offset);
+                cloneStroke = new(Session.Document, layer.Id, settings, sample, offset);
                 CloneSource.Begin(point, clone.Aligned);
             }
             else if (Session.EditMask) maskStroke = new(layer, settings, Session.Document.Width, Session.Document.Height, selection);
@@ -318,6 +319,8 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             maskStroke.Append(point);
             if (!ReferenceEquals(Session.ActiveLayer?.Mask, maskStroke.Mask)) Session.Preview(Session.Document.Replace(originalLayer with { Mask = maskStroke.Mask }));
         }
+        else if (cloneStroke is not null)
+        { cloneStroke.Append(point); if (!ReferenceEquals(Session.Document, cloneStroke.Document)) Session.Preview(cloneStroke.Document); }
         else if (stroke is not null)
         { stroke.Append(point); if (!ReferenceEquals(Session.ActiveLayer?.Pixels, stroke.Pixels)) Session.Preview(Session.Document.Replace(originalLayer with { Pixels = stroke.Pixels })); }
         else if (Tool == EditorTool.Move)
@@ -368,7 +371,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         bool editing = originalLayer is not null || selectionStart is not null;
         pixelMove?.Dispose(); pixelMove = null;
         selectionStart = null; movingSelection = false; drawnSelection = null; lassoPoints.Clear(); polygonCursor = null;
-        stroke = null; maskStroke = null; originalLayer = null; groupMoveDocument = null; multipleMove = null; gestureButton = null;
+        cloneStroke = null; stroke = null; maskStroke = null; originalLayer = null; groupMoveDocument = null; multipleMove = null; gestureButton = null;
         if (editing) { if (commit) Session.Commit(); else Session.Cancel(); }
         InvalidateVisual();
     }

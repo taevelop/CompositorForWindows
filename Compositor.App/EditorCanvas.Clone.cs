@@ -17,7 +17,7 @@ public sealed partial class EditorCanvas
         if (Tool == EditorTool.CloneStamp) InvalidateVisual();
     }
     internal PointD? CloneIndicatorSource => clonePointer is { } point
-        ? CloneSource.SamplePoint(point, ReadClone().Aligned, stroke is not null) : CloneSource.Source;
+        ? CloneSource.SamplePoint(point, ReadClone().Aligned, stroke is not null || cloneStroke is not null) : CloneSource.Source;
 
     private void DrawClone(SKCanvas canvas)
     {
@@ -41,7 +41,7 @@ public sealed partial class EditorCanvas
             catch (System.IO.InvalidDataException) { return; }
             float radius = (float)(brush.Diameter / 2);
             var settings = ReadClone();
-            if (stroke is null && CloneSource.OffsetAt(pointer, settings.Aligned) is { } offset)
+            if (stroke is null && cloneStroke is null && CloneSource.OffsetAt(pointer, settings.Aligned) is { } offset)
             {
                 var center = new PointD(pointer.X + offset.X, pointer.Y + offset.Y);
                 var key = new ClonePreviewKey(Session.Document, Session.ActiveLayerId, center, settings, brush,

@@ -37,6 +37,13 @@ public partial class MainWindow
                 var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
                 using var output = System.IO.File.Create(reportPath + ".png"); encoder.Save(output);
             }
+            var small = Document.Create(8, 4); var smallBytes = new byte[16]; smallBytes[0] = 100; smallBytes[3] = 255;
+            small = small.Replace(small.Layers[0] with { Pixels = Raster.FromRgba(2, 2, smallBytes), Transform = new(0, 0, 2, 2), Mask = LayerMask.Solid(2, 2) }); session.Load(small);
+            Canvas.BeginPointer(new(.5, .5), ModifierKeys.Alt);Canvas.BeginPointer(new(4.5, .5), ModifierKeys.None);Canvas.EndPointer(true);
+            Check(session.ActiveLayer!.Pixels.Width == 5 && session.ActiveLayer.Pixels.ToRgba()[16] == 100 && session.ActiveLayer.Mask!.Pixels.Width == 5,
+                "Clone canvas stroke did not expand pixels and linked mask.");
+            session.Undo();Check(ReferenceEquals(small, session.Document), "Expanded clone Undo lost source dimensions.");session.Redo();
+            ProjectStore.Save(session.Document, session.ActiveLayerId, project);Check(CompositePixels(session.Document).SequenceEqual(CompositePixels(ProjectStore.Load(project).Document)), "Expanded clone save/reopen changed output.");
             var source = Canvas.CloneSource; AddDocumentTab(Document.Create(8, 4)); var second = workspace.Current;
             Check(Canvas.CloneSource.Source is null, "New tab inherited clone source.");
             await SelectTabAsync(first.Id); Check(ReferenceEquals(source, Canvas.CloneSource) && ToolPicker.SelectedIndex == 13, "Tab lost clone state.");
