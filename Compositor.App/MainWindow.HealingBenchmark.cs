@@ -18,10 +18,18 @@ public partial class MainWindow
         var damage = new BrushStroke(layer, new(4, 1, 1, 0, 0, 0), side, side);damage.Append(target);
         layer = layer with { Pixels = damage.Pixels };doc = doc.Replace(layer);
         session.Load(doc);ToolPicker.SelectedIndex = 14;BrushSize.Text = "800";BrushHardness.Text = "70";BrushOpacity.Text = "100";Canvas.Fit();
+        double initialPaintMs = 0;int initialPaints = 0;var initialClock = Stopwatch.StartNew();
+        Canvas.PaintMeasured = (elapsed, _) => { initialPaints++;initialPaintMs += elapsed; };
+        try { Canvas.InvalidateVisual();await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle); }
+        finally { Canvas.PaintMeasured = null; }
+        double initialDisplayMs = initialClock.Elapsed.TotalMilliseconds;
+        if (initialPaints == 0) throw new InvalidOperationException("Initial document was not rendered before the input probe.");
         var timer = new DispatcherTimer(DispatcherPriority.Input) { Interval = TimeSpan.FromMilliseconds(10) };
         long previous = Stopwatch.GetTimestamp();double maximumGap = 0, maximumInput = 0;int ticks = 0;
         timer.Tick += (_, _) => { long now = Stopwatch.GetTimestamp();maximumGap = Math.Max(maximumGap, Stopwatch.GetElapsedTime(previous, now).TotalMilliseconds);previous = now;ticks++; };
         long allocated = GC.GetTotalAllocatedBytes(true);var clock = Stopwatch.StartNew();timer.Start();
+        double paintTotalMs = 0, maximumPaintMs = 0;int paints = 0;
+        Canvas.PaintMeasured = (elapsed, _) => { paints++;paintTotalMs += elapsed;maximumPaintMs = Math.Max(maximumPaintMs, elapsed); };
         double inputMs, workerMs;
         try
         {
@@ -37,7 +45,7 @@ public partial class MainWindow
             if (!await Canvas.HealingCompletion) throw new InvalidOperationException("Dense healing completion failed.");
             workerMs = clock.Elapsed.TotalMilliseconds;
         }
-        finally { timer.Stop(); }
+        finally { timer.Stop();Canvas.PaintMeasured = null; }
         if (ticks == 0 || session.UndoCount != 1 || session.InTransaction) throw new InvalidOperationException("Healing lost Dispatcher progress or single Undo.");
         var result = session.Document;var bytes = result.Layers[0].Pixels.ToRgba();var before = layer.Pixels.ToRgba();int pixel = ((int)target.Y * side + (int)target.X) * 4;
         if (bytes[pixel] <= before[pixel] || bytes[pixel + 3] != 255) throw new InvalidOperationException("Healing did not restore the defect.");
@@ -62,9 +70,9 @@ public partial class MainWindow
         }
         finally { Canvas.HealingOverride = null; }
         using var process = Process.GetCurrentProcess();process.Refresh();
-        File.WriteAllText(report, JsonSerializer.Serialize(new { side, points = 48, brush = 800, inputMs, maximumInputMs = maximumInput, workerMs, ticks, maximumDispatcherGapMs = maximumGap, cancelUiMs, cancelledWorkerMs,
+        File.WriteAllText(report, JsonSerializer.Serialize(new { side, points = 48, brush = 800, initialPaints, initialPaintMs, initialDisplayMs, inputMs, maximumInputMs = maximumInput, workerMs, ticks, maximumDispatcherGapMs = maximumGap, paints, paintTotalMs, maximumPaintMs, cancelUiMs, cancelledWorkerMs,
             allocatedMiB = (GC.GetTotalAllocatedBytes(true) - allocated) / 1048576d, peakMiB = process.PeakWorkingSet64 / 1048576d,
-            note = "One actual WPF dense synthetic stroke; Background Dispatcher yield between inputs includes rendering. Esc is issued after the real Compute delegate starts; exact native phase is unproven. UI restoration and worker drain are separate. Not physical-input latency, natural quality, or Mac parity. Allocation includes validation and cancellation probe; peak includes setup." }, new JsonSerializerOptions { WriteIndented = true }));
+            note = "One actual WPF dense synthetic stroke after initial document rendering (reported separately); Background Dispatcher yield between inputs includes rendering. Paint timings exclude WPF bitmap presentation. Esc is issued after the real Compute delegate starts; exact native phase is unproven. UI restoration and worker drain are separate. Not physical-input latency, natural quality, or Mac parity. Allocation includes validation and cancellation probe; peak includes setup and initial rendering." }, new JsonSerializerOptions { WriteIndented = true }));
         foreach (var tab in workspace.Documents) tab.Session.MarkSaved();Close();
     }
 }

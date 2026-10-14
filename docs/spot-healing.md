@@ -86,3 +86,13 @@ SpotHealing.Apply는CanBeCanceled token에만callback경로를사용하며취소
 코어692개통과:3모드관리token/no-token픽셀동일,legacy/callback픽셀동일,5개native단계내5번째poll취소(출력은10번째poll로실제부분쓰기후취소),원본불변/부분결과폐기·원본재시도동일. 기존3모드독립noise수식/문서·mask·선택·Undo검사포함. 확장probe의최종SHA256도이전과동일(A9D244361781046B83740DF2B1060D8D5ED4AA42445DA014885BE2A6DBA66991). Release0경고/오류·실제Healing WPF저장/Undo/Esc/late worker회귀통과. 첫MSVC link의WandPixels.obj열기실패는재검사성공했으나원인미확정이다.
 
 이번4K/800px actualWPF한회는입력+render2013ms/단일최대81ms/끝626ms/Dispatcher최대537ms/EscUI3.15ms/worker정리3.53ms였다. 이전측정보다지연이커졌으며원인분리전이므로성능개선/완료를주장하지않는다. native내부취소는deterministic코어poll검사로입증했지만이WPF취소probe의정확한nativephase와내부취소응답시간은여전히미측정이다. publish-healing-ui는이전f210268단계패키지이고이번native변경의배포갱신은후속이다. 렌더링gap·대형ROI·자연품질/실기잔여를유지한다.
+
+## 첫 표시와 입력 렌더링 분리
+
+기존EditorCanvas.PaintMeasured를Healing benchmark에연결해paint총합/최대/횟수를기록했다. 첫분리probe는입력1035ms/단일최대26.4ms/worker522ms/Dispatcher최대154ms,48paint총417ms/최대82.6ms였다. 이전537ms지연을항상재현하지는않았다. 원인확정이나해결로판정하지않는다.
+
+측정CLI는현재첫문서를ApplicationIdle까지실제paint한뒤입력을시작하며첫표시도별도기록한다. 최신self-contained한회:첫paint85.2ms/표시126.3ms,입력+render928.7ms/단일입력최대24.4ms/끝worker549.3ms/Dispatcher최대51.2ms,48paint총346.1ms/최대11.4ms,Esc복원2.66ms/worker정리3.47ms. paint는WPFbitmap표시비용을포함하지않고timer에는포함될수있다. 첫표시를옮긴측정조건변경으로수치가낮아졌으므로제품최적화로주장하지않는다. 첫표시/입력계산/paint/표시·GC각비용은후속분석대상이다.
+
+최신native중간취소와도구막대수정을포함한배포경로는 `artifacts/publish-healing-cancellable/Compositor.Windows.exe`로갱신했다. 기존패키지유지,빌드0경고/오류. 이전692코어검증유지(이번제품연산변경없음). Mac왕복/별도Windows실기는보류다.
+
+이패키지의portable45초gate1회도통과했다. 공백경로copy/제한PATH/패키지내CLR·Skia·C모듈로드관측·전체WPF회귀이며같은개발PC의결과다. 일반30초gate안정화나별도cleanPC실기를대체하지않는다.
