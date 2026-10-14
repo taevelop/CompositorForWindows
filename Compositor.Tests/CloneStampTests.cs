@@ -7,6 +7,35 @@ namespace Compositor.Tests;
 public class CloneStampTests
 {
     [Fact]
+    public void DeltaStrokeMatchesIndependentSweptCoverageWithGradientSource()
+    {
+        var doc = Document.Create(64, 64);var original = Enumerable.Repeat(new byte[] { 20, 40, 10, 100 }, 4096).SelectMany(p => p).ToArray();
+        var layer = doc.Layers[0] with { Pixels = Raster.FromRgba(64, 64, original) };var sample = new byte[original.Length];
+        for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++) { int p = (y * 64 + x) * 4;sample[p] = (byte)(x * 2);sample[p + 1] = (byte)(y * 2);sample[p + 3] = 128; }
+        var stroke = new BrushStroke(layer, new(12, .25, .6, 0, 0, 0), 64, 64, cloneSample: Raster.FromRgba(64, 64, sample), cloneOffset: new(-3.25, 2.5));
+        PointD[] points = [new(10.5, 10.5), new(20.5, 10.5), new(20.5, 20.5), new(10.5, 10.5)];foreach (var point in points) stroke.Append(point);
+        var result = stroke.Pixels.ToRgba();
+        for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++)
+        {
+            double minimum = double.MaxValue;
+            for (int i = 1; i < points.Length; i++)
+            {
+                double vx = points[i].X - points[i - 1].X, vy = points[i].Y - points[i - 1].Y;
+                double t = Math.Clamp(((x + .5 - points[i - 1].X) * vx + (y + .5 - points[i - 1].Y) * vy) / (vx * vx + vy * vy), 0, 1);
+                minimum = Math.Min(minimum, double.Hypot(x + .5 - points[i - 1].X - vx * t, y + .5 - points[i - 1].Y - vy * t));
+            }
+            double amount = (float)(minimum <= 1.5 ? 1 : Math.Max(0, (6 - minimum) / 4.5)) * .6;
+            double[] channels = [2 * (x - 3.25), 2 * (y + 2.5), 0, 128];int p = (y * 64 + x) * 4;
+            for (int c = 0; c < 4; c++)
+            {
+                int expected = (int)Math.Round(channels[c] * amount + original[p + c] * (1 - 128 * amount / 255), MidpointRounding.AwayFromZero);
+                Assert.InRange(Math.Abs(result[p + c] - expected), 0, 1);
+            }
+        }
+        var frozen = stroke.Pixels;stroke.Append(points[^1]);Assert.Same(frozen, stroke.Pixels);Assert.Equal(original, layer.Pixels.ToRgba());
+    }
+
+    [Fact]
     public void PreviewAppliesTipOpacityAndBoundsItsScreenResolution()
     {
         var doc = Document.Create(8, 8);

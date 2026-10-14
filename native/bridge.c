@@ -8,6 +8,33 @@
 #include "ContentFill.h"
 #include "WandPixels.h"
 #include <stdlib.h>
+#include <string.h>
+
+// Clone only needs maximum coverage and its changed pixels. Keep the ordinary
+// paint/erase kernel's output-change contract unchanged.
+__declspec(dllexport) int32_t compositor_clone_coverage(float *coverage, uint8_t *delta,
+    int32_t tileX, int32_t tileY, int32_t width, int32_t height, const double *map,
+    double ax, double ay, double bx, double by, double radius, double hardness, int32_t canvasW, int32_t canvasH) {
+    memset(delta,0,256*256);
+    double vx=bx-ax,vy=by-ay,length=vx*vx+vy*vy,rr=radius*radius,inner=radius*hardness;
+    int32_t changed=0;
+    for(int y=0;y<height;y++) {
+        double px=map[0]*(tileX+.5)+map[2]*(tileY+y+.5)+map[4];
+        double py=map[1]*(tileX+.5)+map[3]*(tileY+y+.5)+map[5];
+        for(int x=0;x<width;x++,px+=map[0],py+=map[1]) {
+            if(px<0||py<0||px>=canvasW||py>=canvasH)continue;
+            double t=length>0?((px-ax)*vx+(py-ay)*vy)/length:0;
+            t=fmin(1,fmax(0,t));
+            double dx=px-ax-vx*t,dy=py-ay-vy*t,d2=dx*dx+dy*dy;
+            if(d2>rr)continue;
+            double distance=sqrt(d2);
+            float value=(float)(distance<=inner?1:(radius-distance)/fmax(radius-inner,.0001));
+            int index=y*256+x;if(value<=coverage[index])continue;
+            coverage[index]=value;delta[index]=1;changed=1;
+        }
+    }
+    return changed;
+}
 
 __declspec(dllexport) int64_t compositor_wand_mask(const uint8_t *pixels,int32_t width,int32_t height,int32_t x,int32_t y,int32_t radius,int32_t tolerance,int32_t contiguous,uint8_t *mask) {
     return (int64_t)wand_mask(pixels,(size_t)width,(size_t)height,(size_t)width*4,(size_t)x,(size_t)y,(size_t)radius,tolerance,contiguous,mask);

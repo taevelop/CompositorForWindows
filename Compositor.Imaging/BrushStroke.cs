@@ -6,6 +6,10 @@ namespace Compositor.Imaging;
 public sealed record BrushSettings(double Diameter, double Hardness, double Opacity, byte Red, byte Green, byte Blue, bool Erase = false);
 public static class NativePixels
 {
+    [DllImport("Compositor.Native", EntryPoint="compositor_clone_coverage", CallingConvention=CallingConvention.Cdecl)]
+    internal static extern int CloneCoverage([In,Out] float[] coverage, [Out] byte[] delta,
+        int tileX, int tileY, int width, int height, double[] map, double ax, double ay, double bx, double by,
+        double radius, double hardness, int canvasW, int canvasH);
     [DllImport("Compositor.Native",EntryPoint="compositor_wand_mask",CallingConvention=CallingConvention.Cdecl)]
     internal static extern long WandMask(byte[] pixels,int width,int height,int x,int y,int radius,int tolerance,int contiguous,[Out]byte[] mask);
     [DllImport("Compositor.Native",EntryPoint="compositor_wand_trace",CallingConvention=CallingConvention.Cdecl)]
@@ -43,7 +47,7 @@ public static class NativePixels
 }
 public sealed class BrushStroke
 {
-    private sealed record Work(byte[] Original, byte[] Output, float[] Coverage, float[]? Selection);
+    private sealed record Work(byte[] Original, byte[] Output, float[] Coverage, float[]? Selection, byte[]? Delta);
     private readonly SelectionCoverage? selection;
     private readonly Dictionary<TileKey, Work> work = [];
     private readonly Layer layer;
@@ -104,23 +108,26 @@ public sealed class BrushStroke
                     for (int x = 0; x < Math.Min(256, Pixels.Width - tx * 256); x++)
                         cachedWeights[y * 256 + x] = (float)selection.Sample(layer.Transform.ToDocument(new(tx * 256 + x + .5, ty * 256 + y + .5), Pixels.Width, Pixels.Height));
                 }
-                tile = new(original, (byte[])original.Clone(), new float[256 * 256], cachedWeights); work.Add(key, tile);
+                tile = new(original, (byte[])original.Clone(), new float[256 * 256], cachedWeights, cloneSample is null ? null : new byte[256 * 256]); work.Add(key, tile);
             }
             if (tile.Selection is { } empty && empty.AsSpan().IndexOfAnyExcept(0f) < 0) continue;
-            int updated = NativePixels.Brush(tile.Output, tile.Original, tile.Coverage, tx * 256, ty * 256,
+            int updated = cloneSample is not null
+                ? NativePixels.CloneCoverage(tile.Coverage, tile.Delta!, tx * 256, ty * 256,
+                    Math.Min(256, Pixels.Width - tx * 256), Math.Min(256, Pixels.Height - ty * 256), mapping,
+                    start.X, start.Y, point.X, point.Y, radius, settings.Hardness, canvasWidth, canvasHeight)
+                : NativePixels.Brush(tile.Output, tile.Original, tile.Coverage, tx * 256, ty * 256,
                 Math.Min(256, Pixels.Width - tx * 256), Math.Min(256, Pixels.Height - ty * 256), mapping,
                 start.X, start.Y, point.X, point.Y, radius, settings.Hardness, settings.Opacity,
                 settings.Red, settings.Green, settings.Blue, settings.Erase ? 1 : 0, canvasWidth, canvasHeight);
-            if (updated == 0 && cloneSample is null) continue;
+            if (updated == 0) continue;
             byte[] output = tile.Output;
             if (cloneSample is not null)
             {
-                output = new byte[PixelTile.ByteCount];
-                tile.Original.CopyTo(output, 0);
                 for (int y = 0; y < Math.Min(256, Pixels.Height - ty * 256); y++)
                 for (int x = 0; x < Math.Min(256, Pixels.Width - tx * 256); x++)
                 {
                     int index = y * 256 + x;
+                    if (tile.Delta![index] == 0) continue;
                     double amount = tile.Coverage[index] * settings.Opacity * (tile.Selection?[index] ?? 1);
                     if (amount <= 0) continue;
                     var mapped = layer.Transform.ToDocument(new(tx * 256 + x + .5, ty * 256 + y + .5), Pixels.Width, Pixels.Height);

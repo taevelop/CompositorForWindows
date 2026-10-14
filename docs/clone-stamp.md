@@ -73,3 +73,11 @@ Core663개통과: 11×11초안을10×10으로정리하면서원본rect/white mas
 --clone-stroke report [count=48] [diameter=40] 측정CLI추가. 4K·40px·48입력기준 최초비교: growth48→2, input830→172ms, 최대47→42ms, complete2.90→0.80ms, managed737→39MiB, processpeak425→332MiB. PNG SHA256 C8D43E3E02C2B120F92769A16B80337DF58603CB92E477494A3E4727C6FAAF0C 동일. 최신정규화후40px재측정268ms/최대116ms로변동도기록하고PNG동일성재확인했다. source원본bytes보존·result.Validate를검사한다. 할당은PNG출력을포함하며peak는source준비포함이다.
 
 800px·48입력추가측정은growth3·총2523ms·최대910ms·complete7.14ms·managed417MiB·peak394MiB. 최대입력지연은높아미완료성능항목이다. 모두합성core각1회이며WPF프레임/물리입력/자연texture증거가아니다. 코어664개/빌드0경고오류·최신Clone단독WPF통과. fullWPF30초timeout별도유지. 큰coverage재합성/경계replay·sourcecaptureworker/취소·복합sample·배포검증이남는다.
+
+## Clone coverage delta 최적화
+
+compositor_clone_coverage 고정폭export를추가했다. sweptgeometry/linearhardness의max floatcoverage를유지하고새로coverage가증가한pixel만delta로표시한다. paint/erase커널과기존export의pixel-change계약은변경하지않았다. clone은Work.Output을재사용하며delta가없는tile/pixel은샘플조회·source-over재합성을생략한다. 기존originalpixels와frozenclone source를계속사용하므로stroke교차/반복에서opacity가누적되지않는다.
+
+4K800px48입력단일비교: input2523→1439ms, 최대910→442ms, complete7.14→6.12ms, managed417→168MiB, peak394→370MiB. 출력PNG SHA동일 확인. 각1회합성core/파일출력포함이며비교최대값의반복안정성및WPF지연을입증하지않는다. 최대442ms는여전히높아성능완료가아니다.
+
+반투명gradientsource+fractionaloffset·삼각교차stroke를독립segment거리/source-over참조와전픽셀1LSB이내비교하고반복동일point의Raster참조유지를검사했다. 코어665개·MSVC/Release0경고오류·Clone단독WPF source/Undo/cancel/tab/확장/mask/저장검사통과. 큰frame재생·sourcecaptureworker/취소·복합sample·배포/물리입력과fullWPF30초timeout은잔여다.
