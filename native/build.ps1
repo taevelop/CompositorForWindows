@@ -14,17 +14,25 @@ $sdkVersion = Get-ChildItem -LiteralPath "$sdk\Include" -Directory |
 if (!$sdkVersion) { throw 'Windows SDK headers were not found.' }
 $sources = @(Get-ChildItem -LiteralPath $kernelDirectory -Filter '*.c' | ForEach-Object FullName)
 $sources += "$PSScriptRoot\bridge.c"
+$cppSources = @(Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.cpp' | ForEach-Object FullName)
 $headers = @(Get-ChildItem -LiteralPath $kernelDirectory -Filter '*.h' | ForEach-Object FullName)
 $output = Join-Path $OutputDirectory 'Compositor.Native.dll'
-$inputs = @($sources) + @($headers) + @($PSCommandPath)
+$inputs = @($sources) + @($cppSources) + @($headers) + @($PSCommandPath)
 $stamp = Join-Path $OutputDirectory 'build-success.stamp'
 if ((Test-Path -LiteralPath $output) -and (Test-Path -LiteralPath $stamp) -and !(Get-Item -LiteralPath $inputs | Where-Object LastWriteTimeUtc -gt (Get-Item -LiteralPath $stamp).LastWriteTimeUtc)) { exit 0 }
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
+$cppArguments = @('/nologo','/c','/O2','/MT','/EHsc','/std:c++20','/utf-8',
+    "/I$vc\include", "/I$sdk\Include\$($sdkVersion.Name)\ucrt",
+    "/I$sdk\Include\$($sdkVersion.Name)\um", "/I$sdk\Include\$($sdkVersion.Name)\shared", "/I$sdk\Include\$($sdkVersion.Name)\winrt",
+    "/Fo$OutputDirectory\") + $cppSources
+& "$vc\bin\Hostx64\x64\cl.exe" @cppArguments
+if ($LASTEXITCODE -ne 0) { throw "Native C++ compilation failed ($LASTEXITCODE)." }
+$cppObjects = @($cppSources | ForEach-Object { Join-Path $OutputDirectory ([IO.Path]::GetFileNameWithoutExtension($_) + '.obj') })
 $arguments = @('/nologo','/LD','/O2','/MT','/TC','/std:c17','/utf-8','/D_USE_MATH_DEFINES',
     "/I$vc\include", "/I$sdk\Include\$($sdkVersion.Name)\ucrt", "/I$kernelDirectory",
     "/Fo$OutputDirectory\", "/Fe$output") + $sources + @('/link',
     "/LIBPATH:$vc\lib\x64", "/LIBPATH:$sdk\Lib\$($sdkVersion.Name)\ucrt\x64",
-    "/LIBPATH:$sdk\Lib\$($sdkVersion.Name)\um\x64", "/IMPLIB:$OutputDirectory\Compositor.Native.lib")
+    "/LIBPATH:$sdk\Lib\$($sdkVersion.Name)\um\x64", "/IMPLIB:$OutputDirectory\Compositor.Native.lib", 'dwrite.lib','d2d1.lib','windowscodecs.lib','ole32.lib') + $cppObjects
 & "$vc\bin\Hostx64\x64\cl.exe" @arguments
 if ($LASTEXITCODE -ne 0) { throw "Native compilation failed ($LASTEXITCODE)." }
 [IO.File]::WriteAllText($stamp, [DateTime]::UtcNow.ToString("O"))

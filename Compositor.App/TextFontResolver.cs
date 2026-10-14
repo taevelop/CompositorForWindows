@@ -7,13 +7,13 @@ namespace Compositor.App;
 internal sealed record TextFontResolution(Typeface Typeface, bool MissingFont);
 internal static class TextFontResolver
 {
-    private static Dictionary<string, Typeface>? aliases;
+    private static readonly Lazy<Dictionary<string, Typeface>> aliases = new(BuildAliases);
     internal static TextFontResolution Resolve(string requested)
     {
         var family = Fonts.SystemFontFamilies.FirstOrDefault(f => f.Source.Equals(requested, StringComparison.OrdinalIgnoreCase) || f.FamilyNames.Values.Any(n => n.Equals(requested, StringComparison.OrdinalIgnoreCase)));
         if (family is not null) return new(new(family, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), false);
-        aliases ??= BuildAliases();
-        if (aliases.TryGetValue(requested, out var face)) return new(face, false);
+
+        if (aliases.Value.TryGetValue(requested, out var face)) return new(face, false);
         return new(new(SystemFonts.MessageFontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), true);
     }
     private static Dictionary<string, Typeface> BuildAliases()

@@ -1,46 +1,49 @@
 # 편집 가능한 텍스트 전환
 
-원본 기준은 `macOS/Compositor/Document/TypeTool.swift`, `Rendering/InlineTextEditor.swift`, `IO/ProjectStore.swift`다. 원본은 style과cached image를같은레이어에보관한다. 실제합성은cached image를사용하며image참조가바뀌는pixel편집은텍스트를rasterize하고transform/mask는편집정보를유지한다.
+원본 기준은 `macOS/Compositor/Document/TypeTool.swift`, `Rendering/InlineTextEditor.swift`, `IO/ProjectStore.swift`다. 2026-10-14 현재 모델·저장·글꼴 해결·렌더러가 연결됐으며, Type/inline 편집 UI와 텍스트 편집 명령은 아직 없다.
 
-## 모델과 프로젝트 기반
+## 모델과 프로젝트
 
-LayerTextStyle에 content/fontName/fontSize/RGB/alignment/tracking/leading/optional boxSize를연결했다. 원본범위는UTF16content최대100000, fontSize1–2000, RGB0–1, tracking-100–1000, leading0–5000, box16–30000 및100MP다. Auto leading은fontSize×1.2, padding12다. .NETstring Length는UTF16길이이므로emoji도원본과같이센다. fontName이비어있거나Windows에없는경우도원본fallback계약에맞춰메타데이터를보존한다.
+LayerTextStyle은 content/fontName/fontSize/RGB/alignment/tracking/leading/optional boxSize를 보존한다. 원본과 같은 범위는 UTF-16 내용 최대 100000, 글꼴 크기 1–2000, RGB 0–1, 자간 -100–1000, 행간 0–5000, 문단 상자 16–30000 및 100MP다. 자동 행간은 글꼴 크기 × 1.2, 여백은 12픽셀이다. .NET 문자열 길이는 UTF-16 단위이므로 이모지도 같은 방식으로 센다.
 
-Layer.Text를추가하고새Pixels참조는Shape/Text를함께지운다. 동일Pixels참조·transform/mask/appearance변경은Text를유지한다. group/adjustment/shape와text공존은거부한다. TextJson은원본camelCase와Left/Center/Right·boxSize배열을읽고쓴다. duplicate/unknown fields와invalid범위는거부하며imageFile없는text는PNGdecode전에거부한다. optional box와missing leading은각각pointtext/Auto로처리한다.
+Layer.Text의 원본 정보와 cached Pixels를 함께 보관한다. 새 Pixels 참조로 편집하면 Shape/Text를 지우며 동일 Pixels 참조·변환·마스크·외관 변경은 Text를 유지한다. 그룹·조정·도형과 텍스트의 공존은 거부한다. TextJson은 원본 camelCase 키와 Left/Center/Right, boxSize 배열을 읽고 쓴다. 중복·미지원 필드와 손상된 범위는 거부하며 imageFile 없는 텍스트도 PNG 디코딩 전에 거부한다. boxSize 생략은 포인트 텍스트, leading 생략은 자동 행간이다.
 
-ProjectStore는유효한text metadata와기존PNG를읽고저장한다. 읽을때재렌더하지않으므로없는Macfont도기존외관을유지한다. v8 JSON+PNG디렉터리형식은유지하며새텍스트렌더러는다음단계다. unknown text필드는계속거부하고손상된text객체는invalidmetadata로처리한다. 기존metadata거부/덮어쓰기원본보존테스트를이구분으로갱신했다.
+.comp는 버전 8 JSON+PNG 디렉터리 형식을 유지한다. 열 때 자동으로 텍스트를 렌더링하지 않으므로 Mac 글꼴이 없어도 저장된 외관을 유지한다. 요청한 fontName도 대체 이름으로 덮어쓰지 않는다. 저장된 PNG 보존은 Mac의 새 텍스트 렌더링과 동등하다는 증거가 아니다.
 
-코어718개통과:Unicode/unknown font/right alignment/tracking/leading/box와cached pixels왕복, transform/mask/samepixels정보유지·새pixels래스터화·UndoRedo, duplicate/unknown/null/범위·shape공존거부,손상metadata열기/덮어쓰기거부와원본manifest보존. 일반layer복제는기존record복사로Text도유지한다.
+## 설치 글꼴 해결
+
+OpenTypeFontNames는 SFNT(TTF/OTF) 및 TTC name table의 family/subfamily/full-name/PostScript/typographic family·face(ID 1/2/4/6/16/17)를 수집한다. Unicode big-endian(platform 0/3)과 Mac platform 1의 ASCII 이름을 읽는다. 비ASCII MacRoman은 근사 디코딩하지 않는다. 표·문자 offset/길이, UTF-16 짝수 길이, 컬렉션 크기를 검사하며 글꼴을 프로젝트에 복사하지 않는다.
+
+TextFontResolver는 설치 family와 지역화 이름을 먼저 조회한다. 나머지 이름은 GlyphTypeface.GetFontStream으로 만든 full-name/PostScript 별칭 인덱스로 해결한다. TTC의 다른 face를 혼동하지 않도록 family와 face가 현재 GlyphTypeface와 일치할 때만 연결한다. weight/style/stretch도 유지한다. 없으면 시스템 글꼴을 사용하고 MissingFont와 RequestedFont를 반환한다. 손상된 글꼴은 별칭 조회에서 건너뛴다. 인덱스는 Lazy로 한 번 생성해 동시 요청이 부분 인덱스를 읽지 않도록 한다.
+
+남음: 사용자에게 부족한 글꼴 안내, 글꼴 설치 변경 시 갱신, 큰 카탈로그 생성의 취소·성능, variation named instances/FVAR, 모든 지역화 이름과 컬렉션의 동등성.
+
+## DirectWrite·Direct2D 렌더러
+
+초기 WPF FormattedText 기반 렌더러는 자간을 거부하고 이모지를 단색으로 출력했다. 현재 TextRasterizer는 `native/text_raster.cpp`의 DirectWrite 배치와 Direct2D 컬러 글꼴 렌더링을 사용한다. UTF-16, 글꼴 family/weight/style/stretch, 자간·행간·정렬·상자와 RGB를 전달하고 UI 독립 Raster를 반환한다. 기존 C 커널은 C17로 유지하며 C++20 객체를 별도로 컴파일해 같은 DLL에 링크한다. 기존 export 및 ABI는 유지한다.
+
+- 자간은 IDWriteTextLayout1.SetCharacterSpacing의 trailingSpacing으로 적용한다. 결합 문자·이모지 시퀀스를 문자열 단위로 분리해 그리는 근사를 사용하지 않는다. 최소 advance는 API가 허용하는 0이다. 아주 큰 음수 자간의 advance 제한과 원본 AppKit kern 동등성은 남은 비교 항목이다.
+- 자동/사용자 행간은 균일한 baseline 간격으로 적용하며 선택 face의 ascent를 baseline에 사용한다. 폴백 글꼴의 혼합 행간 및 극단적으로 좁은 행간 품질은 추가 비교가 필요하다.
+- Left/Center/Right와 문단 줄바꿈을 적용한다. 포인트 텍스트는 측정 폭 + 여백 24 + caret 여유 글꼴 크기 × 0.1, 최소 크기 16을 사용한다. 고정 상자는 올림한 크기를 유지하며 내부 영역을 클립한다. 30000픽셀 한 변·100MP 제한을 출력 메모리 할당 전에 검사한다.
+- D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT로 컬러 이모지를 활성화한다. 96 DPI의 WIC 소프트웨어 비트맵에 회색조 안티앨리어싱으로 그린다. 투명 배경의 premultiplied BGRA8을 top-down RGBA8로 교환해 기존 불변 256픽셀 타일 Raster로 변환한다. GPU 가속 경로가 아니다.
+- COM은 각 호출 스레드에서 초기화하며 이미 STA인 UI 스레드와 MTA 작업 스레드 모두 지원한다. 취소는 측정/렌더 전후와 행·타일 변환에서 검사한다. DirectWrite 배치나 Direct2D 렌더 호출 내부의 중간 취소는 아직 없다. 측정과 렌더를 두 번 수행하므로 대형 텍스트 메모리·시간 최적화는 남아 있다.
+
+API 기준: Microsoft [문자 간격](https://learn.microsoft.com/en-us/windows/win32/api/dwrite_1/nf-dwrite_1-idwritetextlayout1-setcharacterspacing), [컬러 글꼴](https://learn.microsoft.com/en-us/windows/win32/directwrite/color-fonts), [OpenType name table](https://learn.microsoft.com/en-us/typography/opentype/otspec182/name), [컬렉션 offset](https://learn.microsoft.com/en-us/typography/opentype/otspec181/otff).
+
+## 검증
+
+제품 코어 720개 검사 통과: 텍스트 Unicode/부족한 글꼴/style/cached pixels 저장 왕복, 변환·마스크·동일 픽셀 정보 유지, 픽셀 편집의 래스터화 및 Undo/Redo, 손상 metadata의 열기/덮어쓰기 거부와 원본 보존, SFNT/TTC 이름 및 잘못된 offset/길이 거부.
+
+실제 `--text-render-smoke` 결과는 `artifacts/text-directwrite-final.json`이다. Latin/한글/아랍어/이모지/결합 문자/다중 행 출력과 premultiplied 알파, 문단 정렬·줄바꿈·고정 크기, 행간 24/60, 부족한 글꼴 표시, 빈 내용·사전 취소, 양수 12/음수 -4 자간, 컬러 이모지 및 Segoe UI에서의 이모지 폴백, STA/MTA 픽셀 일치, 너무 큰 포인트 텍스트의 사전 거부, 자간·이모지 metadata/PNG 왕복을 통과했다. ArialMT/Arial-BoldMT/Arial Bold와 설치 TTC face의 이름·스타일 검사도 유지한다. 굵은 face의 실제 알파 면적 증가 및 사용자 행간 1의 겹침도 검사했다. WPF에서 해결한 family가 DirectWrite 목록에 없으면 다른 글꼴로 조용히 치환하지 않고 오류를 반환한다.
+
+검은 텍스트색으로 출력한 이모지에서 컬러 픽셀 4663개를 확인했고 PNG를 시각 확인했다. 아랍어 PNG도 확인했으나 모든 언어·복합 시퀀스의 shaping 정확성이나 Mac 픽셀 동등성을 입증하지 않는다. Release 빌드 경고·오류는 0개다. 일반 WPF 회귀는 첫 실행이 30초 제한에서 시간 초과됐다. 단계 기록의 마지막은 ToolControlsSmokeTest 시작(27.48초)이었다. 같은 제한으로 재실행한 결과는 통과했고 마지막 단계 종료 기록은 28.27초였다. 간헐적 시간 초과 원인이 해결됐다는 증거는 아니므로 안정성 잔여 항목을 유지한다.
 
 ## 남은 작업
 
-- 글꼴해결/부족한글꼴알림과실제텍스트렌더러:다국어/emoji/fallback·tracking/leading/alignment·point/paragraph wrapping과크기.
-- Type(T)·텍스트생성/재편집·inline editor·선택/커서/키보드/확정/취소·폰트/크기/색상표/슬라이더.
-- 텍스트재렌더명령·transform/boxresize/mask·단일Undo/Redo·저장전확정·선택복사와계층이동의편집정보보존검사.
-- 실제WPF/PNG출력·원본font/sampling·대형/취소·새배포검증. 기존Mac외관의cachedPNG보존은새문자렌더링동등성검증이아니다.
+- Type(T), 클릭/드래그의 포인트·문단 텍스트 생성과 기존 레이어 재편집
+- inline editor, 커서·선택·IME·키보드·확정/취소, 글꼴 선택·크기/자간/행간 슬라이더·색상표
+- 재렌더 편집 명령, 변환과 상자 크기·마스크 보존, 단일 Undo/Redo, 저장 전 확정
+- 작업 스레드 준비와 문서/세션/transaction generation 보호, 취소·늦은 결과 폐기
+- 샘플링/서체·언어·음수 자간·혼합 행간 품질, 대형 문서 피크·지연, 새로운 배포본 검증
 
-현재는모델/저장기반이며WindowsUI에서문자내용을편집하는기능은없다. 현재publish-zoom-controls에는이변경도아직없다. 실제Mac왕복/별도PC실기는사용자지시로보류하며통과로표시하지않는다.
-
-## WPF 레이아웃 렌더링 기반
-
-TextRasterizer는WPFFormattedText의shaping/font fallback/wordlayout을사용해point/paragraph 텍스트를cachedRaster로변환한다. 설치font의family/source 및localizedfamilyname을찾고없으면SystemFonts.MessageFontFamily를사용하며RequestedFont/ResolvedFamily/MissingFont를결과에반환한다. 기존프로젝트를열때자동재렌더하거나원본fontName을바꾸지는않는다. PostScriptface명/weight/style 매핑은후속이다.
-
-현재tracking0의left/center/right·leading/Auto·fixedboxwordwrap/clipping·pointsize를연결했다. 원본padding12·caret여유fontSize*.1·최소16px,30000side/100MP예산을적용한다. RenderTargetBitmap을96dpi/Pbgra32로만들어BGRA→RGBA교환후immutableRaster로변환한다. 저장RGB는sRGB byte로변환한다. 모델은tracking전체범위를보존하지만renderer는비영tracking을명시적으로거부한다. WPFglyphspacing 경로가완료되기전임의근사나설정무시는하지않는다.
-
-actual --text-render-smoke 통과:Latin/한글/아랍어/emoji/결합문자/다중행 nonempty·premul,paragraph left/right차이·줄바꿈/fixedsize,leading24/60의높이차이,unknownfontflag,emptytext·사전취소·tracking거부,renderedstyle/PNG .comp왕복. 아랍어/emoji PNG도시각확인했다. nonempty확인은정확한문자shaping전체품질을입증하지않으며emoji는현재단색이다. 컬러emoji/정확한폰트metrics·bidi/긴word/leading극한/큰text·비영tracking은후속이다. RenderTarget작업자체는중간취소되지않고현재CLI는UI thread의기반검사다.
-
-Release0경고/오류·제품core변경없음·718코어검증유지. Type/inline UI·font선택/fallback안내·새text렌더command·단일Undo/저장확정·backgroundSTA준비/성능과새패키지배포는계속잔여다. 이번코드는개발Release에만반영됐다.
-
-API기준은 Microsoft [FormattedText](https://learn.microsoft.com/en-us/dotnet/api/system.windows.media.formattedtext?view=windowsdesktop-10.0), [LineHeight](https://learn.microsoft.com/en-us/dotnet/api/system.windows.media.formattedtext.lineheight?view=windowsdesktop-10.0) 문서다. 자간/추가glyph제어는 [GlyphRun](https://learn.microsoft.com/dotnet/api/system.windows.media.glyphrun) 경로를후속으로검토한다.
-
-## 설치 글꼴 PostScript face 연결
-
-OpenTypeFontNames는SFNT(TTF/OTF)와TTC 컬렉션의name table을읽는다. family/subfamily/full-name/PostScript/typographic family·face(ID1/2/4/6/16/17)를Unicode big-endian(platform0/3)에서수집한다. Mac platform1의ASCII이름도읽지만비ASCII MacRoman은근사decode하지않는다. 표/문자offset과길이·Unicode짝수길이·컬렉션size를검사하고glyph data나font file을프로젝트에복사하지않는다.
-
-TextFontResolver는family/localizedfamily를먼저조회한다. 그외이름은설치Typeface의GlyphTypeface.GetFontStream에서읽은name을사용한다. TTC안의다른font를혼동하지않도록family와face가현재GlyphTypeface와맞는경우에만full-name/PostScript alias를연결한다. exact Typeface의weight/style/stretch를그대로FormattedText에전달한다. 없으면기존MissingFont flag/systemfallback을유지하고requested name/기존cachedPNG는자동변경하지않는다. unreadable/미지원font metadata는alias인덱스에서건너뛰고family경로는계속사용한다.
-
-코어720개통과:합성SFNT Unicode/PostScript와독립TTC regular/bold face,잘린table·잘못된offset/collectioncount/홀수UTF16길이거부. actualWPF에서ArialMT/Arial-BoldMT/Arial Bold의family·굵기매핑/요청명유지,실제설치TTC face의weight/style유지및기존다국어·문단·fallback·cachedPNG회귀도통과했다. Release0경고/오류.
-
-현재alias인덱스는첫비family요청때생성/캐시된다. 글꼴설치변경refresh·background/cancellation·large catalog·variation named instances/FVAR추가이름·모든locale/font collection의동등성은후속이다. 비영tracking/컬러emoji/Type·inline UI/재렌더명령/배포도계속잔여다. 이번변경은개발Release에만반영됐다.
-
-필드기준은Microsoft [OpenType name table](https://learn.microsoft.com/en-us/typography/opentype/otspec182/name), collection offset기준은 [OpenType font file](https://learn.microsoft.com/en-us/typography/opentype/otspec181/otff) 문서다.
+현재 최신 배포본 publish-rail-verified에는 이 DirectWrite 변경이 없다. 실제 Mac 왕복과 별도 Windows PC 실기 검증은 사용자 지시로 보류하며 통과로 표시하지 않는다.
