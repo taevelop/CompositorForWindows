@@ -76,3 +76,13 @@ Healing의 상대 frame 원점이 256px 타일에 정렬되면 BrushStroke.Refra
 개발 실행: 입력+render1078ms/단일입력최대30.6ms/끝worker541ms/Dispatcher최대165ms/EscUI복원2.99ms/worker정리3.29ms. self-contained 배포 실행:1086ms/27.1ms/564ms/156ms/2.94ms/3.39ms. 누적할당651MiB·peak809MiB는검증용fullRGBA2벌/취소probe를포함하므로이전corestroke할당과직접비교하지않는다. 각1회이며물리입력/일반자연품질/Mac동등성 검증이아니다. rendering포함UIgap과native중간취소는개선대상으로남긴다.
 
 최신실행패키지는 `artifacts/publish-healing-ui/Compositor.Windows.exe`다. 기존 실행패키지폴더는유지한다. 빌드0경고/오류, portable45초gate1회통과:공백경로copy/제한PATH·무효sharedruntime경로/패키지내CLR·Skia·C모듈관측 및전체WPF회귀. 같은개발PC이며별도cleanWindows실기를대체하지않고일반30초gate안정화증거로사용하지않는다. 제품연산변경없음,이전680코어검증유지.
+
+## 네이티브 중간 취소
+
+Windows의HealPixels.c에선택적동기취소callback을추가했다. 기존spot_heal/export는유지하고새spot_heal_cancellable/export를추가했다. bounds·역할/링준비·patch search·재귀membrane solver·출력의row경계와linear준비4096pixel경계에서확인한다. solver취소시각재귀level의coarse버퍼를해제하며최상위4개작업버퍼도항상해제한다. 취소status는-2,메모리실패는기존-1이다. 출력도중취소되면privateRGBA가부분수정될수있으므로관리코드는token확인후OCE로폐기한다. malloc/calloc자체는중간취소되지않는다.
+
+SpotHealing.Apply는CanBeCanceled token에만callback경로를사용하며취소할수없는호출은기존export를유지한다. callback은token상태를정수로반환하고native경계를넘어예외를던지지않는다. 기존macOS원본파일은변경하지않았다. Windowskernel은이제취소적응본이므로과거원본과파일해시동일주장은현재native파일에는적용되지않는다. ROI/검색·solver연산순서/노이즈수식은유지했다.
+
+코어692개통과:3모드관리token/no-token픽셀동일,legacy/callback픽셀동일,5개native단계내5번째poll취소(출력은10번째poll로실제부분쓰기후취소),원본불변/부분결과폐기·원본재시도동일. 기존3모드독립noise수식/문서·mask·선택·Undo검사포함. 확장probe의최종SHA256도이전과동일(A9D244361781046B83740DF2B1060D8D5ED4AA42445DA014885BE2A6DBA66991). Release0경고/오류·실제Healing WPF저장/Undo/Esc/late worker회귀통과. 첫MSVC link의WandPixels.obj열기실패는재검사성공했으나원인미확정이다.
+
+이번4K/800px actualWPF한회는입력+render2013ms/단일최대81ms/끝626ms/Dispatcher최대537ms/EscUI3.15ms/worker정리3.53ms였다. 이전측정보다지연이커졌으며원인분리전이므로성능개선/완료를주장하지않는다. native내부취소는deterministic코어poll검사로입증했지만이WPF취소probe의정확한nativephase와내부취소응답시간은여전히미측정이다. publish-healing-ui는이전f210268단계패키지이고이번native변경의배포갱신은후속이다. 렌더링gap·대형ROI·자연품질/실기잔여를유지한다.

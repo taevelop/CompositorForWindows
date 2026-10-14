@@ -5,6 +5,12 @@
 
 enum { OUTSIDE = 0, RING = 1, HOLE = 2 };
 
+typedef struct { heal_cancel_fn poll; void *context; int cancelled; } HealCancellation;
+static int heal_cancel(HealCancellation *state, int phase) {
+    if (state->cancelled || (state->poll && state->poll(phase, state->context))) state->cancelled = 1;
+    return state->cancelled;
+}
+
 void heal_coverage_bounds(const uint8_t *gray, size_t width, size_t height, size_t stride, long bounds[4]) {
     long x0 = (long)width, y0 = (long)height, x1 = 0, y1 = 0;
     for (size_t y = 0; y < height; ++y) {
@@ -32,12 +38,13 @@ static inline double heal_unit(uint32_t key) { return (double)(heal_hash(key) >>
 // Mean squared difference between the ring around the spot and the ring around the patch
 // offset by (dx, dy). Infinite when the patch would overlap the spot or leave the image.
 static double heal_score(const uint8_t *rgba, size_t stride, const uint8_t *role, long wx0, long wy0,
-                         long ww, long wh, long dx, long dy, long W, long H) {
+                         long ww, long wh, long dx, long dy, long W, long H, HealCancellation *cancel) {
     if (labs(dx) < ww && labs(dy) < wh) return INFINITY;
     if (wx0 + dx < 0 || wy0 + dy < 0 || wx0 + ww + dx > W || wy0 + wh + dy > H) return INFINITY;
     double sum = 0;
     long n = 0;
     for (long y = 0; y < wh; ++y) {
+        if (heal_cancel(cancel, 2)) return INFINITY;
         for (long x = 0; x < ww; ++x) {
             if (role[y * ww + x] != RING) continue;
             const uint8_t *t = rgba + (size_t)(wy0 + y) * stride + (size_t)(wx0 + x) * 4;
@@ -51,7 +58,8 @@ static double heal_score(const uint8_t *rgba, size_t stride, const uint8_t *role
 
 // Solves for smooth values over HOLE pixels, fixed to the RING values around them. A coarser
 // copy is solved first and used as the starting point, so large spots settle in few passes.
-static void heal_solve(float *value, const uint8_t *role, long w, long h, int depth) {
+static void heal_solve(float *value, const uint8_t *role, long w, long h, int depth, HealCancellation *cancel) {
+    if (heal_cancel(cancel, 3)) return;
     int iterations = 300;
     if (w > 32 && h > 32 && depth < 16) {
         long cw = (w + 1) / 2, ch = (h + 1) / 2;
@@ -59,6 +67,7 @@ static void heal_solve(float *value, const uint8_t *role, long w, long h, int de
         uint8_t *coarseRole = calloc((size_t)(cw * ch), 1);
         if (coarse && coarseRole) {
             for (long y = 0; y < ch; ++y) {
+                if (heal_cancel(cancel, 3)) { free(coarse);free(coarseRole);return; }
                 for (long x = 0; x < cw; ++x) {
                     int known = 0, hole = 0;
                     float knownSum[4] = {0, 0, 0, 0}, holeSum[4] = {0, 0, 0, 0};
@@ -76,8 +85,10 @@ static void heal_solve(float *value, const uint8_t *role, long w, long h, int de
                     else if (hole) { coarseRole[q] = HOLE; for (int c = 0; c < 4; ++c) coarse[q * 4 + c] = holeSum[c] / hole; }
                 }
             }
-            heal_solve(coarse, coarseRole, cw, ch, depth + 1);
+            heal_solve(coarse, coarseRole, cw, ch, depth + 1, cancel);
+            if (cancel->cancelled) { free(coarse);free(coarseRole);return; }
             for (long y = 0; y < h; ++y) {
+                if (heal_cancel(cancel, 3)) { free(coarse);free(coarseRole);return; }
                 for (long x = 0; x < w; ++x) {
                     long p = y * w + x, q = (y / 2) * cw + x / 2;
                     if (role[p] == HOLE && coarseRole[q] == HOLE) memcpy(value + p * 4, coarse + q * 4, 4 * sizeof(float));
@@ -91,6 +102,7 @@ static void heal_solve(float *value, const uint8_t *role, long w, long h, int de
     const float omega = 1.8f;
     for (int it = 0; it < iterations; ++it) {
         for (long y = 0; y < h; ++y) {
+            if (heal_cancel(cancel, 3)) return;
             for (long x = 0; x < w; ++x) {
                 long p = y * w + x;
                 if (role[p] != HOLE) continue;
@@ -114,9 +126,24 @@ static void heal_solve(float *value, const uint8_t *role, long w, long h, int de
 
 int spot_heal(uint8_t *rgba, const uint8_t *coverage, size_t width, size_t height, size_t stride,
               float opacity, int mode, uint32_t seed) {
+    return spot_heal_cancellable(rgba, coverage, width, height, stride, opacity, mode, seed, NULL, NULL);
+}
+
+int spot_heal_cancellable(uint8_t *rgba, const uint8_t *coverage, size_t width, size_t height, size_t stride,
+                         float opacity, int mode, uint32_t seed, heal_cancel_fn poll, void *context) {
+    HealCancellation cancellation = {poll, context, 0};
+    HealCancellation *cancel = &cancellation;
     long W = (long)width, H = (long)height;
-    long bounds[4];
-    heal_coverage_bounds(coverage, width, height, width, bounds);
+    long bounds[4] = {W, H, 0, 0};
+    for (long y = 0; y < H; ++y) {
+        if (heal_cancel(cancel, 0)) return -2;
+        for (long x = 0; x < W; ++x) if (coverage[(size_t)y * width + x]) {
+            if (x < bounds[0]) bounds[0] = x;
+            if (y < bounds[1]) bounds[1] = y;
+            if (x + 1 > bounds[2]) bounds[2] = x + 1;
+            if (y + 1 > bounds[3]) bounds[3] = y + 1;
+        }
+    }
     if (bounds[2] <= bounds[0]) return 0;
     long bw = bounds[2] - bounds[0], bh = bounds[3] - bounds[1], size = bw > bh ? bw : bh;
     long ring = size / 8;
@@ -132,12 +159,15 @@ int spot_heal(uint8_t *rgba, const uint8_t *coverage, size_t width, size_t heigh
     float *value = malloc((size_t)wn * 4 * sizeof(float));
     int status = -1;
     if (!role || !near || !prefix || !value) goto done;
-    for (long y = 0; y < wh; ++y)
+    for (long y = 0; y < wh; ++y) {
+        if (heal_cancel(cancel, 1)) goto done;
         for (long x = 0; x < ww; ++x)
             role[y * ww + x] = coverage[(size_t)(wy0 + y) * width + (size_t)(wx0 + x)] ? HOLE : OUTSIDE;
+    }
     // The ring: pixels within `ring` of the spot (a square dilation, row pass then column pass).
     for (long y = 0; y < wh; ++y) {
         prefix[0] = 0;
+        if (heal_cancel(cancel, 1)) goto done;
         for (long x = 0; x < ww; ++x) prefix[x + 1] = prefix[x] + (role[y * ww + x] == HOLE);
         for (long x = 0; x < ww; ++x) {
             long lo = x - ring < 0 ? 0 : x - ring, hi = x + ring + 1 > ww ? ww : x + ring + 1;
@@ -146,6 +176,7 @@ int spot_heal(uint8_t *rgba, const uint8_t *coverage, size_t width, size_t heigh
     }
     for (long x = 0; x < ww; ++x) {
         prefix[0] = 0;
+        if (heal_cancel(cancel, 1)) goto done;
         for (long y = 0; y < wh; ++y) prefix[y + 1] = prefix[y] + near[y * ww + x];
         for (long y = 0; y < wh; ++y) {
             long lo = y - ring < 0 ? 0 : y - ring, hi = y + ring + 1 > wh ? wh : y + ring + 1;
@@ -153,7 +184,10 @@ int spot_heal(uint8_t *rgba, const uint8_t *coverage, size_t width, size_t heigh
         }
     }
     long ringCount = 0;
-    for (long p = 0; p < wn; ++p) ringCount += role[p] == RING;
+    for (long p = 0; p < wn; ++p) {
+        if (p % 4096 == 0 && heal_cancel(cancel, 1)) goto done;
+        ringCount += role[p] == RING;
+    }
     if (!ringCount) { status = 0; goto done; }
 
     // Source patch for Content-Aware and Proximity Match.
@@ -167,7 +201,8 @@ int spot_heal(uint8_t *rgba, const uint8_t *coverage, size_t width, size_t heigh
             for (int a = 0; a < 24; ++a) {
                 double angle = a * M_PI / 12.0;
                 long dx = lround(cos(angle) * factors[f] * ww), dy = lround(sin(angle) * factors[f] * wh);
-                double score = heal_score(rgba, stride, role, wx0, wy0, ww, wh, dx, dy, W, H);
+                double score = heal_score(rgba, stride, role, wx0, wy0, ww, wh, dx, dy, W, H, cancel);
+                if (cancel->cancelled) goto done;
                 if (!isfinite(score)) continue;
                 score *= mode == 2 ? 1.0 + 0.6 * f : 1.0 + 0.1 * f; // nearer patches win ties
                 if (score < best) { best = score; ox = dx; oy = dy; }
@@ -176,10 +211,12 @@ int spot_heal(uint8_t *rgba, const uint8_t *coverage, size_t width, size_t heigh
         if (isfinite(best)) {
             // Fine-tune the alignment so repeating texture lines up.
             long cx = ox, cy = oy;
-            double refined = heal_score(rgba, stride, role, wx0, wy0, ww, wh, cx, cy, W, H);
+            double refined = heal_score(rgba, stride, role, wx0, wy0, ww, wh, cx, cy, W, H, cancel);
+            if (cancel->cancelled) goto done;
             for (long j = -3; j <= 3; ++j) {
                 for (long i = -3; i <= 3; ++i) {
-                    double score = heal_score(rgba, stride, role, wx0, wy0, ww, wh, cx + i, cy + j, W, H);
+                    double score = heal_score(rgba, stride, role, wx0, wy0, ww, wh, cx + i, cy + j, W, H, cancel);
+                    if (cancel->cancelled) goto done;
                     if (score < refined) { refined = score; ox = cx + i; oy = cy + j; }
                 }
             }
@@ -191,6 +228,7 @@ int spot_heal(uint8_t *rgba, const uint8_t *coverage, size_t width, size_t heigh
     // for a smooth fill), spread across the spot.
     double mean[4] = {0, 0, 0, 0}, detail[3] = {0, 0, 0};
     for (long y = 0; y < wh; ++y) {
+        if (heal_cancel(cancel, 1)) goto done;
         for (long x = 0; x < ww; ++x) {
             long p = y * ww + x;
             if (role[p] != RING) { memset(value + p * 4, 0, 4 * sizeof(float)); continue; }
@@ -217,12 +255,16 @@ int spot_heal(uint8_t *rgba, const uint8_t *coverage, size_t width, size_t heigh
         }
     }
     for (int c = 0; c < 4; ++c) mean[c] /= ringCount;
-    for (long p = 0; p < wn; ++p)
+    for (long p = 0; p < wn; ++p) {
+        if (p % 4096 == 0 && heal_cancel(cancel, 1)) goto done;
         if (role[p] == HOLE) for (int c = 0; c < 4; ++c) value[p * 4 + c] = (float)mean[c];
-    heal_solve(value, role, ww, wh, 0);
+    }
+    heal_solve(value, role, ww, wh, 0, cancel);
+    if (cancel->cancelled) goto done;
     for (int c = 0; c < 3; ++c) detail[c] = sqrt(detail[c] / ringCount) * 0.9;
 
     for (long y = 0; y < wh; ++y) {
+        if (heal_cancel(cancel, 4)) goto done;
         for (long x = 0; x < ww; ++x) {
             long p = y * ww + x;
             if (role[p] != HOLE) continue;
@@ -255,5 +297,5 @@ done:
     free(near);
     free(prefix);
     free(value);
-    return status;
+    return cancel->cancelled ? -2 : status;
 }

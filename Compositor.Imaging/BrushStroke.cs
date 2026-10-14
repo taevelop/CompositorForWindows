@@ -6,6 +6,10 @@ namespace Compositor.Imaging;
 public sealed record BrushSettings(double Diameter, double Hardness, double Opacity, byte Red, byte Green, byte Blue, bool Erase = false);
 public static class NativePixels
 {
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    internal delegate int HealingCancellation(int phase, IntPtr context);
+    [DllImport("Compositor.Native", EntryPoint="compositor_spot_heal_cancellable", CallingConvention=CallingConvention.Cdecl)]
+    internal static extern int SpotHealCancellable([In,Out] byte[] pixels, byte[] coverage, int width, int height, float opacity, int mode, uint seed, HealingCancellation cancel, IntPtr context);
     [DllImport("Compositor.Native", EntryPoint="compositor_spot_heal", CallingConvention=CallingConvention.Cdecl)]
     internal static extern int SpotHeal([In,Out] byte[] pixels, byte[] coverage, int width, int height, float opacity, int mode, uint seed);
     [DllImport("Compositor.Native", EntryPoint="compositor_clone_coverage", CallingConvention=CallingConvention.Cdecl)]

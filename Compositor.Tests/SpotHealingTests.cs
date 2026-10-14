@@ -5,6 +5,58 @@ using Xunit;
 namespace Compositor.Tests;
 public class SpotHealingTests
 {
+    [Theory]
+    [InlineData(HealingMode.ContentAware)]
+    [InlineData(HealingMode.CreateTexture)]
+    [InlineData(HealingMode.ProximityMatch)]
+    public void UncancelledManagedTokenPreservesAllModePixels(HealingMode mode)
+    {
+        var bytes = Enumerable.Repeat(new byte[] { 80, 120, 160, 255 }, 32 * 32).SelectMany(p => p).ToArray();
+        int p = 16 * 32 + 16;bytes[p * 4] = bytes[p * 4 + 1] = bytes[p * 4 + 2] = 0;
+        var source = Raster.FromRgba(32, 32, bytes);var coverage = new byte[32 * 32];coverage[p] = 255;
+        using var cancellation = new CancellationTokenSource();
+        Assert.Equal(SpotHealing.Apply(source, coverage, .7, mode, 123).ToRgba(),
+            SpotHealing.Apply(source, coverage, .7, mode, 123, cancellation.Token).ToRgba());
+        Assert.Equal(bytes, source.ToRgba());
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(0, 1)]
+    [InlineData(0, 2)]
+    [InlineData(0, 3)]
+    [InlineData(0, 4)]
+    [InlineData(1, 3)]
+    [InlineData(1, 4)]
+    [InlineData(2, 2)]
+    [InlineData(2, 3)]
+    public void NativeCancellationStopsInsideEachPhaseAndUncancelledOutputMatchesLegacy(int mode, int phase)
+    {
+        const int side = 128;
+        var original = Enumerable.Repeat(new byte[] { 80, 120, 160, 255 }, side * side).SelectMany(p => p).ToArray();
+        var coverage = new byte[side * side];
+        for (int y = 48; y < 80; y++) for (int x = 48; x < 80; x++)
+        { int p = y * side + x;coverage[p] = 255;original[p * 4] = original[p * 4 + 1] = original[p * 4 + 2] = 0; }
+        var legacy = (byte[])original.Clone();Assert.Equal(0, NativePixels.SpotHeal(legacy, coverage, side, side, .7f, mode, 123));
+        var cancellable = (byte[])original.Clone();int polls = 0;
+        Assert.Equal(0, NativePixels.SpotHealCancellable(cancellable, coverage, side, side, .7f, mode, 123, (_, _) => { polls++;return 0; }, IntPtr.Zero));
+        Assert.True(polls > 0);Assert.Equal(legacy, cancellable);
+        using var cancellation = new CancellationTokenSource();int phasePolls = 0, cancelAt = phase == 4 ? 10 : 5;
+        var interrupted = (byte[])original.Clone();
+        int status = NativePixels.SpotHealCancellable(interrupted, coverage, side, side, .7f, mode, 123, (current, _) =>
+        {
+            if (current == phase && ++phasePolls == cancelAt) cancellation.Cancel();
+            return cancellation.IsCancellationRequested ? 1 : 0;
+        }, IntPtr.Zero);
+        Assert.Equal(-2, status);Assert.Equal(cancelAt, phasePolls);
+        if (phase != 4) Assert.Equal(original, interrupted);
+        else Assert.False(original.SequenceEqual(interrupted));
+        // Output cancellation can leave a private partial result: discard it and retry from source.
+        var retry = (byte[])original.Clone();
+        Assert.Equal(0, NativePixels.SpotHealCancellable(retry, coverage, side, side, .7f, mode, 123, (_, _) => 0, IntPtr.Zero));
+        Assert.Equal(legacy, retry);
+    }
+
     [Fact]
     public void DocumentHealingClipsFinalOutputPreservesMetadataAndSupportsUndoAndStorage()
     {

@@ -14,6 +14,9 @@
 __declspec(dllexport) int32_t compositor_spot_heal(uint8_t *pixels,const uint8_t *coverage,int32_t width,int32_t height,float opacity,int32_t mode,uint32_t seed) {
     return spot_heal(pixels,coverage,(size_t)width,(size_t)height,(size_t)width*4,opacity,mode,seed);
 }
+__declspec(dllexport) int32_t compositor_spot_heal_cancellable(uint8_t *pixels,const uint8_t *coverage,int32_t width,int32_t height,float opacity,int32_t mode,uint32_t seed,heal_cancel_fn cancel,void *context) {
+    return spot_heal_cancellable(pixels,coverage,(size_t)width,(size_t)height,(size_t)width*4,opacity,mode,seed,cancel,context);
+}
 
 // Clone only needs maximum coverage and its changed pixels. Keep the ordinary
 // paint/erase kernel's output-change contract unchanged.

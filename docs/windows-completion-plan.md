@@ -357,3 +357,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - Healing 정렬확장 coverage/wash 작업 재사용·비정렬 전체재생 fallback·정확한 kernel frame 유지. 코어680/부분tile padding·feather새셀·tile경계·전체재생픽셀/스냅샷 불변·실제 Healing WPF 회귀 통과. 동일확장 probe 할당755.5→170.1MiB/입력257→88.7ms/최종SHA동일; 최대지연 개선은 미입증. dense대형/UI/native취소·자연품질·배포/실기 후속. 전체70/30은 재산정 전 관리추정 유지.
 
 - Healing dense4K/800px/48point 실제WPF benchmark·단일Undo/원본복원·Compute진입후Esc 즉시복원/late폐기 검사. 개발/배포끝worker541/564ms, 최대Dispatchergap165/156ms로UI지연잔여. Esc복원약3ms이나native내부취소미입증. publish-healing-ui갱신/portable45초gate1회통과(동일개발PC·별도PC보류). 제품연산변경없음·680코어검증유지. 렌더링gap/native취소/자연품질·나머지원본도구/텍스트/PSD/RAW/배포잔여, 전체70/30관리추정재산정전유지.
+
+- Healing Windowsnative5단계row/linear poll중간취소·재귀/최상위버퍼해제·private부분output폐기·기존export유지/새export추가. 코어692·3모드token/no-token/legacy픽셀동일·각nativephase실제취소·부분쓰기재시도·기준SHA동일·실제WPF회귀통과. macOS원본불변/native취소적응본으로파일해시동일주장갱신. 이번4KUIgap537ms/끝626ms로성능원인분리잔여, 실제native취소시간/배포갱신후속. 전체70/30관리추정재산정전유지.

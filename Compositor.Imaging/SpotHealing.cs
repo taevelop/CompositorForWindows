@@ -49,7 +49,10 @@ public static class SpotHealing
             for (int y = y0; y < y1; y++) tile.Bytes.Slice(((y - key.Y * 256) * 256 + x0 - key.X * 256) * 4, (x1 - x0) * 4)
                 .CopyTo(pixels.AsSpan(((y - top) * width + x0 - left) * 4, (x1 - x0) * 4));
         }
-        cancellation.ThrowIfCancellationRequested();int status = NativePixels.SpotHeal(pixels, mask, width, height, (float)opacity, (int)mode, seed);
+        cancellation.ThrowIfCancellationRequested();
+        int status = cancellation.CanBeCanceled
+            ? NativePixels.SpotHealCancellable(pixels, mask, width, height, (float)opacity, (int)mode, seed, (_, _) => cancellation.IsCancellationRequested ? 1 : 0, IntPtr.Zero)
+            : NativePixels.SpotHeal(pixels, mask, width, height, (float)opacity, (int)mode, seed);
         cancellation.ThrowIfCancellationRequested();if (status != 0) throw new OutOfMemoryException("Spot healing could not allocate its working buffers.");
         var tiles = source.Tiles.ToBuilder();bool changed = false;
         for (int ty = top / 256; ty <= (bottom - 1) / 256; ty++) for (int tx = left / 256; tx <= (right - 1) / 256; tx++)

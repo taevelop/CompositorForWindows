@@ -16,4 +16,10 @@ void heal_coverage_bounds(const uint8_t *gray, size_t width, size_t height, size
 // by coverage × opacity. Returns 0, or -1 when memory runs out.
 int spot_heal(uint8_t *rgba, const uint8_t *coverage, size_t width, size_t height, size_t stride,
               float opacity, int mode, uint32_t seed);
+// Optional synchronous cancellation polling. Phases: bounds=0, setup=1,
+// patch search=2, membrane solver=3, output=4. Returns -2 when cancelled.
+// Cancelled output may be partial; callers must discard their private buffer.
+typedef int (*heal_cancel_fn)(int phase, void *context);
+int spot_heal_cancellable(uint8_t *rgba, const uint8_t *coverage, size_t width, size_t height, size_t stride,
+                         float opacity, int mode, uint32_t seed, heal_cancel_fn cancel, void *context);
 #endif
