@@ -20,3 +20,9 @@ SpotHealing.Apply는 premultiplied RGBA Raster와 동일격자의 gray coverage�
 - 저장/출력·패널/물리입력·자연texture 품질·대형ROI 성능/메모리·portable.
 
 현재는 연산 기반이며 사용자 Spot Healing 도구가 완성된 상태가 아니다. 실제 Mac 왕복 및 별도Windows PC 검증은 보류한다. 원본soft tip 밀도와 Windows max swept coverage 동등성도 품질잔여다.
+
+## 문서 명령 연결
+
+SpotHealing.Compute는image layer만허용하고원본pixels에서커널결과를만든뒤 document selection을layer.Transform좌표로최종blend한다. kernel coverage를selection으로미리축소하지않아원본patch검색/edge tone규칙을유지한다. mask/effects/opacity/blend/transform은with Pixels로보존한다. same-result는원본문서참조를반환하고doc검증·256MiB Undo예산·취소검사후결과를반환한다.
+
+코어673개/전체Release0경고오류통과. 지정pixel선택clip/선택밖no-op·원본pixels/metadata공유·단일UndoRedo/문서참조복원·.comp재열기pixel일치를검사했다. 아직stroke coverage수집/변형복합·raster확장·J UI/wash·끝연산worker/Esc·WPF/출력·대형품질은후속이다. source 및 coverage는현재layer raster격자이며사용자도구완료로판정하지않는다.

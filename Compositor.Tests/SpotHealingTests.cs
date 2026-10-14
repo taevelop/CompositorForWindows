@@ -5,6 +5,30 @@ using Xunit;
 namespace Compositor.Tests;
 public class SpotHealingTests
 {
+    [Fact]
+    public void DocumentHealingClipsFinalOutputPreservesMetadataAndSupportsUndoAndStorage()
+    {
+        var doc = Document.Create(32, 32);var bytes = Enumerable.Repeat(new byte[] { 80, 120, 160, 255 }, 1024).SelectMany(p => p).ToArray();
+        int index = 16 * 32 + 16;bytes[index * 4] = bytes[index * 4 + 1] = bytes[index * 4 + 2] = 0;
+        var layer = doc.Layers[0] with { Pixels = Raster.FromRgba(32, 32, bytes), Mask = LayerMask.Solid(32, 32), Opacity = .5, Effects = new(ColorOverlay: new(.1, .2, .3, .4)) };
+        doc = doc.Replace(layer) with { Selection = new("M16 16L17 16L17 17L16 17Z") { Antialiased = false } };
+        var mask = new byte[1024];mask[index] = 255;
+        var result = SpotHealing.Compute(doc, layer.Id, mask);var healed = result.Layers[0];
+        Assert.Equal(new byte[] { 80, 120, 160, 255 }, healed.Pixels.ToRgba().Skip(index * 4).Take(4).ToArray());
+        Assert.Same(layer.Mask, healed.Mask);Assert.Same(layer.Effects, healed.Effects);Assert.Equal(layer.Transform, healed.Transform);Assert.Equal(.5, healed.Opacity);Assert.Equal(doc.Selection, result.Selection);
+        var excluded = doc with { Selection = new("M0 0L1 0L1 1L0 1Z") { Antialiased = false } };
+        Assert.Same(excluded, SpotHealing.Compute(excluded, layer.Id, mask));
+        var session = new EditorSession(doc);session.Apply(_ => result);session.Undo();Assert.Same(doc, session.Document);session.Redo();Assert.Same(result, session.Document);Assert.Equal(bytes, layer.Pixels.ToRgba());
+        string root = Path.Combine(Path.GetTempPath(), "Compositor-heal-" + Guid.NewGuid().ToString("N"));
+        try { ProjectStore.Save(result, layer.Id, root + ".comp");Assert.Equal(healed.Pixels.ToRgba(), ProjectStore.Load(root + ".comp").Document.Layers[0].Pixels.ToRgba()); }
+        finally
+        {
+            string target = Path.GetFullPath(root + ".comp"), parent = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            if (!target.StartsWith(parent, StringComparison.OrdinalIgnoreCase) || !Path.GetFileName(target).StartsWith("Compositor-heal-")) throw new IOException("Unsafe healing cleanup.");
+            if (Directory.Exists(target)) Directory.Delete(target, true);
+        }
+    }
+
     [Theory]
     [InlineData(HealingMode.ContentAware)]
     [InlineData(HealingMode.CreateTexture)]

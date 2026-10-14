@@ -4,6 +4,26 @@ namespace Compositor.Imaging;
 public enum HealingMode { ContentAware, CreateTexture, ProximityMatch }
 public static class SpotHealing
 {
+    public static Document Compute(Document document, Guid layerId, ReadOnlySpan<byte> coverage, double opacity = 1, HealingMode mode = HealingMode.ContentAware, uint seed = 0, CancellationToken cancellation = default)
+    {
+        document.Validate();cancellation.ThrowIfCancellationRequested();
+        var layer = document.Layers.First(l => l.Id == layerId);
+        if (layer.IsGroup || layer.IsAdjustment) throw new InvalidOperationException("Spot Healing requires image pixels.");
+        var pixels = Apply(layer.Pixels, coverage, opacity, mode, seed, cancellation);
+        if (ReferenceEquals(pixels, layer.Pixels)) return document;
+        // Mac heals the full brush footprint, then clips the result by selection.
+        // Restricting the kernel's hole mask would change its patch search/edge tone.
+        if (document.Selection is { } selected)
+        {
+            var selection = SelectionCoverage.Create(selected, document.Width, document.Height);
+            pixels = SelectionPixels.Blend(layer.Pixels, pixels, layer.Transform, selection, cancellation);
+        }
+        if (ReferenceEquals(pixels, layer.Pixels)) return document;
+        var result = document.Replace(layer with { Pixels = pixels });result.Validate();
+        if (EditorSession.UndoBytesRequired(document, result) > EditorSession.MaxHistoryBytes)
+            throw new InvalidOperationException("Spot Healing exceeds the 256 MiB Undo limit.");
+        cancellation.ThrowIfCancellationRequested();return result;
+    }
     public static Raster Apply(Raster source, ReadOnlySpan<byte> coverage, double opacity = 1, HealingMode mode = HealingMode.ContentAware, uint seed = 0, CancellationToken cancellation = default)
     {
         if (coverage.Length != checked(source.Width * source.Height) || !double.IsFinite(opacity) || opacity is < 0 or > 1 || !Enum.IsDefined(mode))
