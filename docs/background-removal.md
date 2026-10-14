@@ -25,3 +25,7 @@ ONNX CPU 연결: Microsoft.ML.OnnxRuntime 1.30.0 고정 및 종속 잠금 파일
 Advanced 연산 기반: 원본 GuidedMatte.swift의 두 축 running-sum box 평균과 scalar guided filter를 C#으로 구현했다. clamp 경계, variance/covariance, epsilon 1e-4 및 0–1 clamp를 유지한다. 행/열/65,536픽셀 단위 취소를 추가한다. 반경 1/4/250의 독립 2차원 평균 계산, 상수 마스크 보존·가이드 경계·범위/취소 검사가 통과했다. 큰 이미지에서 여러 float 배열이 필요하므로 피크 메모리/1400px 표시 축소/원본 해상도 적용은 후속 검증이다. Raster→gray 색공간·정규화·정제 마스크 변환·contrast/shift edge·UI는 아직 연결하지 않았다. 자연 이미지의 피사체 누락을 해결했다고 주장하지 않는다.
 
 Release 경고/오류 0, 코어 628개 및 전체 WPF 회귀 통과.
+
+MatteRefinement 연결: Basic은 기존 마스크 참조를 반환한다. Advanced Refine 0–40/Contrast 0–100/Shift Edge -10–10 및 기본 12/25/0을 원본에 맞췄다. Skia Gray8 가이드/마스크 변환, guided epsilon 1e-4, 미리보기 최대 1400px 정제 후 원본 크기 확대, 전체 적용은 축소 없이 처리한다. Shift Edge는 abs(edge)/2 blur와 음수 .75/양수 .25 임계값·.001 폭을, Contrast는 slope=1/max(.02,1-strength*.98)를 사용한다. 불투명 회색/타일 padding을 보존한다. grayscale 색공간 및 cubic 확대는 Apple DeviceGray/high interpolation과 실제 비교가 아직 없다. 상수 대비 참조/Basic 공유·원본 불변·범위/취소와 Shift 방향 검사를 추가했다. 자연 이미지 품질·피크 메모리·UI 및 추론 캐시 연결은 후속이다.
+
+Release 경고/오류 0, 코어 631개 및 전체 WPF 회귀 통과. 사용자 배경 제거 패널 자체는 아직 미연결이다.
