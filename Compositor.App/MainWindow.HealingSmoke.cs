@@ -61,8 +61,16 @@ public partial class MainWindow
             projectPath = Path.Combine(root, "Cancelled.comp");var cancelledSave = Save(false);
             var cancelKey = new KeyEventArgs(Keyboard.PrimaryDevice, System.Windows.PresentationSource.FromVisual(this), Environment.TickCount, Key.Escape) { RoutedEvent = Keyboard.PreviewKeyDownEvent };WindowKeyDown(this, cancelKey);release.TrySetResult(true);
             Check(cancelKey.Handled && !await cancelledSave && ReferenceEquals(session.Document, doc) && !Directory.Exists(projectPath) && !busy && Editor.IsEnabled, "Cancelled save wrote a healing draft or left UI locked.");
+            Canvas.HealingOverride = null;var edgeDoc = Document.Create(64, 64);
+            var edgeBytes = Enumerable.Repeat(new byte[] { 80, 120, 160, 255 }, 256).SelectMany(p => p).ToArray();int edgeIndex = (7 * 16 + 15) * 4;
+            edgeBytes[edgeIndex] = edgeBytes[edgeIndex + 1] = edgeBytes[edgeIndex + 2] = 0;
+            edgeDoc = edgeDoc.Replace(edgeDoc.Layers[0] with { Pixels = Raster.FromRgba(16, 16, edgeBytes), Transform = new(20, 20, 16, 16), Mask = LayerMask.Solid(16, 16) });session.Load(edgeDoc);BrushSize.Text = "3";Canvas.Fit();
+            Canvas.BeginPointer(new(35.5, 27.5), ModifierKeys.None);Check(session.ActiveLayer!.Pixels.Width == 17, "Healing draft did not expand past layer boundary.");Canvas.EndPointer(true);
+            Check(await Canvas.HealingCompletion && session.ActiveLayer!.Pixels.Width == 17 && session.ActiveLayer.Mask!.Pixels.Width == 17, "Healing completion lost expanded pixels/mask.");
+            var edgeResult = session.Document;session.Undo();Check(ReferenceEquals(session.Document, edgeDoc), "Expanded healing Undo lost original frame.");session.Redo();
+            projectPath = Path.Combine(root, "Expanded.comp");Check(await Save(false) && CompositePixels(edgeResult).SequenceEqual(CompositePixels(ProjectStore.Load(projectPath).Document)), "Expanded healing UI save changed pixels.");
             HealTexture.IsChecked = true;var state = CaptureTabTools();HealContent.IsChecked = true;RestoreTabTools(state);Check(Canvas.ReadHealing() == HealingMode.CreateTexture, "Healing mode snapshot did not restore.");
-            File.WriteAllText(report, JsonSerializer.Serialize(new { checks = new[] { "three modes", "dark wash draft", "source healing instead of wash", "single Undo/Redo", "mask preservation", "gesture cancel", "Esc and late worker", "newer transaction preserved", "mode snapshot restore", "pending save waits for heal", "UI save/reopen and PNG match", "Esc during save creates no project" }, note = "Injected WPF control/pointer path. Raster expansion, large/physical input and full parity remain separate." }));
+            File.WriteAllText(report, JsonSerializer.Serialize(new { checks = new[] { "three modes", "dark wash draft", "source healing instead of wash", "single Undo/Redo", "mask preservation", "gesture cancel", "Esc and late worker", "newer transaction preserved", "mode snapshot restore", "pending save waits for heal", "UI save/reopen and PNG match", "Esc during save creates no project", "edge expansion/mask/Undo/UI save" }, note = "Injected WPF control/pointer path. Raster expansion, large/physical input and full parity remain separate." }));
         }
         finally
         {

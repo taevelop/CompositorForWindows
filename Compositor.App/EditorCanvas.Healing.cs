@@ -5,7 +5,7 @@ using SkiaSharp;
 namespace Compositor.App;
 public sealed partial class EditorCanvas
 {
-    private sealed record HealingDrag(Document Original, Layer Layer, BrushSettings Settings, HealingMode Mode, uint Seed, BrushStroke Coverage, BrushStroke Wash);
+    private sealed record HealingDrag(Layer Layer, HealingStroke Stroke);
     private HealingDrag? healingDrag;
     private Preparation? healingPreparation;
     private readonly SemaphoreSlim healingWorkerGate = new(1, 1);
@@ -14,16 +14,14 @@ public sealed partial class EditorCanvas
     internal bool IsHealingPreparing => healingPreparation is not null;
     internal Func<Document, Guid, byte[], double, HealingMode, uint, CancellationToken, Document>? HealingOverride { get; set; }
 
-    private void BeginHealing(Layer layer, BrushSettings settings, SelectionCoverage? selection)
+    private void BeginHealing(Layer layer, BrushSettings settings)
     {
-        var coverage = new BrushStroke(layer with { Pixels = new Raster(layer.Pixels.Width, layer.Pixels.Height) }, settings with { Opacity = 1, Red = 255, Green = 255, Blue = 255 }, Session.Document.Width, Session.Document.Height);
-        var wash = new BrushStroke(layer, settings with { Opacity = .45, Red = 31, Green = 31, Blue = 31 }, Session.Document.Width, Session.Document.Height, selection);
-        healingDrag = new(Session.Document, layer, settings, ReadHealing(), (uint)Random.Shared.NextInt64(0, 1L << 32), coverage, wash);
+        uint seed = (uint)Random.Shared.NextInt64(0, 1L << 32);var mode = ReadHealing();
+        healingDrag = new(layer, new HealingStroke(Session.Document, layer.Id, settings, mode, seed));
     }
     private void MoveHealing(PointD point)
     {
-        var drag = healingDrag!;drag.Coverage.Append(point);drag.Wash.Append(point);
-        Session.Preview(drag.Original.Replace(drag.Layer with { Pixels = drag.Wash.Pixels }));
+        var drag = healingDrag!;drag.Stroke.Append(point);Session.Preview(drag.Stroke.Preview);
     }
     private void EndHealing(bool commit)
     {
@@ -49,17 +47,7 @@ public sealed partial class EditorCanvas
                 await healingWorkerGate.WaitAsync(token);
                 try
                 {
-                    var raster = drag.Coverage.Pixels;var coverage = new byte[checked(raster.Width * raster.Height)];
-                    foreach (var (key, tile) in raster.Tiles)
-                    {
-                        token.ThrowIfCancellationRequested();
-                        for (int y = 0; y < Math.Min(256, raster.Height - key.Y * 256); y++)
-                        for (int x = 0; x < Math.Min(256, raster.Width - key.X * 256); x++)
-                            coverage[(key.Y * 256 + y) * raster.Width + key.X * 256 + x] = tile.Bytes[(y * 256 + x) * 4 + 3];
-                    }
-                    token.ThrowIfCancellationRequested();
-                    return compute is null ? SpotHealing.Compute(drag.Original, drag.Layer.Id, coverage, drag.Settings.Opacity, drag.Mode, drag.Seed, token)
-                        : compute(drag.Original, drag.Layer.Id, coverage, drag.Settings.Opacity, drag.Mode, drag.Seed, token);
+                    return drag.Stroke.Complete(token, compute);
                 }
                 finally { healingWorkerGate.Release(); }
             });

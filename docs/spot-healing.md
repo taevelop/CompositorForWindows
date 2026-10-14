@@ -44,3 +44,11 @@ WPF단독3모드/washdraft·원본에서보정(wash를결과로쓰지않음)·Un
 지연주입WPF에서Save요청시파일없음/Task미완료/UI잠금→release후단일Undo·saved상태·.comp최종픽셀을검사했다. 실제UI닫기/재열기와PNG전체픽셀이canvas와같음을확인했다. 대기중Esc는원본/활성UI를복원하고취소destination에프로젝트를만들지않았다. fixture는별도문서tab에격리하고원래tab/path를유지한다. 최초fixturetimeout은재열기후기본Brush로초기화된상태에서Healingworker진입을기다린테스트오류였고J/brush설정을다시지정해수정했다.
 
 최신Release0경고오류·Healing단독WPF통과. 이번단계core연산은변경없으며이전673개검증을유지한다. 기존raster범위/경계확장·복합선택/회전·대형/자연이미지품질·실기/배포갱신은계속후속이다. fullWPF의autoscroll간헐실패/30초timeout품질항목을이검사로대체하지않는다.
+
+## 확장 격자·복합 선택 연결
+
+HealingStroke가시작document/source/settings/mode/seed를고정하고coverage·wash·원본base를동일격자에유지한다. canvasclip된swept영역을source.Transform의pixel좌표로변환해필요frame을확장하고RasterReframe으로원본pixel위치/회전flip·linkedmask white padding·independent mask pin을유지한다. frame변경시coverage/wash는시작base에서points를재생한다. 끝worker는wash가아닌확장된base에서커널/최종selection을계산하고원본rect+새alpha영역으로crop한다. 내부원본tile은final alpha스캔에서생략한다. opacity/선택밖no-op은시작document참조를반환하며image/mask·256MiB Undo예산을검사한다.
+
+코어677개통과: source16→17/new alpha·linked/independent mask·원본/UndoRedo·selection제외/no-op·취소, rotation37/FlipXY/feather1의rawhealed+최종selection참조와전pixel1LSB이내합성검사. 실제J WPF에서도16→17px draft/complete mask·Undo/Redo·UI저장canvas출력일치검사통과. 최신Release0경고오류·기존3모드/Esc/lateworker/pendingSave/재열기PNG회귀통과. 입력중selectioncoverage를중복생성하지않게정리했다.
+
+현재frame변경은points재생이므로긴확장stroke/큰tip의preview비용이남는다. nativekernel 중간취소는없다. dense/대형ROI·자연texture/색공간/softcoverage원본동등성·budget극한·실기·배포갱신 및fullWPF간헐항목은후속이며전체Healing품질완료로판정하지않는다.

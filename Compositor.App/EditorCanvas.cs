@@ -264,8 +264,8 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         if (Tool is EditorTool.Brush or EditorTool.Eraser or EditorTool.CloneStamp or EditorTool.SpotHealing)
         {
             var settings = ReadBrush() with { Erase = Tool == EditorTool.Eraser };
-            var selection = Tool != EditorTool.CloneStamp && Session.Document.Selection is { } selected ? SelectionCoverage.Create(selected, Session.Document.Width, Session.Document.Height) : null;
-            if (Tool == EditorTool.SpotHealing) BeginHealing(layer, settings, selection);
+            var selection = Tool is not (EditorTool.CloneStamp or EditorTool.SpotHealing) && Session.Document.Selection is { } selected ? SelectionCoverage.Create(selected, Session.Document.Width, Session.Document.Height) : null;
+            if (Tool == EditorTool.SpotHealing) BeginHealing(layer, settings);
             else if (Tool == EditorTool.CloneStamp)
             {
                 var clone = ReadClone();
