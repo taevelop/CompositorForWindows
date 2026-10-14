@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Input;
 using Compositor.Core;
 using Compositor.Imaging;
@@ -13,7 +13,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
     private EditorSession session=null!;
-    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){ShowFilterPreview(null);CancelShapePreparation();if(shapeDrag is not null)EndShape(false);CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
+    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){clonePointer=null;ShowFilterPreview(null);CancelShapePreparation();if(shapeDrag is not null)EndShape(false);CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
     public Action<PointD,ModifierKeys>? WandClick {get;set;}
     public CloneSource CloneSource { get; set; } = new();
     public Func<CloneSettings> ReadClone { get; set; } = () => new();
@@ -148,6 +148,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     internal void MoveInteraction(Point point)
     {
+        if (Tool == EditorTool.CloneStamp) { clonePointer = DocumentPoint(point); InvalidateVisual(); }
         if(gradientDragging){MoveGradient(DocumentPoint(point));return;}
         if(samplingColor){SampleAt(point);return;}
         if (panStart is Point previous)
@@ -222,6 +223,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     public void BeginPointer(PointD point, ModifierKeys? modifiers = null)
     {
         if (Session.InTransaction) return;
+        if (Tool == EditorTool.CloneStamp) clonePointer = point;
         if(Tool==EditorTool.Eyedropper){SampleDocumentColor(point);return;}
         var keys = modifiers ?? Keyboard.Modifiers;
         if (Tool == EditorTool.CloneStamp && keys.HasFlag(ModifierKeys.Alt))
@@ -275,6 +277,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
     }
     public void MovePointer(PointD point, ModifierKeys? modifiers = null)
     {
+        if (Tool == EditorTool.CloneStamp) clonePointer = point;
         if(shapeDrag is not null){MoveShape(point,modifiers??Keyboard.Modifiers);return;}
         if (transformDrag is not null) { MoveTransformPointer(point, modifiers ?? Keyboard.Modifiers); return; }
         if (cropDrag is not null) { MoveCrop(point, modifiers ?? Keyboard.Modifiers); return; }
@@ -405,7 +408,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         {if(frame is not null){c.Save();c.ResetMatrix();c.DrawImage(frame,0,0,new SKSamplingOptions(SKFilterMode.Nearest));c.Restore();}}
         if(!ready)
         {
-            DrawShape(c);DrawGradient(c);c.Restore();c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);
+            DrawShape(c);DrawGradient(c);DrawClone(c);c.Restore();c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);
             DrawPreparation(c);DrawShapeStatus(c);DrawGradientStatus(c);c.Restore();return;
         }
         if (Session.ActiveLayer is { } layer && Tool == EditorTool.Move && !IsTransforming)
@@ -441,7 +444,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             using var line = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Stroke, StrokeWidth = (float)(1 / Zoom), IsAntialias = true };
             c.DrawPath(path, under); c.DrawPath(path, line);
         }
-        DrawShape(c);DrawGradient(c);
+        DrawShape(c);DrawGradient(c);DrawClone(c);
         DrawCrop(c);
         DrawTransform(c);
         c.Restore();

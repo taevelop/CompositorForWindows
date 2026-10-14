@@ -432,7 +432,7 @@ public partial class MainWindow : Window
         await TimedAsync("SubjectSelectionSmoke", () => SubjectSelectionSmoke(Path.ChangeExtension(screenshot,".subject-selection.json")));
         await TimedAsync("MaskCopySmoke", () => MaskCopySmoke(Path.ChangeExtension(screenshot,".mask-copy.json")));
         await TimedAsync("WandSmoke", () => WandSmoke(Path.ChangeExtension(screenshot,".wand.json")));
-        await TimedAsync("CloneSmoke", CloneSmoke);
+        await TimedAsync("CloneSmoke", () => CloneSmoke());
         await TimedAsync("GroupSmokeTest", () => GroupSmokeTest(Path.ChangeExtension(screenshot, ".groups.json")));
         await TimedAsync("AdjustmentSmokeTest", () => AdjustmentSmokeTest(Path.ChangeExtension(screenshot, ".adjustments.json")));
         await TimedAsync("ExposureSmokeTest", () => ExposureSmokeTest(Path.ChangeExtension(screenshot, ".exposure.json")));

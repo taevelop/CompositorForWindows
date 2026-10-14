@@ -33,3 +33,9 @@ BrushStroke의 optional clone sample/offset 경로를 추가했다. 고정 sourc
 S/rail index13 CloneStamp, Alt-click 소스 지정, Size/Hardness/Opacity 기존slider와 Aligned/All layers checkbox를 연결했다. color/mask 옵션은숨기고 image-only guard를 적용한다. 기존 Session Begin/Preview/Commit/Cancel로 단일Undo/Redo·cancel을 처리한다. Clone 설정/소스상태는 TabTools에 저장하고 새탭은 독립 빈소스로 시작한다.
 
 실제WPF BeginPointer Alt 소스지정(Undo없음)·클릭결과·Undo/Redo·cancel·새탭/복원 검사통과. 코어657개 및 fullWPF 기존30초제한1회통과, 빌드경고/오류0. 도구레이아웃 검사는14도구로확장했다. 물리 S/Alt/drag는별도미검증. 현재target raster크기내 편집이며 raster확장/마스크배치예산·source crosshair/팁미리보기·저장전용검사·대형sampleworker는후속이다. 사용자도구 전체완료로판정하지 않는다.
+
+## 소스 표시와 저장 검증
+
+Clone source crosshair/브러시범위원을 device크기 일정한 black/white outline으로 연결했다. idle/stroke aligned samplepoint 규칙을 따르며 pointerleave와 sessionchange에서 hover를 지운다. 준비중 frame에서도 표시한다. 팁 안 실제source image 미리보기는 아직없다.
+
+--clone-smoke report CLI로 전체회귀와 동일한 Clone 전용WPF검사를30초한도내 실행한다. sourceoffset 표시·클릭/UndoRedo/cancel·독립tab에 더해 .comp저장재열기 composite 및 PNG모든픽셀 일치를 검사했다. 단독exit0/화면검토통과, 빌드0경고오류·코어657개통과. fullWPF는30초timeout재발로미통과이며 단독검사로대체하지 않는다. target raster확장·tippreview·대형source worker/메모리·물리입력 및 배포갱신은잔여다.
