@@ -8,13 +8,15 @@ using SkiaSharp.Views.WPF;
 
 namespace Compositor.App;
 
-public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection, Crop, Eyedropper, Gradient, Shape, MagicWand }
+public enum EditorTool { Move, Brush, Eraser, Hand, RectangleSelection, EllipseSelection, FreehandSelection, PolygonSelection, Crop, Eyedropper, Gradient, Shape, MagicWand, CloneStamp }
 public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
     private EditorSession session=null!;
     public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){ShowFilterPreview(null);CancelShapePreparation();if(shapeDrag is not null)EndShape(false);CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
     public Action<PointD,ModifierKeys>? WandClick {get;set;}
+    public CloneSource CloneSource { get; set; } = new();
+    public Func<CloneSettings> ReadClone { get; set; } = () => new();
     public EditorTool Tool { get; set; } = EditorTool.Brush;
     public Func<BrushSettings> ReadBrush { get; set; } = () => new(40, .7, 1, 32, 32, 32);
     public Action<string>? ReportError { get; set; }
@@ -222,6 +224,8 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         if (Session.InTransaction) return;
         if(Tool==EditorTool.Eyedropper){SampleDocumentColor(point);return;}
         var keys = modifiers ?? Keyboard.Modifiers;
+        if (Tool == EditorTool.CloneStamp && keys.HasFlag(ModifierKeys.Alt))
+        { CloneSource.Set(point); InvalidateVisual(); return; }
         if(Tool==EditorTool.MagicWand){WandClick?.Invoke(point,keys);return;}
         if(Tool==EditorTool.Shape){BeginShape(point,keys);return;}
         if (Tool == EditorTool.Crop) { BeginCrop(point); return; }
@@ -242,8 +246,9 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
             Session.Begin(); MovePointer(point); return;
         }
         if (Session.ActiveLayer is not { } layer || Tool == EditorTool.Hand) return;
-        if (Tool is EditorTool.Brush or EditorTool.Eraser)
+        if (Tool is EditorTool.Brush or EditorTool.Eraser or EditorTool.CloneStamp)
         {
+            if (Tool == EditorTool.CloneStamp && Session.EditMask) throw new InvalidOperationException("Clone Stamp edits image pixels. Select the image thumbnail first.");
             if (layer.IsAdjustment && !Session.EditMask) throw new InvalidOperationException("Adjustment layers have no image pixels. Select Edit mask to paint coverage.");
             if (layer.IsGroup) throw new InvalidOperationException("Select an image layer inside the group before painting.");
             if (!LayerHierarchy.Entries(Session.Document).First(e => e.Layer.Id == layer.Id).Visible) throw new InvalidOperationException("Show the layer and its parent groups before painting.");
@@ -251,11 +256,19 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         multipleMove = Tool == EditorTool.Move && Session.SelectedLayerIds.Count > 1 ? new GroupTransform(Session.Document, Session.SelectedLayerIds) : null;
         originalLayer = layer; anchor = point;
         groupMoveDocument = layer.IsGroup ? Session.Document : null;
-        if (Tool is EditorTool.Brush or EditorTool.Eraser)
+        if (Tool is EditorTool.Brush or EditorTool.Eraser or EditorTool.CloneStamp)
         {
             var settings = ReadBrush() with { Erase = Tool == EditorTool.Eraser };
             var selection = Session.Document.Selection is { } selected ? SelectionCoverage.Create(selected, Session.Document.Width, Session.Document.Height) : null;
-            if (Session.EditMask) maskStroke = new(layer, settings, Session.Document.Width, Session.Document.Height, selection);
+            if (Tool == EditorTool.CloneStamp)
+            {
+                var clone = ReadClone();
+                var offset = CloneSource.OffsetAt(point, clone.Aligned) ?? throw new InvalidOperationException("Alt-click a clone source first.");
+                var sample = CloneStamp.Capture(Session.Document, layer.Id, clone);
+                stroke = new(layer, settings, Session.Document.Width, Session.Document.Height, selection, sample, offset);
+                CloneSource.Begin(point, clone.Aligned);
+            }
+            else if (Session.EditMask) maskStroke = new(layer, settings, Session.Document.Width, Session.Document.Height, selection);
             else stroke = new(layer, settings, Session.Document.Width, Session.Document.Height, selection);
         }
         Session.Begin(); MovePointer(point);
