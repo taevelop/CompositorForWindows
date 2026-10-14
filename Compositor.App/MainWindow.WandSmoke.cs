@@ -25,9 +25,17 @@ public partial class MainWindow
             session.Undo();session.Undo();session.Undo();Check(ReferenceEquals(session.Document,doc),"Wand Undo did not restore original.");
             WandSample5.IsChecked=true;WandTolerance.Value=77;WandContiguous.IsChecked=false;WandAllLayers.IsChecked=true;var state=CaptureTabTools();
             WandTolerance.Value=3;WandSamplePoint.IsChecked=true;RestoreTabTools(state);Check(ReadWandSettings()==new WandSettings(77,2,false,true),"Wand per-tab settings did not restore.");
+            var first=workspace.Current;AddDocumentTab(Document.Create(8,4));var second=workspace.Current;
+            Check(first!=second&&ReadWandSettings()==defaultTabTools.Wand,"New tab inherited Wand settings.");
+            ToolPicker.SelectedIndex=12;WandTolerance.Value=19;WandSample3.IsChecked=true;var secondSettings=ReadWandSettings();
+            await SelectTabAsync(first.Id);Check(ReadWandSettings()==state.Wand&&Canvas.Tool==EditorTool.MagicWand,"Actual tab switch lost Wand settings.");
+            await SelectTabAsync(second.Id);Check(ReadWandSettings()==secondSettings,"Second tab lost independent Wand settings.");
+            Check(workspace.Close(second.Id),"Wand fixture tab did not close.");tabViews.Remove(second.Id);BindCurrentTab();
+            Canvas.BeginPointer(new(1,1),ModifierKeys.None);subjectCancellation?.Cancel();await subjectPending;
+            Check(ReferenceEquals(session.Document,doc)&&session.UndoCount==0&&!busy,"Cancelled Wand click changed document/history or left editor busy.");
             UpdateLayout();var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(ActualWidth),(int)Math.Ceiling(ActualHeight),96,96,System.Windows.Media.PixelFormats.Pbgra32);bitmap.Render(this);
             var png=new System.Windows.Media.Imaging.PngBitmapEncoder();png.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));using(var output=File.Create(report+".png"))png.Save(output);
-            File.WriteAllText(report,JsonSerializer.Serialize(new{checks=new[]{"Wand tool/options","canvas click matching","Shift add/Alt subtract","single edits and Undo source","per-tab settings"},note="WPF BeginPointer/modifier injection. Physical click/key and large native cancellation remain separate."}));
+            File.WriteAllText(report,JsonSerializer.Serialize(new{checks=new[]{"Wand tool/options","canvas click matching","Shift add/Alt subtract","single edits and Undo source","actual tab switching and independent settings","cancelled click preserves document/history"},note="WPF BeginPointer/modifier injection. Physical click/key and native inner-loop cancellation remain separate."}));
         }
         finally{session.Load(saved,active);RestoreTabTools(tools);Refresh();}
     }

@@ -1,5 +1,13 @@
 # Magic Wand 전환
 
+## 2026-10-14 후속 검증
+
+실제 문서 탭 생성/전환 경로에서 새 탭 기본값과 두 탭의 독립적인 Wand 설정 복원을 검사했다. 클릭 직후 취소 요청 시 문서 참조/Undo 불변과 busy 해제를 검사했다. 코어 652개 및 전체 WPF 회귀가 통과했다. 물리 마우스/키 입력 검사와는 구분한다.
+
+`--wand artifacts/wand-4k.json 4000` 벤치마크를 추가했다. 최초 합성 타원 4K 측정은 Contiguous 265ms/global 199ms, 각각 누적 managed 약196MiB, 프로세스 피크554MiB였다. 각1회이며 피크는 문서 준비와 두 실행을 포함한다. 자연 이미지 복잡도나 WPF 입력 지연을 입증하지 않는다. native match/trace 내부 중간 취소는 아직 없으며 호출 전후/managed 루프에서 검사한다. 큰 복잡 윤곽·반복 안정성·실기 검증은 잔여다.
+
+아래 기록은 각 구현 단계 당시 상태이며 최신 연결 여부는 마지막 UI 연결 및 이 후속 검증을 기준으로 한다.
+
 원본 MagicWand.swift 및 WandPixels.c/.h 대조. 기본 Tolerance 32(0–255), Point/3×3/5×5 평균(radius 0/1/2), Contiguous true, Sample All Layers false다. RGBA premultiplied의 모든 채널(알파 포함)을 기준색과 비교한다. 평균은 이미지 경계에서 clip하고 정수 반올림한다. Contiguous는 seed를 포함한 4-connected run fill이며 seed가 평균색과 맞지 않으면 비어 있다.
 
 원본 C 파일과 Windows 커널 SHA256은 BF0783B4DF7373B060C966E88CF6291AC177C313CD4B39CDD91FDD0C168762DB로 동일하다. Windows bridge는 고정 폭 int32 dimensions/settings 및 int64 count를 내보내며 원본 long/size_t는 내부에 둔다. 허용 100MP count는 Windows long 범위에 들어간다. native outline points/loop counts는 원본 C allocator에서 해제한다. 취소/실패에도 finally에서 버퍼를 해제한다.
