@@ -321,3 +321,5 @@ MVP M1 실제 Mac 왕복 및 M4 별도 Windows PC 장시간 사용은 사용자 
 - CloneStamp S/rail/Alt-source·Aligned/All layers UI/기존Undo·cancel·탭별소스연결. WPF source/click/UndoRedo/cancel/newtab/복원검사·fullWPF30초내1회·코어657개통과. target raster확장/crosshair/preview/저장·대형/물리입력은후속이며완료점수일괄차감안함. 전체관리70/30유지.
 
 - Clone sourcecrosshair/brush범위원·leave/session hoverreset 및 전용WPF CLI. sourceoffset/Undo/cancel/tab·.comp재열기·PNG출력픽셀일치·시각검토통과. 코어657/빌드0경고오류, fullWPF30초timeout잔여. 확장/tippreview/대형·물리입력은후속, 전체70/30관리추정유지.
+
+- Clone 팁source이미지preview 1024화면해상도상한·hardness/opacity·idle/Alt규칙·단일SKImage캐시연결. 코어658/빌드0경고오류·단독WPF저장출력 및 tip시각검토통과. 대형hover/원본보간/target확장/배포후속, fullWPF30초timeout잔여유지. 전체70/30관리추정유지.

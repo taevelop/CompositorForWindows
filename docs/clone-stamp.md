@@ -39,3 +39,9 @@ S/rail index13 CloneStamp, Alt-click 소스 지정, Size/Hardness/Opacity 기존
 Clone source crosshair/브러시범위원을 device크기 일정한 black/white outline으로 연결했다. idle/stroke aligned samplepoint 규칙을 따르며 pointerleave와 sessionchange에서 hover를 지운다. 준비중 frame에서도 표시한다. 팁 안 실제source image 미리보기는 아직없다.
 
 --clone-smoke report CLI로 전체회귀와 동일한 Clone 전용WPF검사를30초한도내 실행한다. sourceoffset 표시·클릭/UndoRedo/cancel·독립tab에 더해 .comp저장재열기 composite 및 PNG모든픽셀 일치를 검사했다. 단독exit0/화면검토통과, 빌드0경고오류·코어657개통과. fullWPF는30초timeout재발로미통과이며 단독검사로대체하지 않는다. target raster확장·tippreview·대형source worker/메모리·물리입력 및 배포갱신은잔여다.
+
+## 팁 이미지 미리보기
+
+원본clonePreview의 화면해상도/1024px한변상한과 raw/all-visible 규칙을 대조했다. source-offset으로 이동한 작은영역만 표시bitmap에 렌더하고 tip radialcoverage/hardness·opacity를 premultipliedRGBA에 적용한다. idle에서만 표시하며 stroke진행/Alt누름에는숨긴다. pointer/samplecenter·Document/activeLayer·settings·deviceZoom key의 단일SKImage캐시로 동일state는재사용하고 session변경/Dispose에서해제한다. 숫자invalid draft는Paint를중단하지않고 tip표시만생략한다.
+
+반투명/opacity·raw/all-visible·1024상한·원본보존·취소검사 코어658개통과. 최신빌드0경고오류·Clone단독WPF source/Undo/cancel/tab/저장/PNG와 tip시각검토통과. fullWPF는이번단계재검사하지않았으며 이전30초timeout미해결을유지한다. 축소tip와CoreGraphics medium보간동등성·복합문서대형hover/frame비용·입력/샘플worker·renderer캐시/메모리·target raster확장 및 배포갱신은잔여다. 출력bitmap상한이source/effect렌더메모리상한을뜻하지않는다.

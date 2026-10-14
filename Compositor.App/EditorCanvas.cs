@@ -13,7 +13,7 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
 {
     private readonly ViewportRenderer renderer = new();
     private EditorSession session=null!;
-    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){clonePointer=null;ShowFilterPreview(null);CancelShapePreparation();if(shapeDrag is not null)EndShape(false);CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
+    public EditorSession Session { get=>session; set{if(!ReferenceEquals(session,value)){clonePointer=null;ClearClonePreview();ShowFilterPreview(null);CancelShapePreparation();if(shapeDrag is not null)EndShape(false);CancelRenderPreparation();renderer.InvalidatePreviousFrame();}session=value;} }
     public Action<PointD,ModifierKeys>? WandClick {get;set;}
     public CloneSource CloneSource { get; set; } = new();
     public Func<CloneSettings> ReadClone { get; set; } = () => new();
@@ -450,6 +450,6 @@ public sealed partial class EditorCanvas : SKElement, IDisposable
         c.Restore();
         c.Save();c.Scale(e.Info.Width/(float)ActualWidth,e.Info.Height/(float)ActualHeight);DrawSampleRing(c);DrawShapeStatus(c);DrawGradientStatus(c);c.Restore();
     }
-    public void Dispose() { canvasDisposed=true;CancelShapePreparation();CancelGradient();CancelRenderPreparation();CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
+    public void Dispose() { ClearClonePreview();canvasDisposed=true;CancelShapePreparation();CancelGradient();CancelRenderPreparation();CancelTransform(); StopSelectionAutoScroll(); renderer.Dispose(); }
 }
 

@@ -32,7 +32,7 @@ public partial class MainWindow
             Check(CompositePixels(before).SequenceEqual(ImageCodec.Load(png).ToRgba()), "Clone PNG differs from canvas composite.");
             if (reportPath is not null)
             {
-                Canvas.Fit(); UpdateLayout();
+                Canvas.MovePointer(new(4.5, .5)); Canvas.Fit(); UpdateLayout();
                 var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(ActualWidth), (int)Math.Ceiling(ActualHeight), 96, 96, System.Windows.Media.PixelFormats.Pbgra32); bitmap.Render(this);
                 var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
                 using var output = System.IO.File.Create(reportPath + ".png"); encoder.Save(output);

@@ -7,6 +7,23 @@ namespace Compositor.Tests;
 public class CloneStampTests
 {
     [Fact]
+    public void PreviewAppliesTipOpacityAndBoundsItsScreenResolution()
+    {
+        var doc = Document.Create(8, 8);
+        var rgba = Enumerable.Repeat(new byte[] { 100, 40, 20, 128 }, 64).SelectMany(x => x).ToArray();
+        doc = doc.Replace(doc.Layers[0] with { Pixels = Raster.FromRgba(8, 8, rgba), Opacity = 0 });
+        var brush = new BrushSettings(3, 1, .5, 0, 0, 0);
+        var preview = CloneStamp.Preview(doc, doc.Layers[0].Id, new(4, 4), new(), brush, 1).ToRgba();
+        Assert.Equal(new byte[] { 50, 20, 10, 64 }, preview.Skip(16).Take(4).ToArray());
+        Assert.Equal((byte)64, preview[3]);
+        Assert.All(CloneStamp.Preview(doc, doc.Layers[0].Id, new(4, 4), new(SampleAllLayers: true), brush, 1).ToRgba(), b => Assert.Equal((byte)0, b));
+        var capped = CloneStamp.Preview(doc, doc.Layers[0].Id, new(4, 4), new(), brush with { Diameter = 2000 }, 32);
+        Assert.Equal(1024, capped.Width); Assert.Equal(1024, capped.Height);
+        Assert.Equal(rgba, doc.Layers[0].Pixels.ToRgba());
+        Assert.Throws<OperationCanceledException>(() => CloneStamp.Preview(doc, doc.Layers[0].Id, new(4, 4), new(), brush, 1, new CancellationToken(true)));
+    }
+
+    [Fact]
     public void SelectionClipsCloneAndFractionalOffsetsInterpolatePremultipliedPixels()
     {
         var document = Document.Create(4, 2);var layer = document.Layers[0];

@@ -39,6 +39,42 @@ public sealed class CloneSource
 
 public static class CloneStamp
 {
+    public static Raster Preview(Document document, Guid? activeLayerId, PointD center, CloneSettings clone, BrushSettings brush, double screenScale, CancellationToken cancellation = default)
+    {
+        if (!double.IsFinite(center.X) || !double.IsFinite(center.Y) || !double.IsFinite(screenScale) || screenScale <= 0 ||
+            !double.IsFinite(brush.Diameter) || brush.Diameter is < 1 or > 2000 || !double.IsFinite(brush.Hardness) || brush.Hardness is < 0 or > 1 ||
+            !double.IsFinite(brush.Opacity) || brush.Opacity is < 0 or > 1) throw new ArgumentException("Invalid clone preview settings.");
+        document.Validate(); cancellation.ThrowIfCancellationRequested();
+        int side = (int)Math.Clamp(Math.Ceiling(brush.Diameter * screenScale), 1, 1024);
+        using var bitmap = new SKBitmap(CanvasRenderer.Info(side, side)); using var renderer = new CanvasRenderer();
+        using (var canvas = new SKCanvas(bitmap))
+        {
+            canvas.Clear(SKColors.Transparent); canvas.Scale((float)(side / brush.Diameter));
+            canvas.Translate((float)(brush.Diameter / 2 - center.X), (float)(brush.Diameter / 2 - center.Y));
+            renderer.DrawCancellable(canvas, SampleDocument(document, activeLayerId, clone), cancellation); canvas.Flush();
+        }
+        var bytes = bitmap.GetPixelSpan(); double radius = brush.Diameter / 2, inner = radius * brush.Hardness;
+        for (int y = 0; y < side; y++)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            for (int x = 0; x < side; x++)
+            {
+                double dx = (x + .5) * brush.Diameter / side - radius, dy = (y + .5) * brush.Diameter / side - radius;
+                double distance = double.Hypot(dx, dy);
+                double coverage = distance > radius ? 0 : distance <= inner ? 1 : (radius - distance) / Math.Max(radius - inner, .0001);
+                for (int c = 0; c < 4; c++) bytes[(y * side + x) * 4 + c] = (byte)Math.Round(bytes[(y * side + x) * 4 + c] * coverage * brush.Opacity, MidpointRounding.AwayFromZero);
+            }
+        }
+        return Raster.FromRgba(side, side, bytes);
+    }
+
+    private static Document SampleDocument(Document document, Guid? activeLayerId, CloneSettings settings)
+    {
+        if (settings.SampleAllLayers) return document;
+        var layer = document.Layers.FirstOrDefault(l => l.Id == activeLayerId);
+        return document with { Layers = layer is { IsGroup: false, IsAdjustment: false }
+            ? [new Layer(layer.Id, layer.Name, layer.Pixels, layer.Transform)] : [] };
+    }
     internal readonly record struct Color(double Red, double Green, double Blue, double Alpha);
     // Premultiplied bilinear sampling, pixel centers at n+.5; transparent beyond the canvas.
     internal static Color Sample(Raster raster, PointD point)
@@ -62,13 +98,7 @@ public static class CloneStamp
     public static Raster Capture(Document document, Guid? activeLayerId, CloneSettings settings, CancellationToken cancellation = default)
     {
         document.Validate(); cancellation.ThrowIfCancellationRequested();
-        var sample = document;
-        if (!settings.SampleAllLayers)
-        {
-            var layer = document.Layers.FirstOrDefault(l => l.Id == activeLayerId);
-            sample = document with { Layers = layer is { IsGroup: false, IsAdjustment: false }
-                ? [new Layer(layer.Id, layer.Name, layer.Pixels, layer.Transform)] : [] };
-        }
+        var sample = SampleDocument(document, activeLayerId, settings);
         using var bitmap = new SKBitmap(CanvasRenderer.Info(document.Width, document.Height));
         using var renderer = new CanvasRenderer();
         using (var canvas = new SKCanvas(bitmap))
