@@ -85,3 +85,5 @@ Ctrl 썸네일 클릭은 source layer/mask 선택load를 원본처럼 실행하�
 
 마스크 Alt-drag 복사: 원본 LayerMask.swift canCopyMask/copyMask 대조, 대상이 자기 자신/그룹은 거부하며 source.mask.Placement??source.Transform의 문서 위치로 복사 마스크를 pin한다. Pixels는 불변공유, Enabled/Linked는 source값 유지, 기존 대상 mask를 교체하고 문서/Undo 예산을 검증한다. disabled/linked/unlinked·독립 placement·Undo/Redo·group/no-mask/self 제한 코어 검사 통과.
 Windows mask 썸네일 Alt(noCtrl) 드래그 임계값/OLE Copy 전용 payload, 같은 immutable 문서 ownership·그룹/self/stale 제한·row 타깃 파란 표시·copy후 대상 mask 선택을 연결했다. 기본 layer reorder와 구분하고 drag후 click이 source 타깃을 다시 선택하지 않도록 suppress한다. WPF commit 경로는 target selection/Undo·shared pixels/placement/link·.comp 마스크/output roundtrip·stale/self 결과 보존을 검사했다. 실제 OLE pointer drag/드롭 표시/물리 Alt 조합은 아직 미검증이다. Release 경고/오류0·코어646개·전체WPF회귀통과. 배포본 갱신·품질/대형메모리 및 외부실기는 잔여.
+
+최신 배포본 갱신: artifacts/publish-shape-ui에 선택load/썸네일/마스크Alt-copy 포함, portable1/1 및 실제 모델 Routed Subject/Advanced/Undo/저장 정책 검사 통과. actual OLE·물리입력·Mac/별도PC 품질/성능보류의 대체 증거는 아니다. 전체 검사약2797ms/누적460.2MiB는 배경+피사체+참조/저장 포함이며 이전단계와 속도비교하지 않는다.
